@@ -1,0 +1,40 @@
+/*
+ * Copyright (C) 2026 Akash Nag
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
+import path from 'node:path';
+import os from 'node:os';
+import fs from 'node:fs/promises';
+
+export class Config {
+	static readonly DIRECTORY_NAME: string = '.bscaff';
+	static readonly SNIPPET_DB_FILE: string = 'db.json';
+	static readonly SNIPPET_TEXT_FILE: string = 'snippetText.snippet';
+
+	static getStoragePath(additional: string[] | null = null): string {
+		// return base storage directory (e.g., ~/.bscaff)
+		if(additional)
+			return path.join(os.homedir(), Config.DIRECTORY_NAME, ...additional);
+		else
+			return path.join(os.homedir(), Config.DIRECTORY_NAME);
+	}
+
+	static async ensureStorageDirectoryExists(): Promise<boolean> {
+		const storagePath = Config.getStoragePath();
+		try {
+			await fs.mkdir(storagePath, { recursive: true });
+			return true;
+		} catch (err: any) {
+			return false;
+		}
+	}
+}
