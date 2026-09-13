@@ -61,7 +61,7 @@ export class RecallSnippet {
 		}
 	}
 
-	static async openURLInBrowser(key: string): Promise<boolean> {
+	static async openSnippet(key: string): Promise<boolean> {
 		const store = new Store();
 		if(!store.doesSnippetKeyExist(key)) {
 			Logger.error("key not found");
@@ -74,23 +74,42 @@ export class RecallSnippet {
 			return false;
 		}
 
-		if(record.type != SnippetType.URL) {
-			Logger.error("can only launch URLs");
-			return false;
-		}
+		let retVal = false;
+		if(record.type == SnippetType.URL) {	
+			// if URL then open URL via web browser
+			const url = await FileUtils.readSnippetFromFile(
+				SnippetUtils.getFileUnderSnippet(key, record.structure.filename!)
+			);
 
-		const url = await FileUtils.readSnippetFromFile(
-			SnippetUtils.getFileUnderSnippet(key, record.structure.filename!)
-		);
+			if(!url) {
+				Logger.error("error reading URL");
+				return false;
+			}
 
-		if(!url) {
-			Logger.error("error reading URL");
-			return false;
-		}
+			retVal = await MiscUtils.executeCommand(`google-chrome ${url}`);
+			if(retVal) {
+				Logger.success(`URL launched: ${url}`);
+				retVal = true;
+			}
+		} else if(record.type == SnippetType.File || record.type == SnippetType.Text) {
+			// if text/file, open it in a text editor
+			const filePath = SnippetUtils.getFileUnderSnippet(key, record.structure.filename!);
+			const snippet = await FileUtils.readSnippetFromFile(filePath);
 
-		const retVal = await MiscUtils.executeCommand(`google-chrome ${url}`);
-		if(retVal) {
-			Logger.success(`URL launched: ${url}`);
+			if(!snippet) {
+				Logger.error("error reading snippet");
+				return false;
+			}
+	
+			const fileType = MiscUtils.getFileType(filePath);
+			const tempFile = MiscUtils.createRandomFileAndOpenInEditor(fileType, snippet);
+			if(!tempFile) {
+				Logger.error("error launching text editor");
+			} else {
+				retVal = true;
+			}
+		} else {
+			Logger.error("can only open snippets of type text/file/url");
 		}
 
 		return retVal;
@@ -123,10 +142,12 @@ export class RecallSnippet {
 			return false;
 		}
 
-		const cwd = process.cwd();
+		// paths contains possibly relative filenames, filePaths contain absolute filenames
+		const filePaths = FileUtils.resolveFilePaths(paths);
+
 		let c: number = 0;
 		for(let i: number = 0; i < paths.length; ++i) {
-			const filePath = path.resolve(cwd, paths[i]);
+			const filePath = filePaths[i];
 			if(!FileUtils.doesFileExist(filePath)) {
 				Logger.error(`file not found, skipping: ${paths[i]}`);
 			} else {
@@ -177,5 +198,48 @@ export class RecallSnippet {
 
 		console.log(snippet);
 		return true;
+	}
+
+	static async listAllSnippets(): Promise<boolean> {
+		const store = new Store();
+		const data = store.getList();
+		console.table(data);
+		return true;
+	}
+
+	static async listSnippetFiles(key: string): Promise<boolean> {
+		const store = new Store();
+
+		if(!store.doesSnippetKeyExist(key)) {
+			Logger.error("key not found");
+			return false;
+		}
+		
+		const record = store.fetchSnippetRecord(key);
+		if(!record) {
+			Logger.error("can't fetch record");
+			return false;
+		}
+
+		if(record.type == SnippetType.Directory || record.type == SnippetType.MultiFile) {	
+			// record.structure.filename will be null here, so iterate over its children
+			console.table(SnippetUtils.listSnippetFiles(record.structure));
+		} else if(record.type == SnippetType.File) {
+			console.table([{
+				key: record.key,
+				type: record.type.toString(),
+				filename: record.structure.filename,
+				loc: record.structure.loc,
+				updated: record.modifiedAt
+			}]);
+		} else {
+			console.table(store.getList(key));
+		}
+
+		return true;
+	}
+
+	static async extractSnippet(key: string, path: string | null = null, overwrite: boolean = false): Promise<boolean> {
+		
 	}
 }

@@ -39,6 +39,7 @@ export interface SnippetRecord {
 	createdAt: Date;
 	modifiedAt: Date;
 	structure: SnippetStructure;
+	parameters: string[] | null;
 }
 
 export interface SnippetInfo {
@@ -46,6 +47,14 @@ export interface SnippetInfo {
 	description: string | null;
 	type: SnippetType;
 	structure: SnippetStructure;
+	parameters: string[] | null;
+}
+
+export interface BScaffSettings {
+	editorPreference: string;
+	terminalEditor: string | null;
+	guiEditor: string | null;
+	browser: string | null;
 }
 
 /*

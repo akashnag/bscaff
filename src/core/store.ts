@@ -56,7 +56,8 @@ export class Store {
 			type: type,
 			createdAt: new Date(),
 			modifiedAt: new Date(),
-			structure: structure
+			structure: structure,
+			parameters: info.parameters
 		};
 
 		this.snippetsList.push(record);
@@ -75,6 +76,31 @@ export class Store {
 
 	update(): void {
 		Store.writeSnippetsList(this.snippetsList);
+	}
+
+	getList(key: string | null = null): object[] {
+		const data = [];
+
+		for(let i = 0; i < this.snippetsList.length; ++i) {
+			const record = this.snippetsList[i];
+			if(!key || record.key === key) {
+				const outRec = {
+					key: record.key,
+					updated: record.modifiedAt,
+					type: record.type.toString(),
+					loc: record.structure.loc?.toString()
+				};
+
+				data.push(outRec);
+				if(key) break;
+			}
+		}
+
+		return data;
+	}
+
+	getRawList(key: string): SnippetRecord {
+		return this.snippetsList.find(item => item.key === key)!;
 	}
 
 	// ---------------- I/O methods -------------------

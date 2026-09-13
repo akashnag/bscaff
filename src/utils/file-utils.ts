@@ -194,4 +194,45 @@ export class FileUtils {
 			[folderName]
 		);
 	}
+
+	/**
+	 * Synchronously copies a directory and all of its contents (files and subdirectories).
+	 * 
+	 * @param src - Source folder path
+	 * @param dest - Destination folder path
+	 */
+	static copyDirSync(src: string, dest: string): void {
+		// 1. Ensure target directory exists
+		if (!fs.existsSync(dest)) {
+			fs.mkdirSync(dest, { recursive: true });
+		}
+
+		// 2. Read all items inside source directory
+		const entries = fs.readdirSync(src, { withFileTypes: true });
+
+		// 3. Process each file/folder recursively
+		for (const entry of entries) {
+			const srcPath = path.join(src, entry.name);
+			const destPath = path.join(dest, entry.name);
+
+			if (entry.isDirectory()) {
+				// Recursively copy subfolder
+				FileUtils.copyDirSync(srcPath, destPath);
+			} else {
+				// Copy file (preserves timestamps/mode flags when possible)
+				fs.copyFileSync(srcPath, destPath);
+			}
+		}
+	}
+
+	static resolveFilePaths(paths: string[]): string[] {
+		const cwd = process.cwd();
+		const newPaths = [];
+
+		for(let i = 0; i < paths.length; ++i) {
+			newPaths.push(path.resolve(cwd, paths[i]));
+		}
+
+		return newPaths;
+	}
 }

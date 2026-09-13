@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { SnippetStructure, SnippetStructureItemType } from "../types/types.js";
 import { Config } from "./config.js";
 import { FileUtils } from "./file-utils.js";
 import { MiscUtils } from "./misc.js";
@@ -55,5 +56,24 @@ export class SnippetUtils {
 
 	static async readContentFromSnippetFile(key: string, filePath: string): Promise<string | null> {
 		return await FileUtils.readSnippetFromFile(SnippetUtils.getFileUnderSnippet(key, filePath));
+	}
+
+	static listSnippetFiles(struct: SnippetStructure, path: string = '', data: object[] = []): object[] {
+		if(struct.type != SnippetStructureItemType.DummyNode) {
+			data.push({
+				type: struct.type.toString(),
+				name: `${path}/${struct.filename}`,
+				loc: (struct.type == SnippetStructureItemType.File) ? struct.loc?.toString() : '-'
+			});
+		}
+
+		if(struct.type !== SnippetStructureItemType.File) {
+			for(let i = 0; i < struct.children!.length; ++i) {
+				const newPath = (struct.type == SnippetStructureItemType.Directory) ? `${path}/${struct.filename}` : path;
+				this.listSnippetFiles(struct.children![i], newPath, data);
+			}
+		}
+
+		return data;
 	}
 }

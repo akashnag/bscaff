@@ -23,7 +23,20 @@ import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 
 export class SaveSnippet {
-	static async saveTextFromFile(key: string, filePath: string, description: string | null = null): Promise<boolean> {
+	static async saveTextFromFile(key: string, filePath: string | null = null, description: string | null = null): Promise<boolean> {
+		/*
+			(1) get the file type from filePath
+			(2) create snippet directory and create a new file under it (with name = <Config.SNIPPET_TEXT_FILE>, and extension = filetype identified in step 1)
+			(3) SnippetRecord.structure<SnippetStructure> = { filename: as in step-2, type: FILE, children: null, loc: as computed }
+		*/
+		
+		if(!filePath) {
+			Logger.error("missing file path");
+			return false;
+		}
+
+		filePath = FileUtils.resolveFilePaths([ filePath ])[0];
+
 		const store = new Store();
 
 		if(store.doesSnippetKeyExist(key)) {
@@ -53,7 +66,8 @@ export class SaveSnippet {
 			key: key,
 			description: description,
 			type: SnippetType.Text,
-			structure: structure
+			structure: structure,
+			parameters: null
 		});
 
 		store.update();
@@ -61,7 +75,19 @@ export class SaveSnippet {
 		return true;
 	}
 
-	static async saveFile(key: string, filePath: string, description: string | null = null): Promise<boolean> {
+	static async saveFile(key: string, filePath: string | null = null, description: string | null = null): Promise<boolean> {
+		/*
+			(1) create snippet directory and create a new file under it (with name same as in filePath)
+			(2) SnippetRecord.structure<SnippetStructure> = { filename: as in step-1, type: FILE, children: null, loc: as computed }
+		*/
+
+		if(!filePath) {
+			Logger.error("missing file path");
+			return false;
+		}
+		
+		filePath = FileUtils.resolveFilePaths([ filePath ])[0];
+
 		const store = new Store();
 
 		if(store.doesSnippetKeyExist(key)) {
@@ -93,7 +119,8 @@ export class SaveSnippet {
 			key: key,
 			description: description,
 			type: SnippetType.File,
-			structure: structure
+			structure: structure,
+			parameters: null
 		});
 
 		store.update();
@@ -102,6 +129,12 @@ export class SaveSnippet {
 	}
 
 	static async saveLiveInput(key: string, fileType: string = "txt", description: string | null = null): Promise<boolean> {
+		/*
+			(1) get the file type from command-line args, or 'txt' if omitted by user
+			(2) create snippet directory and create a new file under it (with name = <Config.SNIPPET_TEXT_FILE>, and extension = filetype identified in step 1)
+			(3) SnippetRecord.structure<SnippetStructure> = { filename: as in step-2, type: FILE, children: null, loc: as computed }
+		*/
+
 		const path = MiscUtils.createRandomFileAndOpenInEditor(fileType);
 		if(!path) {
 			Logger.error("could not launch text editor");
@@ -113,6 +146,11 @@ export class SaveSnippet {
 	}
 
 	static async saveURL(key: string, url: string, description: string | null = null): Promise<boolean> {
+		/*
+			(1) create snippet directory and create a new file under it (with name = <Config.SNIPPET_TEXT_FILE>, and extension = '.url')
+			(2) SnippetRecord.structure<SnippetStructure> = { filename: as in step-1, type: FILE, children: null, loc: 1 }
+		*/
+
 		if(!url) {
 			Logger.error("URL missing");
 			return false;
@@ -141,7 +179,8 @@ export class SaveSnippet {
 			key: key,
 			description: description,
 			type: SnippetType.URL,
-			structure: structure
+			structure: structure,
+			parameters: null
 		});
 
 		store.update();
@@ -216,12 +255,104 @@ export class SaveSnippet {
 		return false;
 	}
 
-	static async saveDirectory(): Promise<boolean> {
-		// TODO: add code
-		return false;
+	static async saveMultipleFiles(key: string, files: string[] | null = null, description: string | null = null): Promise<boolean> {
+		/*
+			(1) create snippet directory and copy the files (passed in args) to under it
+			(2) SnippetRecord.structure<SnippetStructure> = { 
+					filename: null, 
+					type: DUMMY_NODE, 
+					children: [
+						{
+							filename: <same as file #1>,
+							type: FILE,
+							children: null,
+							loc: as computed
+						},
+						{
+							filename: <same as file #2>,
+							type: FILE,
+							children: null,
+							loc: as computed
+						},
+						...
+					], 
+					loc: null 
+				}
+		*/
+
+		if(!files) {
+			Logger.error("missing file paths");
+			return false;
+		}
+
+		const store = new Store();
+
+		if(store.doesSnippetKeyExist(key)) {
+			Logger.error("key already exists");
+			return false;
+		}
+		
+		// files contains possibly relative filenames, filePaths contain absolute filenames
+		const filePaths = FileUtils.resolveFilePaths(files);
+
+		// ensure all files exist before proceeding
+		for(let i = 0; i < filePaths.length; ++i) {
+			if(!FileUtils.doesFileExist(filePaths[i])) {
+				Logger.error(`file not found: ${files[i]}`);
+				return false;
+			}
+		}
+
+		// create snippet directory
+		SnippetUtils.createSnippetDirectory(key);
+		
+		// copy each file
+		const children: SnippetStructure[] = [];
+		const parameters: Set<string> = new Set<string>();
+
+		for(let i = 0; i < filePaths.length; ++i) {
+			const filename = FileUtils.getFileNameFromPath(filePaths[i]);
+			const newFilePath = Config.getStoragePath([ key, filename ]);
+
+			const params: string[] = MiscUtils.getParametersFromFilename(filename);
+			params.forEach((param: string) => {
+				parameters.add(param);
+			});
+
+			FileUtils.copyFile(
+				filePaths[i],
+				newFilePath
+			);
+
+			children.push({
+				filename: filename,
+				type: SnippetStructureItemType.File,
+				loc: await MiscUtils.countLOCFromFile(newFilePath),
+				children: null
+			});
+		}
+		
+		const structure: SnippetStructure = {
+			filename: null,
+			type: SnippetStructureItemType.DummyNode,
+			loc: null,
+			children: children
+		};
+
+		store.saveSnippet({
+			key: key,
+			description: description,
+			type: SnippetType.MultiFile,
+			structure: structure,
+			parameters: Array.from(parameters)
+		});
+
+		store.update();
+		Logger.success("template saved");
+		return true;
 	}
 
-	static async saveMultipleFiles(): Promise<boolean> {
+	static async saveDirectory(key: string, dirPath: string | null = null, description: string | null = null): Promise<boolean> {
 		// TODO: add code
 		return false;
 	}

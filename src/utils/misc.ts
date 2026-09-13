@@ -16,6 +16,7 @@ import { exec, spawnSync } from 'child_process';
 import { execSync } from 'child_process';
 import { Config } from "./config.js";
 import { promisify } from "util";
+import { Settings } from "../core/settings.js";
 
 const execPromisified = promisify(exec);
 
@@ -74,7 +75,7 @@ export class MiscUtils {
 		if(content) {
 			if(!FileUtils.writeTextFile(path, content)) return null;
 		}
-		if(!MiscUtils.openFileInEditor(path)) return null;
+		if(!MiscUtils.openFileInEditor(path, )) return null;
 		return path;
 	}
 
@@ -156,7 +157,8 @@ export class MiscUtils {
 	/**
 	 * Checks if a command binary is available in the system PATH
 	 */
-	private static isCommandAvailable(command: string): boolean {
+	private static isCommandAvailable(command: string | null): boolean {
+		if(!command) return false;
 		const checkCmd = (MiscUtils.getPlatform() === 'win32') ? `where ${command}` : `which ${command}`;
 		try {
 			execSync(checkCmd, { stdio: 'ignore' });
@@ -172,13 +174,14 @@ export class MiscUtils {
      * 
      * @returns true if opened and closed successfully, false on failure.
      */
-    static openFileInEditor(filePath: string, preferredTerminalEditor: string = 'nano'): boolean {
-        const isTerminalAvailable = MiscUtils.isCommandAvailable(preferredTerminalEditor);
+    static openFileInEditor(filePath: string, preferredTerminalEditor: string | null = null): boolean {
+        if(!preferredTerminalEditor) preferredTerminalEditor = Settings.get('terminalEditor');
+		const isTerminalAvailable = Settings.get('editorPreference') == 'terminal' ? MiscUtils.isCommandAvailable(preferredTerminalEditor!) : false;
 
         if (isTerminalAvailable) {
             try {
                 // stdio: 'inherit' attaches TTY so interactive terminal editors (nano/vim) work
-                const result = spawnSync(preferredTerminalEditor, [filePath], { stdio: 'inherit' });
+                const result = spawnSync(preferredTerminalEditor!, [filePath], { stdio: 'inherit' });
                 return result.status === 0 && result.error === undefined;
             } catch (err) {
                 console.error(`Failed to launch ${preferredTerminalEditor}:`, err);
@@ -196,7 +199,7 @@ export class MiscUtils {
      * @returns true if opened and closed successfully, false on failure.
      */
     private static openFileInGUIEditor(filePath: string): boolean {
-        let command: string;
+        let command: string | null;
         let args: string[];
 
         switch (process.platform) {
@@ -211,10 +214,12 @@ export class MiscUtils {
                 break;
             
             default: // Linux / BSD
-                command = MiscUtils.isCommandAvailable('gedit') ? 'gedit' : 'xdg-open';
+                command = MiscUtils.isCommandAvailable(Settings.get('guiEditor')) ? Settings.get('guiEditor') : 'xdg-open';
                 args = [filePath];
                 break;
         }
+
+		if(!command) return false;
 
         try {
             const result = spawnSync(command, args, { stdio: 'ignore' });
@@ -224,4 +229,24 @@ export class MiscUtils {
             return false;
         }
     }
+
+	/**
+	 * Extracts all parameters enclosed within {{ and }} from a string.
+	 * 
+	 * @param filename - The target filename to search for parameters.
+	 * @returns An array of parameter names found, or an empty array if none match.
+	 */
+	static getParametersFromFilename(filename: string): string[] {
+		// Regex matching {{ followed by non-}} characters, capturing the inner content
+		const regex = /\{\{([^}]+)\}\}/g;
+		const matches: string[] = [];
+		
+		let match: RegExpExecArray | null;
+		while ((match = regex.exec(filename)) !== null) {
+			// match[1] refers to the first capture group (inside {{ }})
+			matches.push(match[1].trim());
+		}
+	
+		return matches;
+	}
 }
