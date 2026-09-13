@@ -88,7 +88,7 @@ export class Store {
 					key: record.key,
 					updated: record.modifiedAt,
 					type: record.type.toString(),
-					loc: record.structure.loc?.toString()
+					loc: record.structure.loc ? record.structure.loc.toString() : '-'		// TODO: change loc to content and show URLs (if type URL) else '-'
 				};
 
 				data.push(outRec);

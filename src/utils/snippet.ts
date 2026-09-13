@@ -76,4 +76,32 @@ export class SnippetUtils {
 
 		return data;
 	}
+
+	static drawSnippetFileTree(struct: SnippetStructure, prefix: string = '', isLast: boolean = true, lines: string[] = []): string {
+		// Format and add the current node (skip the root DummyNode)
+		if (struct.type !== SnippetStructureItemType.DummyNode) {
+			const connector = isLast ? '└── ' : '├── ';
+			const isDir = struct.type === SnippetStructureItemType.Directory;
+			const displayName = isDir ? `${struct.filename}/` : struct.filename;
+	
+			lines.push(`${prefix}${connector}${displayName}`);
+		}
+	
+		// Recursively process children
+		if (struct.type !== SnippetStructureItemType.File && struct.children) {
+			let childPrefix = prefix;
+			if (struct.type !== SnippetStructureItemType.DummyNode) {
+				childPrefix += isLast ? '    ' : '│   ';
+			}
+	
+			const count = struct.children.length;
+			for (let i = 0; i < count; ++i) {
+				const childIsLast = (i === count - 1);
+				this.drawSnippetFileTree(struct.children[i], childPrefix, childIsLast, lines);
+			}
+		}
+	
+		// Return the complete string separated by newlines
+		return lines.join('\n');
+	}
 }

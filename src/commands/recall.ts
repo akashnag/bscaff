@@ -171,6 +171,7 @@ export class RecallSnippet {
 
 	static async displaySnippet(key: string): Promise<boolean> {
 		const store = new Store();
+		
 		if(!store.doesSnippetKeyExist(key)) {
 			Logger.error("key not found");
 			return false;
@@ -223,7 +224,7 @@ export class RecallSnippet {
 
 		if(record.type == SnippetType.Directory || record.type == SnippetType.MultiFile) {	
 			// record.structure.filename will be null here, so iterate over its children
-			console.table(SnippetUtils.listSnippetFiles(record.structure));
+			console.log(SnippetUtils.drawSnippetFileTree(record.structure));
 		} else if(record.type == SnippetType.File) {
 			console.table([{
 				key: record.key,
@@ -240,6 +241,73 @@ export class RecallSnippet {
 	}
 
 	static async extractSnippet(key: string, path: string | null = null, overwrite: boolean = false): Promise<boolean> {
+		if(!path) {
+			Logger.error("missing path");
+			return false;
+		}
 		
+		const store = new Store();
+		
+		if(!store.doesSnippetKeyExist(key)) {
+			Logger.error("key not found");
+			return false;
+		}
+		
+		const record = store.fetchSnippetRecord(key);
+		if(!record) {
+			Logger.error("can't fetch record");
+			return false;
+		}
+
+		const paramValues: Record<string, string> = {};
+		if(record.parameters) {
+			for(const param of record.parameters) {
+				paramValues[param] = await MiscUtils.prompt(`Enter value for parameter '${param}': `);
+			}
+		}
+
+		// resolve paths
+		path = FileUtils.resolveFilePaths([ path ])[0];
+
+		if(record.type == SnippetType.File) {
+			const localFilePath: string = SnippetUtils.getFileUnderSnippet(key, record.structure.filename!);
+			let shouldOverwrite: boolean = false;
+			const fileExists: boolean = FileUtils.doesFileExist(path);
+
+			if(fileExists && !overwrite) {
+				shouldOverwrite = ((await MiscUtils.prompt(`Overwrite (Y/N)? `)).toLowerCase() == 'y');
+			}
+
+			if(overwrite || shouldOverwrite) {
+				if((!fileExists || FileUtils.deleteFile(path)) && FileUtils.copyFile(localFilePath, path)) {
+					Logger.success(`file extracted to: ${path}`);
+					return true;
+				} else {
+					Logger.error("could not extract file to destination");
+					return false;
+				}
+			}
+
+			return true;
+		} else if(record.type == SnippetType.MultiFile) {
+			return RecallSnippet.extractDirectoryTemplate(key, path, overwrite, paramValues);
+		} else if(record.type == SnippetType.Directory) {
+			return RecallSnippet.extractDirectoryTemplate(key, path, overwrite, paramValues);
+		} else {
+			Logger.error("can only use snippets of type file/multi-file/directory/github-template");
+			return false;
+		}
+	}
+
+	// ------------------------------------------------------
+
+	private static extractMultiFileTemplate(key: string, path: string, overwrite: boolean, paramValues: Record<string, string>): boolean {
+		// TODO: add code
+		return true;
+	}
+
+	private static extractDirectoryTemplate(key: string, path: string, overwrite: boolean, paramValues: Record<string, string>): boolean {
+		// TODO: add code
+		return true;
 	}
 }

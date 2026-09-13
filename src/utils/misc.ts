@@ -17,6 +17,8 @@ import { execSync } from 'child_process';
 import { Config } from "./config.js";
 import { promisify } from "util";
 import { Settings } from "../core/settings.js";
+import * as readline from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
 
 const execPromisified = promisify(exec);
 
@@ -248,5 +250,10 @@ export class MiscUtils {
 		}
 	
 		return matches;
+	}
+
+	static async prompt(question: string): Promise<string> {
+		const rl = readline.createInterface({ input, output });
+		return (await rl.question(question)).trim();
 	}
 }

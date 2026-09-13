@@ -19,8 +19,6 @@ import { Config } from '../utils/config.js';
 import { MiscUtils } from '../utils/misc.js';
 import { MiscSnippetManagement } from './misc.js';
 import { SnippetUtils } from '../utils/snippet.js';
-import * as readline from 'node:readline/promises';
-import { stdin as input, stdout as output } from 'node:process';
 
 export class SaveSnippet {
 	static async saveTextFromFile(key: string, filePath: string | null = null, description: string | null = null): Promise<boolean> {
@@ -220,9 +218,9 @@ export class SaveSnippet {
 		}
 
 		if(record.type == SnippetType.URL) {
-			const rl = readline.createInterface({ input, output });
 			console.log(`Current URL: ${snippet.trim()}`);
-			const newURL = (await rl.question('Enter new URL (press Enter to abort): ')).trim();
+			
+			const newURL = await MiscUtils.prompt('Enter new URL (press Enter to abort): ');
 			
 			if(newURL.length == 0) {
 				Logger.success("update aborted");

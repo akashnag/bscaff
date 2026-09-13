@@ -14,7 +14,8 @@
 import { SaveSnippet } from './commands/save.js';
 import { Command } from 'commander';
 
-import pkg from '../package.json' with { type: 'json' };import { Logger } from './utils/logger.js';
+import pkg from '../package.json' with { type: 'json' };
+import { Logger } from './utils/logger.js';
 import { RecallSnippet } from './commands/recall.js';
 import { MiscSnippetManagement } from './commands/misc.js';
 import { Config } from './utils/config.js';
