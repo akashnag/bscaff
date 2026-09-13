@@ -21,7 +21,7 @@ import { MiscSnippetManagement } from './misc.js';
 import { SnippetUtils } from '../utils/snippet.js';
 
 export class SaveSnippet {
-	static async saveTextFromFile(key: string, filePath: string): Promise<boolean> {
+	static async saveTextFromFile(key: string, filePath: string, description: string | null = null): Promise<boolean> {
 		const store = new Store();
 
 		if(store.doesSnippetKeyExist(key)) {
@@ -30,30 +30,36 @@ export class SaveSnippet {
 		}
 		
 		const snippet = await FileUtils.readSnippetFromFile(filePath);
-		if(!snippet) return false;
+		if(!snippet) {
+			Logger.error("cannot read file: ensure it exists, is a text file and you have read permissions");
+			return false;
+		}
 
+		const fileType = MiscUtils.getFileType(filePath, true, "txt");
+		
 		SnippetUtils.createSnippetDirectory(key);
-		SnippetUtils.writeContentToSnippetFile(snippet, key);
+		SnippetUtils.writeContentToSnippetFile(snippet, key, `${Config.SNIPPET_TEXT_FILE}${fileType}`);
 
 		const structure: SnippetStructure = {
-			filename: Config.SNIPPET_TEXT_FILE,
+			filename: `${Config.SNIPPET_TEXT_FILE}${fileType}`,
 			type: SnippetStructureItemType.File,
 			loc: MiscUtils.countLOC(snippet),
 			children: null
 		};
 
-		store.saveSnippet(
-			key,
-			SnippetType.Text,
-			structure
-		);
+		store.saveSnippet({
+			key: key,
+			description: description,
+			type: SnippetType.Text,
+			structure: structure
+		});
 
 		store.update();
 		Logger.success("snippet saved");
 		return true;
 	}
 
-	static async saveFile(key: string, filePath: string): Promise<boolean> {
+	static async saveFile(key: string, filePath: string, description: string | null = null): Promise<boolean> {
 		const store = new Store();
 
 		if(store.doesSnippetKeyExist(key)) {
@@ -81,15 +87,27 @@ export class SaveSnippet {
 			children: null
 		};
 
-		store.saveSnippet(
-			key,
-			SnippetType.Text,
-			structure
-		);
+		store.saveSnippet({
+			key: key,
+			description: description,
+			type: SnippetType.File,
+			structure: structure
+		});
 
 		store.update();
 		Logger.success("snippet saved");
 		return true;
+	}
+
+	static async saveLiveInput(key: string, fileType: string = "txt", description: string | null = null): Promise<boolean> {
+		const path = MiscUtils.createRandomFileAndOpenInEditor(fileType);
+		if(!path) {
+			Logger.error("could not launch text editor");
+			return false;
+		}
+		const success = await SaveSnippet.saveTextFromFile(key, path, description);
+		if(success) return FileUtils.deleteFile(path);
+		return false;
 	}
 
 	static async saveDirectory(): Promise<boolean> {
@@ -98,11 +116,6 @@ export class SaveSnippet {
 	}
 
 	static async saveMultipleFiles(): Promise<boolean> {
-		// TODO: add code
-		return false;
-	}
-
-	static async saveLiveInput(): Promise<boolean> {
 		// TODO: add code
 		return false;
 	}

@@ -48,12 +48,12 @@ export class SnippetUtils {
 		return true;
 	}
 
-	static writeContentToSnippetFile(content: string, key: string, filePath: string = Config.SNIPPET_TEXT_FILE): boolean {
+	static writeContentToSnippetFile(content: string, key: string, filePath: string): boolean {
 		FileUtils.writeTextFile(SnippetUtils.getFileUnderSnippet(key, filePath), content);
 		return true;
 	}
 
-	static async readContentFromSnippetFile(key: string, filePath: string = Config.SNIPPET_TEXT_FILE): Promise<string | null> {
+	static async readContentFromSnippetFile(key: string, filePath: string): Promise<string | null> {
 		return await FileUtils.readSnippetFromFile(SnippetUtils.getFileUnderSnippet(key, filePath));
 	}
 }

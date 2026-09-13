@@ -41,6 +41,15 @@ export class FileUtils {
 		}
 	}
 
+	static deleteFile(filePath: string): boolean {
+		try {
+			fs.unlinkSync(filePath);
+			return true;
+		} catch(error) {
+			return false;
+		}
+	}
+
 	static async isTextFile(filePath: string): Promise<boolean> {
 		try {
 			const isBinary = await isBinaryFile(filePath);

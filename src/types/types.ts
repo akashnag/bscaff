@@ -15,7 +15,8 @@ export enum SnippetType {
 	Text = "TEXT",
 	Directory = "DIRECTORY",
 	File = "FILE",
-	MultiFile = "MULTI_FILE"
+	MultiFile = "MULTI_FILE",
+	URL = "URL"							// file saved as <Config.SNIPPET_TEXT_FILE>.url
 }
 
 export enum SnippetStructureItemType {
@@ -33,9 +34,17 @@ export interface SnippetStructure {
 
 export interface SnippetRecord {
 	key: string;
+	description: string | null;
 	type: SnippetType;
 	createdAt: Date;
 	modifiedAt: Date;
+	structure: SnippetStructure;
+}
+
+export interface SnippetInfo {
+	key: string;
+	description: string | null;
+	type: SnippetType;
 	structure: SnippetStructure;
 }
 

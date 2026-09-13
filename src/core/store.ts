@@ -11,9 +11,10 @@
  * GNU General Public License for more details.
  */
 
-import { SnippetType, SnippetRecord, SnippetStructure } from '../types/types.js';
+import { SnippetType, SnippetRecord, SnippetStructure, SnippetInfo } from '../types/types.js';
 import { Config } from '../utils/config.js';
 import { FileUtils } from '../utils/file-utils.js';
+import { SnippetUtils } from '../utils/snippet.js';
 
 export class Store {
 	private snippetsList: SnippetRecord[];
@@ -45,11 +46,13 @@ export class Store {
 		return this.snippetsList.some(record => (record.key === key));
 	}
 
-	saveSnippet(key: string, type: SnippetType, structure: SnippetStructure): boolean {
+	saveSnippet(info: SnippetInfo): boolean {
+		const { key, type, structure, description } = info;
 		if(this.doesSnippetKeyExist(key)) return false;
 
 		const record: SnippetRecord = {
 			key: key,
+			description: description,
 			type: type,
 			createdAt: new Date(),
 			modifiedAt: new Date(),
@@ -77,13 +80,13 @@ export class Store {
 	// ---------------- I/O methods -------------------
 
 	static writeSnippetsList(snippets: SnippetRecord[]): void {
-        const filePath = Config.getSnippetsListDBPath();
+        const filePath = SnippetUtils.getSnippetsListDBPath();
         const text = JSON.stringify(snippets, null, 2);
         FileUtils.writeTextFile(filePath, text);
     }
 
 	static readSnippetsList(): SnippetRecord[] | null {
-		const filePath = Config.getSnippetsListDBPath();
+		const filePath = SnippetUtils.getSnippetsListDBPath();
 		const text = FileUtils.readTextFile(filePath);
 		if(text) {
 			const data: SnippetRecord[] = JSON.parse(text);

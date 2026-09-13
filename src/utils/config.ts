@@ -18,7 +18,7 @@ import fs from 'node:fs/promises';
 export class Config {
 	static readonly DIRECTORY_NAME: string = '.bscaff';
 	static readonly SNIPPET_DB_FILE: string = 'db.json';
-	static readonly SNIPPET_TEXT_FILE: string = 'snippetText.snippet';
+	static readonly SNIPPET_TEXT_FILE: string = 'snippet';
 
 	static getStoragePath(additional: string[] | null = null): string {
 		// return base storage directory (e.g., ~/.bscaff)

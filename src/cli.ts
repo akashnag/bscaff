@@ -33,24 +33,31 @@ export class CLI {
 			.version(pkg.version)
 
 			.option('-k, --key <key>', 'key for the snippet')
+			.option('--desc <description>', 'description of the snippet (in double-quotes)')
 
-			.option('-sd, --save-dir <path>', 'saves a snapshot of the directory specified by path')
-			.option('-sm, --save-multi <files...>', 'saves a snapshot of the files listed')
-			.option('-st, --save-text <file>', 'saves a snapshot of the text contained in the file')
-			.option('-sf, --save-file <file>', 'saves a snapshot of the file')
-			.option('-si, --save-input [file_type]', 'saves a snapshot given as input')
-
-			.option('-ep, --extract-to-path <path>', 'extracts a saved snapshot to the specified path')
-			.option('-ec, --extract-to-memory', 'copies a saved snapshot to clipboard')
+			.option('--save-dir <path>', 'saves a snapshot of the directory specified by path')
+			.option('--save-multi <files...>', 'saves a snapshot of the files listed')
+			.option('--save-text <file>', 'saves a snapshot of the text contained in the file')
+			.option('--save-file <file>', 'saves a snapshot of the file')
+			.option('--save-input [file_type]', 'saves a snapshot given as input, file_type is the extension (without dot)')
+			.option('--save-url <url>', 'saves a URL')
+			.option('--save-gh-template <repo_url>', 'saves a template from github')
+			
+			.option('-d, --display', 'display the contents of the saved text/file')
+			.option('-x, --extract <path>', 'extracts a saved snapshot to the specified path')
+			.option('-c, --copy', 'copies a saved snapshot to clipboard')
+			.option('-e, --edit', 'opens a saved file/text for editing')
+			.option('-o, --open', 'opens the saved URL in the browser')
 			.option('-a, --append <path>', 'adds the text of a saved snapshot to the end of the file specified by path')
 			.option('-p, --prepend <path>', 'adds the text of a saved snapshot to the beginning of the file specified by path')
-			.option('-o, --overwrite', 'force overwrite if destination file/directory exists')
+			.option('--overwrite', 'force overwrite if destination file/directory exists')
 
 			.option('-l, --list [relative_path]', 'lists down the structure of the saved snapshot (or the text of the file if path mentioned)')
 			.option('-r, --rename <new_key>', 'updates a snippet key to the new_key')
-			.option('-d, --delete', 'removes a snippet from record')
+			.option('--delete', 'removes a snippet from record')
 
 			.option('-q, --quiet', 'works silently without printing anything to screen')
+			.option('-s, --settings', 'opens bscaff settings for editing')
 			.option('-h, --help', 'displays this help');
 	}
 
@@ -70,24 +77,80 @@ export class CLI {
 
 		if(options.quiet) Logger.setSilentMode();
 
-		if(!options.key) {
+		if(!options.key && !(options.list || options.settings)) {
 			Logger.error("Missing key");
 			return 1;
 		}
 		
 		let retVal: boolean = true;
 
-		if(options.saveText) {
-			retVal = await SaveSnippet.saveTextFromFile(options.key, options.saveText);
+		if(options.saveDir) {
+			// TODO: add code
+
+		} else if(options.saveMulti) {
+			// TODO: add code
+
+		} else if(options.saveText) {
+			retVal = await SaveSnippet.saveTextFromFile(
+						options.key, 
+						options.saveText, 
+						options.desc
+					);
 		} else if(options.saveFile) {
-			retVal = await SaveSnippet.saveFile(options.key, options.saveFile);
-		} else if(options.extractToMemory) {
+			retVal = await SaveSnippet.saveFile(
+						options.key, 
+						options.saveFile,
+						options.desc
+					);
+		} else if(options.saveInput) {
+			retVal = await SaveSnippet.saveLiveInput(
+						options.key, 
+						options.saveInput === true ? undefined : options.saveInput,
+						options.desc
+					);
+		} else if(options.saveUrl) {
+			// TODO: add code
+					
+		} else if(options.saveGhTemplate) {
+			// TODO: add code
+			
+		} else if(options.display) {
+			// TODO: add code
+			
+		} else if(options.extract) {
+			// TODO: add code, check overwrite flag
+			
+		} else if(options.copy) {
 			retVal = await RecallSnippet.copySnippetToMemory(options.key);
-		} else if(options.delete) {
-			retVal = await MiscSnippetManagement.deleteSnippet(options.key);
+		} else if(options.edit) {
+			// TODO: add code
+			
+		} else if(options.open) {
+			// TODO: add code
+			
+		} else if(options.append) {
+			// TODO: add code
+			
+		} else if(options.prepend) {
+			// TODO: add code
+		
+		} else if(options.list) {
+			// TODO: add code
+			if(options.key) {
+
+			} else {
+
+			}
 		} else if(options.rename) {
 			retVal = await MiscSnippetManagement.renameSnippet(options.key, options.rename);
+		} else if(options.delete) {
+			retVal = await MiscSnippetManagement.deleteSnippet(options.key);
+		} else if(options.settings) {
+			// TODO: add code
+		
+
 		}
+		
 
 		return retVal ? 0 : 1;
 	}
