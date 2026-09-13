@@ -68,8 +68,39 @@ export class FileUtils {
 	}
 
 	static writeTextFile(filePath: string, content: string): boolean {
-        try {
+        if(!content) return false;
+		try {
             fs.writeFileSync(filePath, content, 'utf-8');
+            return true;
+        } catch(error) {
+            return false;
+        }
+    }
+
+	/**
+     * Appends content to the end of a file.
+     * Creates the file if it does not already exist.
+     */
+    static appendToTextFile(filePath: string, content: string): boolean {
+        try {
+            fs.appendFileSync(filePath, content, 'utf-8');
+            return true;
+        } catch(error) {
+            return false;
+        }
+    }
+
+    /**
+     * Prepends content to the beginning of a file.
+     * If the file doesn't exist, it creates a new file with the content.
+     */
+    static prependToTextFile(filePath: string, content: string): boolean {
+        try {
+            let existingContent = '';
+            if (fs.existsSync(filePath)) {
+                existingContent = fs.readFileSync(filePath, 'utf-8');
+            }
+            fs.writeFileSync(filePath, content + existingContent, 'utf-8');
             return true;
         } catch(error) {
             return false;

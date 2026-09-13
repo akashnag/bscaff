@@ -15,6 +15,9 @@ import { FileUtils } from "./file-utils.js";
 import { exec, spawnSync } from 'child_process';
 import { execSync } from 'child_process';
 import { Config } from "./config.js";
+import { promisify } from "util";
+
+const execPromisified = promisify(exec);
 
 export class MiscUtils {
 	static getPlatform(): string {
@@ -48,6 +51,14 @@ export class MiscUtils {
 		return MiscUtils.countLOC(data);
 	}
 
+	/**
+	 * Given a path to a file, returns the extension of that file
+	 * 
+	 * @param filePath - path to the file
+	 * @param includeDot - includes the dot in the returned extension if true
+	 * @param defaultExtension - returns this extension if the file does not have an extension
+	 * @returns the file extension
+	 */
 	static getFileType(filePath: string, includeDot: boolean = true, defaultExtension: string = "txt"): string {
 		const pos = filePath.lastIndexOf(".");
 		if(pos < 0) {
@@ -67,6 +78,13 @@ export class MiscUtils {
 		return path;
 	}
 
+	/**
+	 * Generates a random integer between min and max (both inclusive)
+	 * 
+	 * @param min - the minimum integer that could be generated
+	 * @param max - the maximum integer that could be generated
+	 * @returns the random integer that was generated
+	 */
 	static getRandomInt(min: number, max: number): number {
 		// Ensure inputs are integers
 		const minCeil = Math.ceil(min);
@@ -77,7 +95,47 @@ export class MiscUtils {
 	}
 
 	/**
+	 * Finds the name of the function which called the current function
+	 * 
+	 * @returns name of the caller function
+	 */
+	static getCallerName(): string | null {
+		const stack = new Error().stack;
+		if (!stack) return null;
+	
+		// Split stack trace into lines
+		const lines = stack.split('\n');
+		
+		// Line 0: Error message
+		// Line 1: getCallerName (this function)
+		// Line 2: The current function
+		// Line 3: The caller of the current function
+		const callerLine = lines[3]; 
+		if (!callerLine) return null;
+	
+		// Extract function name using regex
+		const match = callerLine.match(/at\s+([^\s]+)/);
+		return match ? match[1] : 'anonymous / global';
+	}
+
+	/**
+	 * Executes an arbitrary system command
+	 * 
+	 * @param command - the command (with args) to execute
+	 * @returns true if the command was successfully executed, false otherwise
+	 */
+	static async executeCommand(command: string): Promise<boolean> {
+		try {
+			const { stdout, stderr } = await execPromisified(command);
+			return true;
+		} catch (error) {
+			return false;
+		}
+	}
+	
+	/**
 	 * Executes an OS-specific script file
+	 * 
 	 * @param scriptPath The full path to the location of the script file
 	 * @param scriptWorkingDir The working directory that should be considered by the script
 	 */
@@ -114,7 +172,7 @@ export class MiscUtils {
      * 
      * @returns true if opened and closed successfully, false on failure.
      */
-    private static openFileInEditor(filePath: string, preferredTerminalEditor: string = 'nano'): boolean {
+    static openFileInEditor(filePath: string, preferredTerminalEditor: string = 'nano'): boolean {
         const isTerminalAvailable = MiscUtils.isCommandAvailable(preferredTerminalEditor);
 
         if (isTerminalAvailable) {

@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { MiscUtils } from "./misc.js";
+
 export class Logger {
 	static silentMode: boolean = false;
 
@@ -29,8 +31,8 @@ export class Logger {
 	static warn(message: string): void {
 		if(!Logger.silentMode) console.warn(`[WARN] ${message}`);
 	}
-  
+	
 	static error(message: string, error?: unknown): void {
-		if(!Logger.silentMode) console.error(`[ERROR] ${message}`, error ?? '');
+		if(!Logger.silentMode) console.error(`[ERROR] ${MiscUtils.getCallerName()}: ${message}`, error ?? '');
 	}
 }

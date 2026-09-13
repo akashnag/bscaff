@@ -17,42 +17,47 @@ import { Command } from 'commander';
 import pkg from '../package.json' with { type: 'json' };import { Logger } from './utils/logger.js';
 import { RecallSnippet } from './commands/recall.js';
 import { MiscSnippetManagement } from './commands/misc.js';
+import { Config } from './utils/config.js';
+import { MiscUtils } from './utils/misc.js';
 
 export class CLI {
+	// shared Commander object
 	private readonly program: Command;
 
+	// constructor to initialize Commander
 	constructor() {
 		this.program = new Command();
 		this.defineArgs();
 	}
 
-	private defineArgs() {
+	// define the command line args we accept
+	private defineArgs(): void {
 		this.program
-			.name(pkg.name)
+			.name("bscaff")
 			.description(pkg.description)
 			.version(pkg.version)
 
 			.option('-k, --key <key>', 'key for the snippet')
 			.option('--desc <description>', 'description of the snippet (in double-quotes)')
 
-			.option('--save-dir <path>', 'saves a snapshot of the directory specified by path')
-			.option('--save-multi <files...>', 'saves a snapshot of the files listed')
+			//.option('--save-dir <path>', 'saves a snapshot of the directory specified by path')
+			//.option('--save-multi <files...>', 'saves a snapshot of the files listed')
 			.option('--save-text <file>', 'saves a snapshot of the text contained in the file')
 			.option('--save-file <file>', 'saves a snapshot of the file')
 			.option('--save-input [file_type]', 'saves a snapshot given as input, file_type is the extension (without dot)')
 			.option('--save-url <url>', 'saves a URL')
-			.option('--save-gh-template <repo_url>', 'saves a template from github')
+			//.option('--save-gh-template <repo_url>', 'saves a template from github')
 			
 			.option('-d, --display', 'display the contents of the saved text/file')
-			.option('-x, --extract <path>', 'extracts a saved snapshot to the specified path')
+			//.option('-x, --extract <path>', 'extracts a saved snapshot to the specified path')
 			.option('-c, --copy', 'copies a saved snapshot to clipboard')
 			.option('-e, --edit', 'opens a saved file/text for editing')
 			.option('-o, --open', 'opens the saved URL in the browser')
-			.option('-a, --append <path>', 'adds the text of a saved snapshot to the end of the file specified by path')
-			.option('-p, --prepend <path>', 'adds the text of a saved snapshot to the beginning of the file specified by path')
-			.option('--overwrite', 'force overwrite if destination file/directory exists')
+			.option('-a, --append <path...>', 'adds the text of a saved snapshot to the end of the file(s) specified by path')
+			.option('-p, --prepend <path...>', 'adds the text of a saved snapshot to the beginning of the file(s) specified by path')
+			//.option('--overwrite', 'force overwrite if destination file/directory exists')
 
-			.option('-l, --list [relative_path]', 'lists down the structure of the saved snapshot (or the text of the file if path mentioned)')
+			//.option('-l, --list [relative_path]', 'lists down the structure of the saved snapshot (or the text of the file if path mentioned)')
 			.option('-r, --rename <new_key>', 'updates a snippet key to the new_key')
 			.option('--delete', 'removes a snippet from record')
 
@@ -61,23 +66,25 @@ export class CLI {
 			.option('-h, --help', 'displays this help');
 	}
 
+	// display to the user the command-line flags we accept
 	showHelp(): void {
 		console.log(`${pkg.name} ${pkg.version}`);
 		this.program.outputHelp();
 	}
 
+	// Parses command line args passed to the program, and calls the appropriate helper function to perform the task
 	async parseArgsAndExecute(args: string[]): Promise<number> {
 		this.program.parse(args);
 		const options = this.program.opts();
 
-		if(options.help) {
+		if(options.help || args.length == 2) {
 			this.showHelp();
 			return 0;
 		}
 
 		if(options.quiet) Logger.setSilentMode();
 
-		if(!options.key && !(options.list || options.settings)) {
+		if((!options.key || (options.key === true)) && !(options.list || options.settings)) {
 			Logger.error("Missing key");
 			return 1;
 		}
@@ -99,7 +106,7 @@ export class CLI {
 		} else if(options.saveFile) {
 			retVal = await SaveSnippet.saveFile(
 						options.key, 
-						options.saveFile,
+						options.saveFile === true ? undefined : options.saveFile,
 						options.desc
 					);
 		} else if(options.saveInput) {
@@ -109,31 +116,37 @@ export class CLI {
 						options.desc
 					);
 		} else if(options.saveUrl) {
-			// TODO: add code
-					
+			retVal = await SaveSnippet.saveURL(
+				options.key, 
+				options.saveUrl === true ? undefined : options.saveUrl,
+				options.desc
+			);
 		} else if(options.saveGhTemplate) {
 			// TODO: add code
 			
 		} else if(options.display) {
-			// TODO: add code
-			
+			retVal = await RecallSnippet.displaySnippet(options.key);
 		} else if(options.extract) {
 			// TODO: add code, check overwrite flag
 			
 		} else if(options.copy) {
 			retVal = await RecallSnippet.copySnippetToMemory(options.key);
 		} else if(options.edit) {
-			// TODO: add code
-			
+			retVal = await SaveSnippet.editSnippetContent(options.key);
 		} else if(options.open) {
-			// TODO: add code
-			
+			retVal = await RecallSnippet.openURLInBrowser(options.key);
 		} else if(options.append) {
-			// TODO: add code
-			
+			retVal = await RecallSnippet.appendOrPrependToFile(
+				options.key,
+				"append",
+				options.append === true ? [] : options.append
+			);
 		} else if(options.prepend) {
-			// TODO: add code
-		
+			retVal = await RecallSnippet.appendOrPrependToFile(
+				options.key,
+				"prepend",
+				options.prepend === true ? [] : options.prepend
+			);
 		} else if(options.list) {
 			// TODO: add code
 			if(options.key) {
@@ -146,11 +159,11 @@ export class CLI {
 		} else if(options.delete) {
 			retVal = await MiscSnippetManagement.deleteSnippet(options.key);
 		} else if(options.settings) {
-			// TODO: add code
-		
-
+			retVal = MiscUtils.openFileInEditor(
+				Config.getStoragePath([ Config.SETTINGS_FILE ])
+			);
+			if(retVal) Logger.success("settings updated");
 		}
-		
 
 		return retVal ? 0 : 1;
 	}

@@ -14,11 +14,20 @@
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
+import { FileUtils } from './file-utils.js';
 
 export class Config {
 	static readonly DIRECTORY_NAME: string = '.bscaff';
 	static readonly SNIPPET_DB_FILE: string = 'db.json';
 	static readonly SNIPPET_TEXT_FILE: string = 'snippet';
+	static readonly SETTINGS_FILE: string = "settings.json";
+
+	static readonly DEFAULT_SETTINGS = {
+		"editorPreference": "terminal",
+		"terminalEditor": "nano",
+		"guiEditor": "gedit",
+		"browser": "google-chrome"
+	};
 
 	static getStoragePath(additional: string[] | null = null): string {
 		// return base storage directory (e.g., ~/.bscaff)
@@ -30,8 +39,13 @@ export class Config {
 
 	static async ensureStorageDirectoryExists(): Promise<boolean> {
 		const storagePath = Config.getStoragePath();
+		const settingsFile = Config.getStoragePath([ Config.SETTINGS_FILE ]);
+
 		try {
 			await fs.mkdir(storagePath, { recursive: true });
+			if(!FileUtils.doesFileExist(settingsFile)) {
+				return FileUtils.writeTextFile(settingsFile, JSON.stringify(Config.DEFAULT_SETTINGS, null, 2));
+			}
 			return true;
 		} catch (err: any) {
 			return false;
