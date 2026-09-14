@@ -340,7 +340,50 @@ export class RecallSnippet {
 	}
 
 	private static async extractDirectoryTemplate(key: string, record: SnippetRecord, path: string, overwrite: boolean, paramValues: Record<string, string>): Promise<boolean> {
-		// TODO: add code
+		// get root directory
+		const rootDirName: string = record.structure.filename!;
+		const concretizedRootDirName = MiscUtils.replacePlaceholdersInText(rootDirName, paramValues);
+		const sourceRootDirPath: string = Config.formPath([ SnippetUtils.getSnippetDirectory(key), rootDirName ]);
+		const destRootDirPath: string = Config.formPath([ path, rootDirName ]);
+		
+		if(FileUtils.doesDirectoryExist(destRootDirPath) && !overwrite) {
+			const shouldOverwrite = ((await MiscUtils.prompt(`Overwrite '${concretizedRootDirName}' and any of its contents (Y/N)? `)).toLowerCase() == 'y');
+			if(!shouldOverwrite) return true;
+		} else {
+			// create directory parent
+			FileUtils.createDirectory(path);
+		}
+
+		// copy the directory as-is (without replacing params)
+		FileUtils.copyDirSync(sourceRootDirPath, destRootDirPath);
+
+		// Recursively process files and folders to replace placeholders
+        function processPath(currentPath: string): void {
+            // Read entries before processing
+            const entries = FileUtils.readDirectoryContents(currentPath);
+
+            for (const entry of entries) {
+                const entryPath = Config.formPath([ currentPath, entry ]);
+
+                if (FileUtils.doesDirectoryExist(entry)) {
+                    // Recurse into subdirectories first (bottom-up traversal)
+                    processPath(entryPath);
+                    // Rename the directory using your library function
+                    MiscUtils.replacePlaceholdersInFile('directory', entryPath, paramValues);
+                } else if (FileUtils.doesFileExist(entry)) {
+                    // Rename file AND replace contents
+                    MiscUtils.replacePlaceholdersInFile('file', entryPath, paramValues);
+                }
+            }
+        }
+
+        // Process all nested items inside the target root directory
+        processPath(destRootDirPath);
+
+        // Finally, rename the root directory itself if needed
+        MiscUtils.replacePlaceholdersInFile('directory', destRootDirPath, paramValues);
+
+		Logger.success("directory extracted");
 		return true;
 	}
 }

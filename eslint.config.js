@@ -16,24 +16,24 @@ export default tseslint.config(
 	{
 		files: ["**/*.ts"],
 		languageOptions: {
-		ecmaVersion: "latest",
-		sourceType: "module",
-		globals: {
-			...globals.node,
-		},
-		parserOptions: {
-			projectService: true,
-			tsconfigRootDir: import.meta.dirname,
-		},
+			ecmaVersion: "latest",
+			sourceType: "module",
+			globals: {
+				...globals.node,
+			},
+			parserOptions: {
+				projectService: true,
+				tsconfigRootDir: import.meta.dirname,
+			},
 		},
 		rules: {
-		// Custom rule overrides
-		"@typescript-eslint/no-explicit-any": "warn",
-		"@typescript-eslint/no-unused-vars": [
-			"warn",
-			{ argsIgnorePattern: "^_" },
-		],
-		"no-console": "off",
+			// Custom rule overrides
+			"@typescript-eslint/no-explicit-any": "warn",
+			"@typescript-eslint/no-unused-vars": [
+				"warn",
+				{ argsIgnorePattern: "^_" },
+			],
+			"no-console": "off",
 		},
 	}
 );
