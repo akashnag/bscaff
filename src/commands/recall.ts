@@ -13,7 +13,7 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
-import { SnippetType } from "../types/types.js";
+import { SnippetRecord, SnippetType } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import { FileUtils } from "../utils/file-utils.js";
 import { Logger } from "../utils/logger.js";
@@ -278,7 +278,7 @@ export class RecallSnippet {
 				shouldOverwrite = ((await MiscUtils.prompt(`Overwrite (Y/N)? `)).toLowerCase() == 'y');
 			}
 
-			if(overwrite || shouldOverwrite) {
+			if(!fileExists || overwrite || shouldOverwrite) {
 				if((!fileExists || FileUtils.deleteFile(path)) && FileUtils.copyFile(localFilePath, path)) {
 					Logger.success(`file extracted to: ${path}`);
 					return true;
@@ -286,13 +286,15 @@ export class RecallSnippet {
 					Logger.error("could not extract file to destination");
 					return false;
 				}
+			} else {
+				Logger.info("skipping");
 			}
 
 			return true;
 		} else if(record.type == SnippetType.MultiFile) {
-			return RecallSnippet.extractDirectoryTemplate(key, path, overwrite, paramValues);
+			return await RecallSnippet.extractMultiFileTemplate(key, record, path, overwrite, paramValues);
 		} else if(record.type == SnippetType.Directory) {
-			return RecallSnippet.extractDirectoryTemplate(key, path, overwrite, paramValues);
+			return await RecallSnippet.extractDirectoryTemplate(key, path, overwrite, paramValues);
 		} else {
 			Logger.error("can only use snippets of type file/multi-file/directory/github-template");
 			return false;
@@ -301,12 +303,43 @@ export class RecallSnippet {
 
 	// ------------------------------------------------------
 
-	private static extractMultiFileTemplate(key: string, path: string, overwrite: boolean, paramValues: Record<string, string>): boolean {
-		// TODO: add code
+	private static async extractMultiFileTemplate(key: string, record: SnippetRecord, path: string, overwrite: boolean, paramValues: Record<string, string>): Promise<boolean> {
+		if(!record.structure.children) return false;
+		
+		const filesToExtract: { filename: string; path: string }[] = [];
+		for(let i = 0; i < record.structure.children.length; ++i) {
+			filesToExtract.push({
+				filename: record.structure.children[i].filename!,
+				path: SnippetUtils.getFileUnderSnippet(key, record.structure.children[i].filename!)
+			});
+		}
+		
+		for(let i = 0; i < filesToExtract.length; ++i) {
+			const destPath: string = Config.formPath([ path, filesToExtract[i].filename ]);
+			const fileExists: boolean = FileUtils.doesFileExist(destPath);
+			let shouldOverwrite: boolean = false;
+
+			if(fileExists && !overwrite) {
+				shouldOverwrite = ((await MiscUtils.prompt(`Overwrite '${filesToExtract[i].filename}' (Y/N)? `)).toLowerCase() == 'y');
+			}
+
+			if(!fileExists || overwrite || shouldOverwrite) {
+				if((!fileExists || FileUtils.deleteFile(destPath)) && FileUtils.copyFile(filesToExtract[i].path, destPath)) {
+					Logger.success(`file extracted to: ${path}`);
+					return true;
+				} else {
+					Logger.error("could not extract file to destination");
+					return false;
+				}
+			} else {
+				Logger.info("skipping");
+			}
+		}
+
 		return true;
 	}
 
-	private static extractDirectoryTemplate(key: string, path: string, overwrite: boolean, paramValues: Record<string, string>): boolean {
+	private static async extractDirectoryTemplate(key: string, path: string, overwrite: boolean, paramValues: Record<string, string>): Promise<boolean> {
 		// TODO: add code
 		return true;
 	}

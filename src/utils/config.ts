@@ -31,6 +31,10 @@ export class Config {
 			return path.join(os.homedir(), Config.DIRECTORY_NAME);
 	}
 
+	static formPath(items: string[]): string {
+		return path.join(...items);
+	}
+
 	static async ensureStorageDirectoryExists(): Promise<boolean> {
 		const storagePath = Config.getStoragePath();
 		const settingsFile = Config.getStoragePath([ Config.SETTINGS_FILE ]);
