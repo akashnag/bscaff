@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { SnippetType, SnippetRecord, SnippetStructure, SnippetInfo } from '../types/types.js';
+import { SnippetRecord, SnippetInfo } from '../types/types.js';
 import { Config } from '../utils/config.js';
 import { FileUtils } from '../utils/file-utils.js';
 import { SnippetUtils } from '../utils/snippet.js';
@@ -59,6 +59,13 @@ export class Store {
 			structure: structure,
 			parameters: info.parameters
 		};
+
+		if(info.triggers) {
+			record.triggers = {
+				preScript: info.triggers.preScript,
+				postScript: info.triggers.postScript
+			};
+		}
 
 		this.snippetsList.push(record);
 		return true;

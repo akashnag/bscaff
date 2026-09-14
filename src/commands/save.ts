@@ -350,7 +350,13 @@ export class SaveSnippet {
 		return true;
 	}
 
-	static async saveDirectory(key: string, dirPath: string | null = null, description: string | null = null): Promise<boolean> {
+	static async saveDirectory(
+		key: string, 
+		dirPath: string | null = null, 
+		description: string | null = null,
+		preExtractScriptPath: string | null = null,
+		postExtractScriptPath: string | null = null
+	): Promise<boolean> {
 		/*
 			(1) create snippet directory and copy the directory (passed in args) to under it
 			(2) SnippetRecord.structure<SnippetStructure> = { 
@@ -409,6 +415,12 @@ export class SaveSnippet {
 		const destPath = SnippetUtils.getSnippetDirectory(key);
 		FileUtils.copyDirSync(dirPath, destPath);
 
+		const triggerScripts = SaveSnippet.copyTriggerScripts(
+			key,
+			preExtractScriptPath,
+			postExtractScriptPath
+		);
+
 		const result: RecursionResult = await SaveSnippet.processDirectory(destPath);
 		
 		store.saveSnippet({
@@ -416,7 +428,11 @@ export class SaveSnippet {
 			description: description,
 			type: SnippetType.Directory,
 			structure: result.structure,
-			parameters: Array.from(result.parameters)
+			parameters: Array.from(result.parameters),
+			triggers: {
+				preScript: triggerScripts.preScript,
+				postScript: triggerScripts.postScript
+			}
 		});
 
 		store.update();
@@ -424,7 +440,13 @@ export class SaveSnippet {
 		return true;
 	}
 
-	static async cloneGitRepo(key: string, repoURL: string | null = null, description: string | null = null): Promise<boolean> {
+	static async cloneGitRepo(
+		key: string, 
+		repoURL: string | null = null, 
+		description: string | null = null,
+		preExtractScriptPath: string | null = null,
+		postExtractScriptPath: string | null = null
+	): Promise<boolean> {
 		if(!repoURL) {
 			Logger.error("git repo URL missing");
 			return false;
@@ -439,6 +461,12 @@ export class SaveSnippet {
 		
 		// create snippet directory
 		SnippetUtils.createSnippetDirectory(key);
+
+		const triggerScripts = SaveSnippet.copyTriggerScripts(
+			key,
+			preExtractScriptPath,
+			postExtractScriptPath
+		);
 
 		let repoName = repoURL.substring(1 + repoURL.lastIndexOf('/'));
 		if(repoName.endsWith('.git')) repoName = repoName.substring(repoName.length - 4);
@@ -466,7 +494,11 @@ export class SaveSnippet {
 			description: description,
 			type: SnippetType.Directory,
 			structure: result.structure,
-			parameters: Array.from(result.parameters)
+			parameters: Array.from(result.parameters),
+			triggers: {
+				preScript: triggerScripts.preScript,
+				postScript: triggerScripts.postScript
+			}
 		});
 
 		store.update();
@@ -474,7 +506,7 @@ export class SaveSnippet {
 		return true;
 	}
 
-	// -------------------------------------------------------
+	// ------------------------ [private] -------------------------------
 
 	private static async processDirectory(dirPath: string): Promise<RecursionResult> {
 		const parameters = new Set<string>();
@@ -526,5 +558,24 @@ export class SaveSnippet {
 			structure: rootStructure,
 			parameters: parameters
 		};
+	}
+
+	private static copyTriggerScripts(key: string, preExtractScript: string | null = null, postExtractScript: string | null = null): { preScript: string | null, postScript: string | null } {
+		const snippetDir = SnippetUtils.getSnippetDirectory(key);
+		const retVal: { preScript: string | null, postScript: string | null } = { preScript: null, postScript: null };
+
+		if(preExtractScript && FileUtils.doesFileExist(preExtractScript)) {
+			const fileType = MiscUtils.getFileType(preExtractScript, true, "");
+			FileUtils.copyFile(preExtractScript, Config.formPath([ snippetDir, `pre-script${fileType}` ]));
+			retVal.preScript = `pre-script${fileType}`;
+		}
+
+		if(postExtractScript && FileUtils.doesFileExist(postExtractScript)) {
+			const fileType = MiscUtils.getFileType(postExtractScript, true, "");
+			FileUtils.copyFile(postExtractScript, Config.formPath([ snippetDir, `post-script${fileType}` ]));
+			retVal.postScript = `post-script${fileType}`;
+		}
+
+		return retVal;
 	}
 }

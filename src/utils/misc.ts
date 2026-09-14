@@ -54,18 +54,11 @@ export class MiscUtils {
 		return MiscUtils.countLOC(data);
 	}
 
-	/**
-	 * Given a path to a file, returns the extension of that file
-	 * 
-	 * @param filePath - path to the file
-	 * @param includeDot - includes the dot in the returned extension if true
-	 * @param defaultExtension - returns this extension if the file does not have an extension
-	 * @returns the file extension
-	 */
+	// Given a path to a file, returns the extension of that file
 	static getFileType(filePath: string, includeDot: boolean = true, defaultExtension: string = "txt"): string {
 		const pos = filePath.lastIndexOf(".");
 		if(pos < 0) {
-			return (includeDot ? "." : "") + defaultExtension;
+			return ((includeDot && defaultExtension.trim().length > 0) ? "." : "") + defaultExtension;
 		} else {
 			return filePath.substring(pos);
 		}
@@ -81,13 +74,7 @@ export class MiscUtils {
 		return path;
 	}
 
-	/**
-	 * Generates a random integer between min and max (both inclusive)
-	 * 
-	 * @param min - the minimum integer that could be generated
-	 * @param max - the maximum integer that could be generated
-	 * @returns the random integer that was generated
-	 */
+	// Generates a random integer between min and max (both inclusive)
 	static getRandomInt(min: number, max: number): number {
 		// Ensure inputs are integers
 		const minCeil = Math.ceil(min);
@@ -97,11 +84,7 @@ export class MiscUtils {
 		return Math.floor(Math.random() * (maxFloor - minCeil + 1)) + minCeil;
 	}
 
-	/**
-	 * Finds the name of the function which called the current function
-	 * 
-	 * @returns name of the caller function
-	 */
+	// Finds the name of the function which called the current function
 	static getCallerName(): string | null {
 		const stack = new Error().stack;
 		if (!stack) return null;
@@ -121,12 +104,7 @@ export class MiscUtils {
 		return match ? match[1] : 'anonymous / global';
 	}
 
-	/**
-	 * Executes an arbitrary system command
-	 * 
-	 * @param command - the command (with args) to execute
-	 * @returns true if the command was successfully executed, false otherwise
-	 */
+	// Executes an arbitrary system command
 	static async executeCommand(command: string): Promise<boolean> {
 		try {
 			await execPromisified(command);
@@ -136,16 +114,14 @@ export class MiscUtils {
 		}
 	}
 	
-	/**
-	 * Executes an OS-specific script file
-	 * 
-	 * @param scriptPath The full path to the location of the script file
-	 * @param scriptWorkingDir The working directory that should be considered by the script
-	 */
-	static executeScript(scriptPath: string, scriptWorkingDir: string): Promise<string> {
+	// Executes an OS-specific script file
+	static executeScript(scriptPath: string, scriptWorkingDir: string, args: string = ''): Promise<string> {
 		return new Promise((resolve, reject) => {
+			const formattedArgs = args.trim() ? ` ${args.trim()}` : '';
+
 			const isWindows = (MiscUtils.getPlatform() === 'win32');
-			const command = isWindows ? `"${scriptPath}"` : `sh "${scriptPath}"`;
+			const command = isWindows ? `"${scriptPath}" ${formattedArgs}` : `sh "${scriptPath}" ${formattedArgs}`;
+			
 			exec(command, { cwd: scriptWorkingDir }, (error, stdout, stderr) => {
 				if (error) {
 				  reject(new Error(`Failed: ${error.message}\n${stderr}`));
@@ -156,9 +132,6 @@ export class MiscUtils {
 		});
 	}
 	
-	/**
-	 * Checks if a command binary is available in the system PATH
-	 */
 	private static isCommandAvailable(command: string | null): boolean {
 		if(!command) return false;
 		const checkCmd = (MiscUtils.getPlatform() === 'win32') ? `where ${command}` : `which ${command}`;
@@ -170,13 +143,8 @@ export class MiscUtils {
 		}
 	}
 
-	/**
-     * Opens a file in a terminal editor, falling back to a GUI editor if unavailable.
-     * Blocks execution until the editor is closed.
-     * 
-     * @returns true if opened and closed successfully, false on failure.
-     */
-    static openFileInEditor(filePath: string, preferredTerminalEditor: string | null = null): boolean {
+	// opens file for editing in terminal-editor or if it fails then a gui-editor (unless in settings user has set preference to gui first)
+	static openFileInEditor(filePath: string, preferredTerminalEditor: string | null = null): boolean {
         if(!preferredTerminalEditor) preferredTerminalEditor = Settings.get('terminalEditor');
 		const isTerminalAvailable = Settings.get('editorPreference') == 'terminal' ? MiscUtils.isCommandAvailable(preferredTerminalEditor!) : false;
 
@@ -195,11 +163,6 @@ export class MiscUtils {
         }
     }
 
-    /**
-     * Platform-independent GUI file launcher (blocking mode).
-     * 
-     * @returns true if opened and closed successfully, false on failure.
-     */
     private static openFileInGUIEditor(filePath: string): boolean {
         let command: string | null;
         let args: string[];
@@ -232,12 +195,7 @@ export class MiscUtils {
         }
     }
 
-	/**
-	 * Extracts all parameters enclosed within {{ and }} from a string.
-	 * 
-	 * @param filename - The target filename to search for parameters.
-	 * @returns An array of parameter names found, or an empty array if none match.
-	 */
+	// Extracts all parameters enclosed within {{ and }} from a string
 	static getParametersFromFilename(filename: string): string[] {
 		// Regex matching {{ followed by non-}} characters, capturing the inner content
 		const regex = /\{\{([^}]+)\}\}/g;
@@ -263,7 +221,7 @@ export class MiscUtils {
 		return (await rl.question(question)).trim();
 	}
 
-	static replacePlaceholdersInFile(pathType: 'directory' | 'file', filePath: string, params: Record<string, string>) {
+	static replacePlaceholdersInFile(pathType: 'directory' | 'file', filePath: string, params: Record<string, string>): string {
 		const exclusions = Settings.get('excludeFromContentModification')!.split(';');
 
 		// rename file
@@ -277,12 +235,12 @@ export class MiscUtils {
 				FileUtils.renameDirectory(filePath, newFilePath);
 		}
 
-		if(pathType == 'directory') return;
+		if(pathType == 'directory') return newFilePath;
 
 		// check if content-modification is allowed
 		for(let i = 0; i < exclusions.length; ++i) {
 			if(!exclusions[i].startsWith('*.')) continue;
-			if(filePath.toLowerCase().endsWith(exclusions[i].substring(1).toLowerCase())) return;
+			if(filePath.toLowerCase().endsWith(exclusions[i].substring(1).toLowerCase())) return newFilePath;
 		}
 
 		// perform content modification
@@ -291,5 +249,7 @@ export class MiscUtils {
 			text = MiscUtils.replacePlaceholdersInText(text, params);
 			FileUtils.writeTextFile(newFilePath, text);
 		}
+
+		return newFilePath;
 	}
 }

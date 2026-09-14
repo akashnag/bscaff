@@ -354,6 +354,15 @@ export class RecallSnippet {
 			FileUtils.createDirectory(path);
 		}
 
+		// execute pre-extraction hooks
+		RecallSnippet.executeTriggers(
+			'pre', 
+			key, 
+			path, 
+			record.triggers,
+			MiscUtils.replacePlaceholdersInText(destRootDirPath, paramValues)		// the would-be final directory (after replacing params)
+		);
+
 		// copy the directory as-is (without replacing params)
 		FileUtils.copyDirSync(sourceRootDirPath, destRootDirPath);
 
@@ -381,9 +390,41 @@ export class RecallSnippet {
         processPath(destRootDirPath);
 
         // Finally, rename the root directory itself if needed
-        MiscUtils.replacePlaceholdersInFile('directory', destRootDirPath, paramValues);
+        const renamedDestDir = MiscUtils.replacePlaceholdersInFile('directory', destRootDirPath, paramValues);
+
+		// execute post-extraction hooks
+		RecallSnippet.executeTriggers(
+			'post', 
+			key, 
+			renamedDestDir, 
+			record.triggers
+		);
 
 		Logger.success("directory extracted");
 		return true;
+	}
+
+	// ------------------------------ [private] ------------------------------
+
+	private static executeTriggers(
+		mode: 'pre' | 'post', 
+		key: string, 
+		workingDir: string, 
+		triggers: { preScript: string | null, postScript: string | null } | undefined,
+		destDir: string | undefined = undefined
+	) {
+		if(!triggers) return;
+
+		const snippetDir = SnippetUtils.getSnippetDirectory(key);
+
+		if(mode == 'pre' && triggers.preScript) {
+			const preScriptPath = Config.formPath([ snippetDir, triggers.preScript ]);
+			MiscUtils.executeScript(preScriptPath, workingDir, destDir);
+		}
+
+		if(mode == 'post' && triggers.postScript) {
+			const postScriptPath = Config.formPath([ snippetDir, triggers.postScript ]);
+			MiscUtils.executeScript(postScriptPath, workingDir);
+		}
 	}
 }

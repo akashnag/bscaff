@@ -47,7 +47,7 @@ export class CLI {
 			.option('--save-file <file>', 'saves a snapshot of the file')
 			.option('--save-input [file_type]', 'saves a snapshot given as input, file_type is the extension (without dot)')
 			.option('--save-url <url>', 'saves a URL')
-			.option('--save-gh-template <repo_url>', 'saves a template from github')
+			.option('--save-git <repo_url>', 'saves a template from a git repo')
 			
 			.option('-d, --display [relative_path]', 'display the contents of the saved text/file')
 			.option('-x, --extract <path>', 'extracts a saved snapshot to the specified path')
@@ -58,7 +58,9 @@ export class CLI {
 			.option('-p, --prepend <path...>', 'adds the text of a saved snapshot to the beginning of the file(s) specified by path')
 			
 			.option('--overwrite', 'force overwrite if destination file/directory exists')
-			
+			.option('--pre-extract <path-to-script-file>', 'executes this script before extracting a directory/git-template')
+			.option('--post-extract <path-to-script-file>', 'executes this script after extracting a directory/git-template')
+
 			.option('-l, --list', 'lists down the structure of the saved snapshot (or the text of the file if path mentioned)')
 			.option('-r, --rename <new_key>', 'updates a snippet key to the new_key')
 			.option('--delete', 'removes a snippet from record')
@@ -94,8 +96,13 @@ export class CLI {
 		let retVal: boolean = true;
 
 		if(options.saveDir) {
-			// TODO: add code
-
+			retVal = await SaveSnippet.saveDirectory(
+				options.key,
+				options.saveDir === true ? null : options.saveDir,
+				options.desc,
+				(!options.preExtract || (options.preExtract === true)) ? null : options.preExtract,
+				(!options.postExtract || (options.postExtract === true)) ? null : options.postExtract
+			);
 		} else if(options.saveMulti) {
 			retVal = await SaveSnippet.saveMultipleFiles(
 				options.key,
@@ -130,7 +137,9 @@ export class CLI {
 			retVal = await SaveSnippet.cloneGitRepo(
 				options.key,
 				options.saveGhTemplate === true ? undefined : options.saveGhTemplate,
-				options.desc
+				options.desc,
+				(!options.preExtract || (options.preExtract === true)) ? null : options.preExtract,
+				(!options.postExtract || (options.postExtract === true)) ? null : options.postExtract
 			);
 		} else if(options.display) {
 			retVal = await RecallSnippet.displaySnippet(options.key);

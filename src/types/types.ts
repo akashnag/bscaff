@@ -40,6 +40,10 @@ export interface SnippetRecord {
 	modifiedAt: Date;
 	structure: SnippetStructure;
 	parameters: string[] | null;
+	triggers?: {
+		preScript: string | null;
+		postScript: string | null;
+	}
 }
 
 export interface SnippetInfo {
@@ -48,6 +52,10 @@ export interface SnippetInfo {
 	type: SnippetType;
 	structure: SnippetStructure;
 	parameters: string[] | null;
+	triggers?: {
+		preScript: string | null;
+		postScript: string | null;
+	}
 }
 
 export interface BScaffSettings {

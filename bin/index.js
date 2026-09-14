@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  */
 
+import process from "node:process";
 import { spawnSync } from "child_process";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";

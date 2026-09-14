@@ -12,9 +12,7 @@
  */
 
 import { Store } from "../core/store.js";
-import { FileUtils } from "../utils/file-utils.js";
 import { Logger } from "../utils/logger.js";
-import { MiscUtils } from "../utils/misc.js";
 import { SnippetUtils } from "../utils/snippet.js";
 
 export class MiscSnippetManagement {
