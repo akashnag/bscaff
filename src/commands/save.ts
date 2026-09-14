@@ -14,10 +14,9 @@
 import { Store } from '../core/store.js';
 import { FileUtils } from '../utils/file-utils.js';
 import { Logger } from '../utils/logger.js';
-import { SnippetStructure, SnippetStructureItemType, SnippetType } from '../types/types.js';
+import { RecursionResult, SnippetStructure, SnippetStructureItemType, SnippetType } from '../types/types.js';
 import { Config } from '../utils/config.js';
 import { MiscUtils } from '../utils/misc.js';
-import { MiscSnippetManagement } from './misc.js';
 import { SnippetUtils } from '../utils/snippet.js';
 
 export class SaveSnippet {
@@ -351,7 +350,128 @@ export class SaveSnippet {
 	}
 
 	static async saveDirectory(key: string, dirPath: string | null = null, description: string | null = null): Promise<boolean> {
-		// TODO: add code
-		return false;
+		/*
+			(1) create snippet directory and copy the directory (passed in args) to under it
+			(2) SnippetRecord.structure<SnippetStructure> = { 
+					filename: <name of the root directory>, 
+					type: DIRECTORY, 
+					children: [
+						{
+							filename: <file #1>,
+							type: FILE,
+							children: null,
+							loc: as computed
+						},
+						{
+							filename: <file #2>,
+							type: FILE,
+							children: null,
+							loc: as computed
+						},
+						{
+							filename: <sub-directory #1>,
+							type: DIRECTORY,
+							children: [],
+							loc: null
+						},
+						...
+					], 
+					loc: null 
+				}
+		*/
+		
+		if(!dirPath) {
+			Logger.error("missing parameter: path to the directory");
+			return false;
+		}
+
+		const store = new Store();
+
+		if(store.doesSnippetKeyExist(key)) {
+			Logger.error("key already exists");
+			return false;
+		}
+		
+		// files contains possibly relative filenames, filePaths contain absolute filenames
+		dirPath = FileUtils.resolveFilePaths([dirPath])[0];
+
+		// ensure the source directory before proceeding
+		if(!FileUtils.doesDirectoryExist(dirPath)) {
+			Logger.error("directory does not exist or you don't have read permissions");
+			return false;
+		}
+
+		// create snippet directory
+		SnippetUtils.createSnippetDirectory(key);
+		
+		// copy the directory
+		const destPath = SnippetUtils.getSnippetDirectory(key);
+		FileUtils.copyDirSync(dirPath, destPath);
+
+		const result: RecursionResult = await SaveSnippet.processDirectory(destPath);
+		
+		store.saveSnippet({
+			key: key,
+			description: description,
+			type: SnippetType.Directory,
+			structure: result.structure,
+			parameters: Array.from(result.parameters)
+		});
+
+		store.update();
+		Logger.success("template saved");
+		return true;
+	}
+
+	private static async processDirectory(dirPath: string): Promise<RecursionResult> {
+		const parameters = new Set<string>();
+
+		async function walk(currentPath: string): Promise<SnippetStructure> {
+			const name = FileUtils.getFileNameFromPath(currentPath);
+
+			// Extract parameters from the current file or directory name
+			const params = MiscUtils.getParametersFromFilename(name);
+			params.forEach((param: string) => parameters.add(param));
+
+			// Check if the current item is a directory or a file
+			const isDir = FileUtils.doesDirectoryExist(currentPath);
+
+			if(isDir) {
+				// Read all direct children inside the folder
+				const entryNames = FileUtils.readDirectoryContents(currentPath);
+				const children: SnippetStructure[] = [];
+
+				for (const entryName of entryNames) {
+					const childPath = Config.formPath([ currentPath, entryName ]);
+					
+					// Recursively walk into each child item
+					const childStructure = await walk(childPath);
+					children.push(childStructure);
+				}
+
+				return {
+					filename: name,
+					type: SnippetStructureItemType.Directory,
+					loc: null,
+					children: children
+				};
+			} else {
+				const loc = await MiscUtils.countLOCFromFile(currentPath);
+				return {
+					filename: name,
+					type: SnippetStructureItemType.File,
+					loc: loc,
+					children: null
+				};
+			}
+		}
+
+		// Start the recursive traversal from root dirPath
+		const rootStructure = await walk(dirPath);
+
+		return {
+			structure: rootStructure,
+			parameters: parameters
+		};
 	}
 }

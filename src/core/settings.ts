@@ -21,7 +21,8 @@ export class Settings {
 		"editorPreference": "terminal",
 		"terminalEditor": "nano",
 		"guiEditor": (MiscUtils.getPlatform() == 'win32' ? "notepad" : "gedit"),
-		"browser": "google-chrome"
+		"browser": "google-chrome",
+		"excludeFromContentModification": "*.html;*.j2"
 	};
 
 	static settings: BScaffSettings;

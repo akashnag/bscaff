@@ -1,0 +1,39 @@
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import globals from "globals";
+
+export default tseslint.config(
+	// Ignores build outputs and non-source files
+	{
+		ignores: ["dist/**", "node_modules/**", "coverage/**"],
+	},
+
+	// Recommended base rules for JavaScript and TypeScript
+	js.configs.recommended,
+	...tseslint.configs.recommended,
+
+	// Project-specific rules and environment
+	{
+		files: ["**/*.ts"],
+		languageOptions: {
+		ecmaVersion: "latest",
+		sourceType: "module",
+		globals: {
+			...globals.node,
+		},
+		parserOptions: {
+			projectService: true,
+			tsconfigRootDir: import.meta.dirname,
+		},
+		},
+		rules: {
+		// Custom rule overrides
+		"@typescript-eslint/no-explicit-any": "warn",
+		"@typescript-eslint/no-unused-vars": [
+			"warn",
+			{ argsIgnorePattern: "^_" },
+		],
+		"no-console": "off",
+		},
+	}
+);

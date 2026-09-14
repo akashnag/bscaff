@@ -14,7 +14,6 @@
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
-import { FileUtils } from './file-utils.js';
 import { Settings } from '../core/settings.js';
 
 export class Config {
@@ -37,12 +36,11 @@ export class Config {
 
 	static async ensureStorageDirectoryExists(): Promise<boolean> {
 		const storagePath = Config.getStoragePath();
-		const settingsFile = Config.getStoragePath([ Config.SETTINGS_FILE ]);
-
+		
 		try {
 			await fs.mkdir(storagePath, { recursive: true });
 			return Settings.initSettings();
-		} catch (err: any) {
+		} catch {
 			return false;
 		}
 	}

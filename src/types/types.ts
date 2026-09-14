@@ -55,7 +55,15 @@ export interface BScaffSettings {
 	terminalEditor: string | null;
 	guiEditor: string | null;
 	browser: string | null;
+	excludeFromContentModification: string;
 }
+
+export interface RecursionResult {
+	structure: SnippetStructure;
+	parameters: Set<string>;
+}
+
+
 
 /*
 Contents of:  ~/.bscaff/

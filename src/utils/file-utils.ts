@@ -16,12 +16,31 @@ import { isBinaryFile } from 'isbinaryfile';
 import * as tar from 'tar';
 import * as path from 'path';
 import { Logger } from './logger.js';
-import { ClipboardManager } from '../core/clipboard.js';
 import { MiscUtils } from './misc.js';
 
 export class FileUtils {
 	static doesFileExist(filePath: string): boolean {
-		return fs.existsSync(filePath);
+		try {
+			return fs.statSync(filePath).isFile();
+		} catch {
+			return false;
+		}
+	}
+
+	static doesDirectoryExist(dirPath: string): boolean {
+		try {
+			return fs.statSync(dirPath).isDirectory();
+		} catch {
+			return false;
+		}
+	}
+
+	static readDirectoryContents(dirPath: string): string[] {
+		try {
+			return fs.readdirSync(dirPath);
+		} catch {
+			return [];
+		}
 	}
 
 	static getFileNameFromPath(filePath: string): string {
@@ -32,11 +51,30 @@ export class FileUtils {
 			return path.posix.basename(filePath);
 	}
 
+	static getPathAndFileName(filePath: string): { path: string; filename: string } {
+		const platform = MiscUtils.getPlatform();
+		const p = platform === 'win32' ? path.win32 : path.posix;
+	
+		return {
+			path: p.dirname(filePath),
+			filename: p.basename(filePath)
+		};
+	}
+
+	static renameFile(oldPath: string, newPath: string): boolean {
+		try {
+			fs.renameSync(oldPath, newPath);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
 	static copyFile(filePath: string, newFilePath: string): boolean {
 		try {
 			fs.copyFileSync(filePath, newFilePath);
 			return true;
-		} catch(error) {
+		} catch {
 			return false;
 		}
 	}
@@ -45,7 +83,7 @@ export class FileUtils {
 		try {
 			fs.unlinkSync(filePath);
 			return true;
-		} catch(error) {
+		} catch {
 			return false;
 		}
 	}
@@ -54,7 +92,7 @@ export class FileUtils {
 		try {
 			const isBinary = await isBinaryFile(filePath);
 			return !isBinary;
-		} catch(error) {
+		} catch {
 			return false;
 		}
 	}
@@ -62,7 +100,7 @@ export class FileUtils {
 	static readTextFile(filePath: string): string | null {
 		try {
 			return fs.readFileSync(filePath, 'utf-8');
-		} catch(error) {
+		} catch {
 			return null;
 		}
 	}
@@ -72,7 +110,7 @@ export class FileUtils {
 		try {
             fs.writeFileSync(filePath, content, 'utf-8');
             return true;
-        } catch(error) {
+        } catch {
             return false;
         }
     }
@@ -85,7 +123,7 @@ export class FileUtils {
         try {
             fs.appendFileSync(filePath, content, 'utf-8');
             return true;
-        } catch(error) {
+        } catch {
             return false;
         }
     }
@@ -102,7 +140,7 @@ export class FileUtils {
             }
             fs.writeFileSync(filePath, content + existingContent, 'utf-8');
             return true;
-        } catch(error) {
+        } catch {
             return false;
         }
     }
@@ -111,7 +149,7 @@ export class FileUtils {
 		try {
 			fs.renameSync(oldPath, newPath);
 			return true;
-		} catch(error) {
+		} catch {
 			return false;
 		}
 	}
@@ -120,7 +158,7 @@ export class FileUtils {
 		try {
 			fs.mkdirSync(path, { recursive: false });
 			return true;
-		} catch(error) {
+		} catch {
 			return false;
 		}
 	}
@@ -129,7 +167,7 @@ export class FileUtils {
 		try {
 		  	fs.rmSync(path, { recursive: true, force: true });
 		  	return true;
-		} catch (error) {
+		} catch {
 		  	return false;
 		}
 	}
@@ -202,15 +240,15 @@ export class FileUtils {
 	 * @param dest - Destination folder path
 	 */
 	static copyDirSync(src: string, dest: string): void {
-		// 1. Ensure target directory exists
+		// Ensure target directory exists
 		if (!fs.existsSync(dest)) {
 			fs.mkdirSync(dest, { recursive: true });
 		}
 
-		// 2. Read all items inside source directory
+		// Read all items inside source directory
 		const entries = fs.readdirSync(src, { withFileTypes: true });
 
-		// 3. Process each file/folder recursively
+		// Process each file/folder recursively
 		for (const entry of entries) {
 			const srcPath = path.join(src, entry.name);
 			const destPath = path.join(dest, entry.name);

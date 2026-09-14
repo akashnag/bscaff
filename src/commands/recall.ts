@@ -19,7 +19,6 @@ import { FileUtils } from "../utils/file-utils.js";
 import { Logger } from "../utils/logger.js";
 import { MiscUtils } from "../utils/misc.js";
 import { SnippetUtils } from "../utils/snippet.js";
-import path from 'path';
 
 export class RecallSnippet {
 	static async copySnippetToMemory(key: string): Promise<boolean> {
@@ -55,7 +54,7 @@ export class RecallSnippet {
 			cm.copy(snippet);
 			Logger.success("snippet copied to clipboard");
 			return true;
-		} catch(error) {
+		} catch {
 			Logger.error("unknown error encountered in <copySnippetToMemory>");
 			return false;
 		}
@@ -294,7 +293,7 @@ export class RecallSnippet {
 		} else if(record.type == SnippetType.MultiFile) {
 			return await RecallSnippet.extractMultiFileTemplate(key, record, path, overwrite, paramValues);
 		} else if(record.type == SnippetType.Directory) {
-			return await RecallSnippet.extractDirectoryTemplate(key, path, overwrite, paramValues);
+			return await RecallSnippet.extractDirectoryTemplate(key, record, path, overwrite, paramValues);
 		} else {
 			Logger.error("can only use snippets of type file/multi-file/directory/github-template");
 			return false;
@@ -325,6 +324,7 @@ export class RecallSnippet {
 
 			if(!fileExists || overwrite || shouldOverwrite) {
 				if((!fileExists || FileUtils.deleteFile(destPath)) && FileUtils.copyFile(filesToExtract[i].path, destPath)) {
+					MiscUtils.replacePlaceholdersInFile('file', destPath, paramValues);
 					Logger.success(`file extracted to: ${path}`);
 					return true;
 				} else {
@@ -339,7 +339,7 @@ export class RecallSnippet {
 		return true;
 	}
 
-	private static async extractDirectoryTemplate(key: string, path: string, overwrite: boolean, paramValues: Record<string, string>): Promise<boolean> {
+	private static async extractDirectoryTemplate(key: string, record: SnippetRecord, path: string, overwrite: boolean, paramValues: Record<string, string>): Promise<boolean> {
 		// TODO: add code
 		return true;
 	}

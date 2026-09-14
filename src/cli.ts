@@ -41,7 +41,7 @@ export class CLI {
 			.option('-k, --key <key>', 'key for the snippet')
 			.option('--desc <description>', 'description of the snippet (in double-quotes)')
 
-			//.option('--save-dir <path>', 'saves a snapshot of the directory specified by path')
+			.option('--save-dir <path>', 'saves a snapshot of the directory specified by path')
 			.option('--save-multi <files...>', 'saves a snapshot of the files listed')
 			.option('--save-text <file>', 'saves a snapshot of the text contained in the file')
 			.option('--save-file <file>', 'saves a snapshot of the file')
@@ -56,8 +56,9 @@ export class CLI {
 			.option('-o, --open', 'opens the saved URL in the browser OR open saved text/file in editor (read-only)')
 			.option('-a, --append <path...>', 'adds the text of a saved snapshot to the end of the file(s) specified by path')
 			.option('-p, --prepend <path...>', 'adds the text of a saved snapshot to the beginning of the file(s) specified by path')
+			
 			.option('--overwrite', 'force overwrite if destination file/directory exists')
-
+			
 			.option('-l, --list', 'lists down the structure of the saved snapshot (or the text of the file if path mentioned)')
 			.option('-r, --rename <new_key>', 'updates a snippet key to the new_key')
 			.option('--delete', 'removes a snippet from record')

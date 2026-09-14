@@ -129,9 +129,9 @@ export class MiscUtils {
 	 */
 	static async executeCommand(command: string): Promise<boolean> {
 		try {
-			const { stdout, stderr } = await execPromisified(command);
+			await execPromisified(command);
 			return true;
-		} catch (error) {
+		} catch {
 			return false;
 		}
 	}
@@ -252,8 +252,44 @@ export class MiscUtils {
 		return matches;
 	}
 
+	private static replacePlaceholdersInText(template: string, params: Record<string, string>): string {
+		return template.replace(/\{\{\s*(.*?)\s*\}\}/g, (match, key) => {
+		  	return key in params ? params[key] : match;
+		});
+	}
+
 	static async prompt(question: string): Promise<string> {
 		const rl = readline.createInterface({ input, output });
 		return (await rl.question(question)).trim();
+	}
+
+	static replacePlaceholdersInFile(pathType: 'directory' | 'file', filePath: string, params: Record<string, string>) {
+		const exclusions = Settings.get('excludeFromContentModification')!.split(';');
+
+		// rename file
+		const parts = FileUtils.getPathAndFileName(filePath);
+		parts.filename = MiscUtils.replacePlaceholdersInText(parts.filename, params);
+		const newFilePath = Config.formPath([ parts.path, parts.filename ]);
+		if(filePath != newFilePath) {
+			if(pathType == 'file')
+				FileUtils.renameFile(filePath, newFilePath);
+			else
+				FileUtils.renameDirectory(filePath, newFilePath);
+		}
+
+		if(pathType == 'directory') return;
+
+		// check if content-modification is allowed
+		for(let i = 0; i < exclusions.length; ++i) {
+			if(!exclusions[i].startsWith('*.')) continue;
+			if(filePath.toLowerCase().endsWith(exclusions[i].substring(1).toLowerCase())) return;
+		}
+
+		// perform content modification
+		let text: string | null = FileUtils.readTextFile(newFilePath);
+		if(text) {
+			text = MiscUtils.replacePlaceholdersInText(text, params);
+			FileUtils.writeTextFile(newFilePath, text);
+		}
 	}
 }
