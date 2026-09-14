@@ -47,7 +47,7 @@ export class CLI {
 			.option('--save-file <file>', 'saves a snapshot of the file')
 			.option('--save-input [file_type]', 'saves a snapshot given as input, file_type is the extension (without dot)')
 			.option('--save-url <url>', 'saves a URL')
-			//.option('--save-gh-template <repo_url>', 'saves a template from github')
+			.option('--save-gh-template <repo_url>', 'saves a template from github')
 			
 			.option('-d, --display [relative_path]', 'display the contents of the saved text/file')
 			.option('-x, --extract <path>', 'extracts a saved snapshot to the specified path')
@@ -127,8 +127,11 @@ export class CLI {
 				options.desc
 			);
 		} else if(options.saveGhTemplate) {
-			// TODO: add code
-			
+			retVal = await SaveSnippet.cloneGitRepo(
+				options.key,
+				options.saveGhTemplate === true ? undefined : options.saveGhTemplate,
+				options.desc
+			);
 		} else if(options.display) {
 			retVal = await RecallSnippet.displaySnippet(options.key);
 		} else if(options.extract) {

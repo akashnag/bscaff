@@ -13,7 +13,6 @@
 
 import * as fs from 'fs';
 import { isBinaryFile } from 'isbinaryfile';
-import * as tar from 'tar';
 import * as path from 'path';
 import { Logger } from './logger.js';
 import { MiscUtils } from './misc.js';
@@ -115,11 +114,7 @@ export class FileUtils {
         }
     }
 
-	/**
-     * Appends content to the end of a file.
-     * Creates the file if it does not already exist.
-     */
-    static appendToTextFile(filePath: string, content: string): boolean {
+	static appendToTextFile(filePath: string, content: string): boolean {
         try {
             fs.appendFileSync(filePath, content, 'utf-8');
             return true;
@@ -128,10 +123,6 @@ export class FileUtils {
         }
     }
 
-    /**
-     * Prepends content to the beginning of a file.
-     * If the file doesn't exist, it creates a new file with the content.
-     */
     static prependToTextFile(filePath: string, content: string): boolean {
         try {
             let existingContent = '';
@@ -192,53 +183,6 @@ export class FileUtils {
 		return snippet;
 	}
 
-	/**
-	 * Archives and compresses multiple files into a single .tar.gz archive.
-	 * 
-	 * @param filePaths - Array of absolute or relative file paths to compress
-	 * @param outputPath - Output destination path for the .tar.gz file
-	 */
-	async gzipFiles(filePaths: string[], outputPath: string): Promise<void> {
-		// Extract shared base directories to avoid absolute paths inside the archive
-		const cwd = path.dirname(filePaths[0] || '.');
-		const relativeFiles = filePaths.map(filePath => path.relative(cwd, filePath));
-	
-		await tar.create(
-			{
-				gzip: true,
-				file: outputPath,
-				cwd: cwd
-			},
-			relativeFiles
-		);
-	}
-	
-	/**
-	 * Archives and compresses an entire directory into a .tar.gz archive.
-	 * 
-	 * @param dirPath - Path to the directory to compress
-	 * @param outputPath - Output destination path for the .tar.gz file
-	 */
-	async gzipDirectory(dirPath: string, outputPath: string): Promise<void> {
-		const parentDir = path.dirname(dirPath);
-		const folderName = path.basename(dirPath);
-	
-		await tar.create(
-			{
-				gzip: true,
-				file: outputPath,
-				cwd: parentDir 		// Sets context to parent folder so top-level folder remains intact
-			},
-			[folderName]
-		);
-	}
-
-	/**
-	 * Synchronously copies a directory and all of its contents (files and subdirectories).
-	 * 
-	 * @param src - Source folder path
-	 * @param dest - Destination folder path
-	 */
 	static copyDirSync(src: string, dest: string): void {
 		// Ensure target directory exists
 		if (!fs.existsSync(dest)) {

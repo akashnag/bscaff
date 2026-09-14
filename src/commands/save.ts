@@ -18,6 +18,7 @@ import { RecursionResult, SnippetStructure, SnippetStructureItemType, SnippetTyp
 import { Config } from '../utils/config.js';
 import { MiscUtils } from '../utils/misc.js';
 import { SnippetUtils } from '../utils/snippet.js';
+import simpleGit, { SimpleGit } from 'simple-git';
 
 export class SaveSnippet {
 	static async saveTextFromFile(key: string, filePath: string | null = null, description: string | null = null): Promise<boolean> {
@@ -422,6 +423,58 @@ export class SaveSnippet {
 		Logger.success("template saved");
 		return true;
 	}
+
+	static async cloneGitRepo(key: string, repoURL: string | null = null, description: string | null = null): Promise<boolean> {
+		if(!repoURL) {
+			Logger.error("git repo URL missing");
+			return false;
+		}
+		
+		const store = new Store();
+
+		if(store.doesSnippetKeyExist(key)) {
+			Logger.error("key already exists");
+			return false;
+		}
+		
+		// create snippet directory
+		SnippetUtils.createSnippetDirectory(key);
+
+		let repoName = repoURL.substring(1 + repoURL.lastIndexOf('/'));
+		if(repoName.endsWith('.git')) repoName = repoName.substring(repoName.length - 4);
+
+		const snippetDir = SnippetUtils.getSnippetDirectory(key);
+		const repoLocalDir = Config.formPath([ snippetDir, repoName ]);
+		FileUtils.createDirectory(repoLocalDir);
+		
+		const git: SimpleGit = simpleGit.simpleGit();
+
+		try {
+			Logger.info(`Cloning into ${repoLocalDir}...`);
+			await git.clone(repoURL, repoLocalDir);
+			Logger.info('Clone completed successfully!');
+		} catch {
+			Logger.error('Clone failed');
+			FileUtils.deleteDirectory(snippetDir);
+			return false;
+		}
+
+		const result: RecursionResult = await SaveSnippet.processDirectory(repoLocalDir);
+		
+		store.saveSnippet({
+			key: key,
+			description: description,
+			type: SnippetType.Directory,
+			structure: result.structure,
+			parameters: Array.from(result.parameters)
+		});
+
+		store.update();
+		Logger.success("template saved");
+		return true;
+	}
+
+	// -------------------------------------------------------
 
 	private static async processDirectory(dirPath: string): Promise<RecursionResult> {
 		const parameters = new Set<string>();
