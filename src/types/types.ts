@@ -14,48 +14,57 @@
 export enum SnippetType {
 	Text = "TEXT",
 	Directory = "DIRECTORY",
+	Tree = "TREE", // tree copied from AI output
 	File = "FILE",
 	MultiFile = "MULTI_FILE",
-	URL = "URL"							// file saved as <Config.SNIPPET_TEXT_FILE>.url
+	URL = "URL", // file saved as <Config.SNIPPET_TEXT_FILE>.url
 }
 
 export enum SnippetStructureItemType {
-	File = "FILE",						// used for SnippetType.Text and SnippetType.File
-	Directory = "DIRECTORY",			// used for SnippetType.DIRECTORY at the root level and also at sub-directory levels
-	DummyNode = "DUMMY_NODE"			// used for SnippetType.MultiFile at the root level
+	File = "FILE", // used for SnippetType.Text and SnippetType.File
+	Directory = "DIRECTORY", // used for SnippetType.DIRECTORY at the root level and also at sub-directory levels
+	DummyNode = "DUMMY_NODE", // used for SnippetType.MultiFile at the root level
+}
+
+export interface FileTreeNode {
+	type: "dir" | "file";
+	level: number;
+	name: string;
+	path: string;
 }
 
 export interface SnippetStructure {
 	filename: string | null;
 	type: SnippetStructureItemType;
-	loc: number | null;
 	children: SnippetStructure[] | null;
 }
 
+// actual format in which snippet record is stored on database
 export interface SnippetRecord {
 	key: string;
 	description: string | null;
 	type: SnippetType;
 	createdAt: Date;
 	modifiedAt: Date;
-	structure: SnippetStructure;
+	structure: SnippetStructure | FileTreeNode[];
 	parameters: string[] | null;
 	triggers?: {
 		preScript: string | null;
 		postScript: string | null;
-	}
+	};
 }
 
+// used to pass info to snippet utility functions
 export interface SnippetInfo {
 	key: string;
 	description: string | null;
 	type: SnippetType;
-	structure: SnippetStructure;
+	structure: SnippetStructure | FileTreeNode[];
 	parameters: string[] | null;
 	triggers?: {
 		preScript: string | null;
 		postScript: string | null;
-	}
+	};
 }
 
 export interface BScaffSettings {
@@ -66,25 +75,7 @@ export interface BScaffSettings {
 	excludeFromContentModification: string;
 }
 
-export interface RecursionResult {
+export interface DirectoryStructure {
 	structure: SnippetStructure;
 	parameters: Set<string>;
 }
-
-
-
-/*
-Contents of:  ~/.bscaff/
-
-db.json
-<folder1 named as key1 -- type text>
-	snippetText.snippet
-<folder2 named as key2 -- type file>
-	<filename_with_extension>
-<folder3 named as key3 -- type multi>
-	<filename1_with_extension>
-	<filename2_with_extension>
-<folder4 named as key3 -- type multi>
-...
-
-*/

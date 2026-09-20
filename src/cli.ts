@@ -11,15 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import { SaveSnippet } from './commands/save.js';
-import { Command } from 'commander';
-
-import pkg from '../package.json' with { type: 'json' };
-import { Logger } from './utils/logger.js';
-import { RecallSnippet } from './commands/recall.js';
-import { MiscSnippetManagement } from './commands/misc.js';
-import { Config } from './utils/config.js';
-import { MiscUtils } from './utils/misc.js';
+import { Command } from "commander";
+import pkg from "../package.json" with { type: "json" };
+import * as ListSnippet from "./commands/list.js";
+import * as MiscSnippetManagement from "./commands/misc.js";
+import * as RecallSnippet from "./commands/recall.js";
+import * as SaveSnippet from "./commands/save.js";
+import { Config } from "./utils/config.js";
+import { Logger } from "./utils/logger.js";
+import * as MiscUtils from "./utils/misc.js";
 
 export class CLI {
 	// shared Commander object
@@ -38,36 +38,86 @@ export class CLI {
 			.description(pkg.description)
 			.version(pkg.version)
 
-			.option('-k, --key <key>', 'key for the snippet')
-			.option('--desc <description>', 'description of the snippet (in double-quotes)')
+			.option("-k, --key <key>", "key for the snippet")
+			.option(
+				"--desc <description>",
+				"description of the snippet (in double-quotes)",
+			)
 
-			.option('--save-dir <path>', 'saves a snapshot of the directory specified by path')
-			.option('--save-multi <files...>', 'saves a snapshot of the files listed')
-			.option('--save-text <file>', 'saves a snapshot of the text contained in the file')
-			.option('--save-file <file>', 'saves a snapshot of the file')
-			.option('--save-input [file_type]', 'saves a snapshot given as input, file_type is the extension (without dot)')
-			.option('--save-url <url>', 'saves a URL')
-			.option('--save-git <repo_url>', 'saves a template from a git repo')
-			
-			.option('-d, --display [relative_path]', 'display the contents of the saved text/file')
-			.option('-x, --extract <path>', 'extracts a saved snapshot to the specified path')
-			.option('-c, --copy', 'copies a saved snapshot to clipboard')
-			.option('-e, --edit', 'opens a saved file/text for editing')
-			.option('-o, --open', 'opens the saved URL in the browser OR open saved text/file in editor (read-only)')
-			.option('-a, --append <path...>', 'adds the text of a saved snapshot to the end of the file(s) specified by path')
-			.option('-p, --prepend <path...>', 'adds the text of a saved snapshot to the beginning of the file(s) specified by path')
-			
-			.option('--overwrite', 'force overwrite if destination file/directory exists')
-			.option('--pre-extract <path-to-script-file>', 'executes this script before extracting a directory/git-template')
-			.option('--post-extract <path-to-script-file>', 'executes this script after extracting a directory/git-template')
+			.option(
+				"--save-dir <path>",
+				"saves a snapshot of the directory specified by path",
+			)
+			.option("--save-multi <files...>", "saves a snapshot of the files listed")
+			.option(
+				"--save-text <file>",
+				"saves a snapshot of the text contained in the file",
+			)
+			.option("--save-file <file>", "saves a snapshot of the file")
+			.option(
+				"--save-input [file_type]",
+				"saves a snapshot given as input, file_type is the extension (without dot)",
+			)
+			.option("--save-url <url>", "saves a URL")
+			.option("--save-git <repo_url>", "saves a template from a git repo")
+			.option(
+				"--save-tree",
+				"saves a project scaffolding tree copied to clipboard (e.g. generated from LLM tools)",
+			)
 
-			.option('-l, --list', 'lists down the structure of the saved snapshot (or the text of the file if path mentioned)')
-			.option('-r, --rename <new_key>', 'updates a snippet key to the new_key')
-			.option('--delete', 'removes a snippet from record')
+			.option(
+				"-d, --display [relative_path]",
+				"display the contents of the saved text/file",
+			)
+			.option(
+				"-x, --extract <path>",
+				"extracts a saved snapshot to the specified path",
+			)
+			.option(
+				"--create-tree <path>",
+				"creates a project scaffolding tree directly from clipboard (e.g. generated from LLM tools)",
+			)
+			.option("-c, --copy", "copies a saved snapshot to clipboard")
+			.option("-e, --edit", "opens a saved file/text for editing")
+			.option(
+				"-o, --open",
+				"opens the saved URL in the browser OR open saved text/file in editor (read-only)",
+			)
+			.option(
+				"-a, --append <path...>",
+				"adds the text of a saved snapshot to the end of the file(s) specified by path",
+			)
+			.option(
+				"-p, --prepend <path...>",
+				"adds the text of a saved snapshot to the beginning of the file(s) specified by path",
+			)
 
-			.option('-q, --quiet', 'works silently without printing anything to screen')
-			.option('-s, --settings', 'opens bscaff settings for editing')
-			.option('-h, --help', 'displays this help');
+			.option(
+				"--overwrite",
+				"force overwrite if destination file/directory exists",
+			)
+			.option(
+				"--pre-extract <path-to-script-file>",
+				"executes this script before extracting a directory/git-template",
+			)
+			.option(
+				"--post-extract <path-to-script-file>",
+				"executes this script after extracting a directory/git-template",
+			)
+
+			.option(
+				"-l, --list",
+				"lists down the structure of the saved snapshot (or the text of the file if path mentioned)",
+			)
+			.option("-r, --rename <new_key>", "updates a snippet key to the new_key")
+			.option("--delete", "removes a snippet from record")
+
+			.option(
+				"-q, --quiet",
+				"works silently without printing anything to screen",
+			)
+			.option("-s, --settings", "opens bscaff settings for editing")
+			.option("-h, --help", "displays this help");
 	}
 
 	// display to the user the command-line flags we accept
@@ -78,110 +128,142 @@ export class CLI {
 
 	// Parses command line args passed to the program, and calls the appropriate helper function to perform the task
 	async parseArgsAndExecute(args: string[]): Promise<number> {
+		const logger = new Logger();
+
 		this.program.parse(args);
 		const options = this.program.opts();
 
-		if(options.help || args.length == 2) {
+		if (options.help || args.length == 2) {
 			this.showHelp();
 			return 0;
 		}
 
-		if(options.quiet) Logger.setSilentMode();
+		if (options.quiet) Logger.setSilentMode();
 
-		if((!options.key || (options.key === true)) && !(options.list || options.settings)) {
-			Logger.error("Missing key");
+		if (
+			(!options.key || options.key === true) &&
+			!(options.list || options.settings || options.createTree)
+		) {
+			logger.error("Missing key");
 			return 1;
 		}
-		
+
 		let retVal: boolean = true;
 
-		if(options.saveDir) {
+		if (options.saveDir) {
 			retVal = await SaveSnippet.saveDirectory(
 				options.key,
 				options.saveDir === true ? null : options.saveDir,
 				options.desc,
-				(!options.preExtract || (options.preExtract === true)) ? null : options.preExtract,
-				(!options.postExtract || (options.postExtract === true)) ? null : options.postExtract
+				!options.preExtract || options.preExtract === true
+					? null
+					: options.preExtract,
+				!options.postExtract || options.postExtract === true
+					? null
+					: options.postExtract,
 			);
-		} else if(options.saveMulti) {
+		} else if (options.saveMulti) {
 			retVal = await SaveSnippet.saveMultipleFiles(
 				options.key,
 				options.saveMulti === true ? null : options.saveMulti,
-				options.desc
+				options.desc,
 			);
-		} else if(options.saveText) {
+		} else if (options.saveText) {
 			retVal = await SaveSnippet.saveTextFromFile(
-						options.key, 
-						options.saveText === true ? undefined : options.saveText, 
-						options.desc
-					);
-		} else if(options.saveFile) {
-			retVal = await SaveSnippet.saveFile(
-						options.key, 
-						options.saveFile === true ? undefined : options.saveFile,
-						options.desc
-					);
-		} else if(options.saveInput) {
-			retVal = await SaveSnippet.saveLiveInput(
-						options.key, 
-						options.saveInput === true ? undefined : options.saveInput,
-						options.desc
-					);
-		} else if(options.saveUrl) {
-			retVal = await SaveSnippet.saveURL(
-				options.key, 
-				options.saveUrl === true ? undefined : options.saveUrl,
-				options.desc
+				options.key,
+				options.saveText === true ? undefined : options.saveText,
+				options.desc,
 			);
-		} else if(options.saveGhTemplate) {
+		} else if (options.saveFile) {
+			retVal = await SaveSnippet.saveFile(
+				options.key,
+				options.saveFile === true ? undefined : options.saveFile,
+				options.desc,
+			);
+		} else if (options.saveInput) {
+			retVal = await SaveSnippet.saveLiveInput(
+				options.key,
+				options.saveInput === true ? undefined : options.saveInput,
+				options.desc,
+			);
+		} else if (options.saveUrl) {
+			retVal = await SaveSnippet.saveURL(
+				options.key,
+				options.saveUrl === true ? undefined : options.saveUrl,
+				options.desc,
+			);
+		} else if (options.saveGhTemplate) {
 			retVal = await SaveSnippet.cloneGitRepo(
 				options.key,
 				options.saveGhTemplate === true ? undefined : options.saveGhTemplate,
 				options.desc,
-				(!options.preExtract || (options.preExtract === true)) ? null : options.preExtract,
-				(!options.postExtract || (options.postExtract === true)) ? null : options.postExtract
+				!options.preExtract || options.preExtract === true
+					? null
+					: options.preExtract,
+				!options.postExtract || options.postExtract === true
+					? null
+					: options.postExtract,
 			);
-		} else if(options.display) {
+		} else if (options.saveTree) {
+			retVal = await SaveSnippet.saveTree(
+				options.key,
+				options.desc,
+				!options.preExtract || options.preExtract === true
+					? null
+					: options.preExtract,
+				!options.postExtract || options.postExtract === true
+					? null
+					: options.postExtract,
+			);
+		} else if (options.display) {
 			retVal = await RecallSnippet.displaySnippet(options.key);
-		} else if(options.extract) {
+		} else if (options.extract) {
 			retVal = await RecallSnippet.extractSnippet(
 				options.key,
 				options.extract === true ? undefined : options.extract,
-				options.overwrite
+				options.overwrite,
 			);
-		} else if(options.copy) {
+		} else if (options.createTree) {
+			retVal = await RecallSnippet.createTreeDirect(
+				options.createTree === true ? undefined : options.createTree,
+				options.overwrite,
+			);
+		} else if (options.copy) {
 			retVal = await RecallSnippet.copySnippetToMemory(options.key);
-		} else if(options.edit) {
+		} else if (options.edit) {
 			retVal = await SaveSnippet.editSnippetContent(options.key);
-		} else if(options.open) {
+		} else if (options.open) {
 			retVal = await RecallSnippet.openSnippet(options.key);
-		} else if(options.append) {
+		} else if (options.append) {
 			retVal = await RecallSnippet.appendOrPrependToFile(
 				options.key,
 				"append",
-				options.append === true ? [] : options.append
+				options.append === true ? [] : options.append,
 			);
-		} else if(options.prepend) {
+		} else if (options.prepend) {
 			retVal = await RecallSnippet.appendOrPrependToFile(
 				options.key,
 				"prepend",
-				options.prepend === true ? [] : options.prepend
+				options.prepend === true ? [] : options.prepend,
 			);
-		} else if(options.list) {
-			if(options.key) {
-				retVal = await RecallSnippet.listSnippetFiles(options.key);
+		} else if (options.list) {
+			if (options.key) {
+				retVal = await ListSnippet.listSnippetFiles(options.key);
 			} else {
-				retVal = await RecallSnippet.listAllSnippets();
+				retVal = await ListSnippet.listAllSnippets();
 			}
-		} else if(options.rename) {
-			retVal = await MiscSnippetManagement.renameSnippet(options.key, options.rename);
-		} else if(options.delete) {
-			retVal = await MiscSnippetManagement.deleteSnippet(options.key);
-		} else if(options.settings) {
-			retVal = MiscUtils.openFileInEditor(
-				Config.getStoragePath([ Config.SETTINGS_FILE ])
+		} else if (options.rename) {
+			retVal = await MiscSnippetManagement.renameSnippet(
+				options.key,
+				options.rename,
 			);
-			if(retVal) Logger.success("settings updated");
+		} else if (options.delete) {
+			retVal = await MiscSnippetManagement.deleteSnippet(options.key);
+		} else if (options.settings) {
+			retVal = MiscUtils.openFileInEditor(
+				Config.getStoragePath([Config.SETTINGS_FILE]),
+			);
+			if (retVal) logger.success("settings updated");
 		}
 
 		return retVal ? 0 : 1;

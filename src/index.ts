@@ -11,20 +11,22 @@
  * GNU General Public License for more details.
  */
 
-import { CLI } from './cli.js';
-import { Config } from './utils/config.js';
-import { Logger } from './utils/logger.js';
+import { CLI } from "./cli.js";
+import { Config } from "./utils/config.js";
+import { Logger } from "./utils/logger.js";
 
 async function main(): Promise<void> {
+	const logger = new Logger();
+
 	try {
-		if(await Config.ensureStorageDirectoryExists()) {
+		if (await Config.ensureStorageDirectoryExists()) {
 			const cli = new CLI();
 			process.exit(await cli.parseArgsAndExecute(process.argv));
 		} else {
 			throw new Error("File path issue");
 		}
 	} catch (error: any) {
-		Logger.error('An unexpected error occurred during execution:', error);
+		logger.error("An unexpected error occurred during execution:", error);
 		process.exit(1);
 	}
 }

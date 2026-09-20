@@ -11,28 +11,32 @@
  * GNU General Public License for more details.
  */
 
-import { MiscUtils } from "./misc.js";
+import * as MiscUtils from "./misc.js";
 
 export class Logger {
-	static silentMode: boolean = false;
+	private static silentMode: boolean;
 
 	static setSilentMode() {
 		Logger.silentMode = true;
 	}
 
-	static info(message: string): void {
-	  	if(!Logger.silentMode) console.log(`[INFO] ${message}`);
+	info(message: string): void {
+		if (!Logger.silentMode) console.log(`[INFO] ${message}`);
 	}
-  
-	static success(message: string): void {
-		if(!Logger.silentMode) console.log(`[SUCCESS] ${message}`);
+
+	success(message: string): void {
+		if (!Logger.silentMode) console.log(`[SUCCESS] ${message}`);
 	}
-  
-	static warn(message: string): void {
-		if(!Logger.silentMode) console.warn(`[WARN] ${message}`);
+
+	warn(message: string): void {
+		if (!Logger.silentMode) console.warn(`[WARN] ${message}`);
 	}
-	
-	static error(message: string, error?: unknown): void {
-		if(!Logger.silentMode) console.error(`[ERROR] ${MiscUtils.getCallerName()}: ${message}`, error ?? '');
+
+	error(message: string, error?: unknown): void {
+		if (!Logger.silentMode)
+			console.error(
+				`[ERROR] ${MiscUtils.getCallerName()}: ${message}`,
+				error ?? "",
+			);
 	}
 }

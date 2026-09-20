@@ -13,44 +13,47 @@
 
 import { Store } from "../core/store.js";
 import { Logger } from "../utils/logger.js";
-import { SnippetUtils } from "../utils/snippet.js";
+import * as SnippetUtils from "../utils/snippet.js";
 
-export class MiscSnippetManagement {
-	static async deleteSnippet(key: string): Promise<boolean> {
-		const store = new Store();
+export async function deleteSnippet(key: string): Promise<boolean> {
+	const store = new Store();
+	const logger = new Logger();
 
-		if(!store.doesSnippetKeyExist(key)) {
-			Logger.error("key not found");
-			return false;
-		}
-
-		if(SnippetUtils.deleteSnippetDirectory(key)) {
-			store.deleteSnippetRecord(key);
-		} else {
-			return false;
-		}
-
-		store.update();
-		Logger.success("Snippet deleted");
-		return true;
+	if (!store.doesSnippetKeyExist(key)) {
+		logger.error("key not found");
+		return false;
 	}
 
-	static async renameSnippet(key: string, newKey: string): Promise<boolean> {
-		const store = new Store();
-
-		if(!store.doesSnippetKeyExist(key)) {
-			Logger.error("key not found");
-			return false;
-		}
-
-		if(SnippetUtils.renameSnippetDirectory(key, newKey)) {
-			store.renameSnippetKey(key, newKey);
-		} else {
-			return false;
-		}
-
-		store.update();
-		Logger.success("Snippet renamed");
-		return true;
+	if (SnippetUtils.deleteSnippetDirectory(key)) {
+		store.deleteSnippetRecord(key);
+	} else {
+		return false;
 	}
+
+	store.update();
+	logger.success("Snippet deleted");
+	return true;
+}
+
+export async function renameSnippet(
+	key: string,
+	newKey: string,
+): Promise<boolean> {
+	const store = new Store();
+	const logger = new Logger();
+
+	if (!store.doesSnippetKeyExist(key)) {
+		logger.error("key not found");
+		return false;
+	}
+
+	if (SnippetUtils.renameSnippetDirectory(key, newKey)) {
+		store.renameSnippetKey(key, newKey);
+	} else {
+		return false;
+	}
+
+	store.update();
+	logger.success("Snippet renamed");
+	return true;
 }

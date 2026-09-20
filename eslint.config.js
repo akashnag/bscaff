@@ -1,14 +1,10 @@
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
-import globals from "globals";
-
-export default tseslint.config(
-	// Ignores build outputs and non-source files
+export default [
+	// Ignore build outputs and non-source files
 	{
 		ignores: ["dist/**", "node_modules/**", "coverage/**"],
 	},
 
-	// Recommended base rules for JavaScript and TypeScript
+	// Base rules for JavaScript and TypeScript
 	js.configs.recommended,
 	...tseslint.configs.recommended,
 
@@ -35,5 +31,8 @@ export default tseslint.config(
 			],
 			"no-console": "off",
 		},
-	}
-);
+	},
+
+	// use biome for formatting
+	biomeConfig,
+];

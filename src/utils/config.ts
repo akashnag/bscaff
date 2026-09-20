@@ -11,23 +11,22 @@
  * GNU General Public License for more details.
  */
 
-import path from 'node:path';
-import os from 'node:os';
-import fs from 'node:fs/promises';
-import { Settings } from '../core/settings.js';
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { Settings } from "../core/settings.js";
 
 export class Config {
-	static readonly DIRECTORY_NAME: string = '.bscaff';
-	static readonly SNIPPET_DB_FILE: string = 'db.json';
-	static readonly SNIPPET_TEXT_FILE: string = 'snippet';
+	static readonly DIRECTORY_NAME: string = ".bscaff";
+	static readonly SNIPPET_DB_FILE: string = "db.json";
+	static readonly SNIPPET_TEXT_FILE: string = "snippet";
 	static readonly SETTINGS_FILE: string = "settings.json";
 
 	static getStoragePath(additional: string[] | null = null): string {
 		// return base storage directory (e.g., ~/.bscaff)
-		if(additional)
+		if (additional)
 			return path.join(os.homedir(), Config.DIRECTORY_NAME, ...additional);
-		else
-			return path.join(os.homedir(), Config.DIRECTORY_NAME);
+		else return path.join(os.homedir(), Config.DIRECTORY_NAME);
 	}
 
 	static formPath(items: string[]): string {
@@ -36,7 +35,7 @@ export class Config {
 
 	static async ensureStorageDirectoryExists(): Promise<boolean> {
 		const storagePath = Config.getStoragePath();
-		
+
 		try {
 			await fs.mkdir(storagePath, { recursive: true });
 			return Settings.initSettings();
