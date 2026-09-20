@@ -324,6 +324,9 @@ export async function extractSnippet(
 			overwrite,
 			paramValues,
 		);
+	} else if (record.type == SnippetType.Tree) {
+		if (!Array.isArray(record.structure)) return false;
+		return await MiscUtils.createTree(record.structure, paramValues);
 	} else {
 		logger.error(
 			"can only use snippets of type file/multi-file/directory/github-template",
@@ -332,14 +335,6 @@ export async function extractSnippet(
 	}
 }
 
-export async function createTreeDirect(
-	path: string | null = null,
-	overwrite: boolean = false,
-): Promise<boolean> {
-	const logger = new Logger();
-
-	// TODO: add code
-}
 // ---------------------- [private] --------------------------------
 
 async function extractMultiFileTemplate(

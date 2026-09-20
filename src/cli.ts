@@ -224,7 +224,7 @@ export class CLI {
 				options.overwrite,
 			);
 		} else if (options.createTree) {
-			retVal = await RecallSnippet.createTreeDirect(
+			retVal = await MiscSnippetManagement.createTreeDirect(
 				options.createTree === true ? undefined : options.createTree,
 				options.overwrite,
 			);

@@ -19,6 +19,7 @@ import { Settings } from "../core/settings.js";
 import { FileTreeNode } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./file-utils.js";
+import { Logger } from "./logger.js";
 
 const execPromisified = promisify(exec);
 
@@ -361,6 +362,15 @@ export function extractStructureFromTree(tree: string): any | null {
 	}
 
 	return { structure: struct, parameters: parameters };
+}
+
+export function createTree(
+	structure: FileTreeNode[],
+	parameters: Record<string, string>,
+): boolean {
+	// TODO: add code
+
+	return true;
 }
 
 // ------------------------- [private] -------------------------

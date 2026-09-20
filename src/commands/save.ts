@@ -593,7 +593,7 @@ export async function saveTree(
 	store.saveSnippet({
 		key: key,
 		description: description,
-		type: SnippetType.Directory,
+		type: SnippetType.Tree,
 		structure: structure,
 		parameters: Array.from(parameters),
 		triggers: {

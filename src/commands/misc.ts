@@ -11,8 +11,10 @@
  * GNU General Public License for more details.
  */
 
+import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
 import { Logger } from "../utils/logger.js";
+import * as MiscUtils from "../utils/misc.js";
 import * as SnippetUtils from "../utils/snippet.js";
 
 export async function deleteSnippet(key: string): Promise<boolean> {
@@ -56,4 +58,36 @@ export async function renameSnippet(
 	store.update();
 	logger.success("Snippet renamed");
 	return true;
+}
+
+export async function createTreeDirect(
+	path: string | null = null,
+	overwrite: boolean = false,
+): Promise<boolean> {
+	const logger = new Logger();
+	const cm = new ClipboardManager();
+	const tree = (await cm.paste()).trim();
+
+	const { structure, parameters } = MiscUtils.extractStructureFromTree(tree);
+
+	if (!structure) {
+		logger.error("invalid tree structure");
+		return false;
+	}
+
+	const paramValues: Record<string, string> = {};
+	if (parameters) {
+		for (const param of parameters) {
+			paramValues[param] = await MiscUtils.prompt(
+				`Enter value for parameter '${param}': `,
+			);
+		}
+	}
+
+	if (MiscUtils.createTree(structure, paramValues)) {
+		logger.success("tree created");
+		return true;
+	}
+
+	return false;
 }

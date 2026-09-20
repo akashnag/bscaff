@@ -99,12 +99,22 @@ export function listSnippetFiles(
 	return data;
 }
 
-export function drawSnippetFileTree(
-	struct: SnippetStructure,
+export async function drawSnippetFileTree(
+	structure: SnippetStructure | FileTreeNode[],
 	prefix: string = "",
 	isLast: boolean = true,
 	lines: string[] = [],
-): string {
+): Promise<string | null> {
+	let struct: SnippetStructure | null = null;
+
+	if (Array.isArray(structure)) {
+		struct = (await getDirectoryStructureFromTree(structure)).structure;
+	} else {
+		struct = structure;
+	}
+
+	if (!struct) return null;
+
 	// Format and add the current node (skip the root DummyNode)
 	if (struct.type !== SnippetStructureItemType.DummyNode) {
 		const connector = isLast ? "└── " : "├── ";

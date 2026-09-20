@@ -40,11 +40,13 @@ export async function listSnippetFiles(key: string): Promise<boolean> {
 
 	if (
 		record.type === SnippetType.Directory ||
-		record.type === SnippetType.MultiFile
+		record.type === SnippetType.MultiFile ||
+		record.type === SnippetType.Tree
 	) {
 		// record.structure.filename will be null here, so iterate over its children
 		console.log(SnippetUtils.drawSnippetFileTree(record.structure));
 	} else if (record.type === SnippetType.File) {
+		if (!("filename" in record.structure)) return false;
 		console.table([
 			{
 				key: record.key,
