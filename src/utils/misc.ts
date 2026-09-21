@@ -31,6 +31,11 @@ export function containsChar(text: string, charList: string[]): boolean {
 	return charList.some((char) => text.includes(char));
 }
 
+export function countLines(str: string): number {
+	if (!str) return 0;
+	return str.split(/\r?\n/).length;
+}
+
 export function countLOC(codeString: string): number {
 	const lines = codeString.split(/\r?\n/);
 
@@ -191,7 +196,7 @@ export function openFileInEditor(
 }
 
 // Extracts all parameters enclosed within {{ and }} from a string
-export function getParametersFromFilename(filename: string): string[] {
+export function getParametersFromText(filename: string): string[] {
 	// Regex matching {{ followed by non-}} characters, capturing the inner content
 	const regex = /\{\{([^}]+)\}\}/g;
 	const matches: string[] = [];

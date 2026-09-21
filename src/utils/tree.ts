@@ -11,10 +11,17 @@
  * GNU General Public License for more details.
  */
 
-import { FileTreeNode } from "../types/types.js";
+import {
+	DirectoryStructure,
+	FileTreeNode,
+	SnippetStructure,
+	SnippetStructureItemType,
+	Template,
+} from "../types/types.js";
 import * as FileUtils from "./files.js";
 import * as MiscUtils from "./misc.js";
 
+// converts an ASCII-art file-tree to FileTreeNode[]
 export function extractStructureFromTree(tree: string): {
 	structure: FileTreeNode[] | null;
 	parameters: string[] | null;
@@ -111,7 +118,7 @@ export function extractStructureFromTree(tree: string): {
 			path: path,
 		});
 
-		const params = MiscUtils.getParametersFromFilename(name);
+		const params = MiscUtils.getParametersFromText(name);
 		params.forEach((param: string) => {
 			parameters.add(param);
 		});
@@ -126,10 +133,8 @@ export function extractStructureFromTree(tree: string): {
 	return { structure: struct, parameters: Array.from(parameters) };
 }
 
-export function extractStructureFromTemplateFile(filePath: string): {
-	structure: FileTreeNode[] | null;
-	parameters: string[] | null;
-} {
+// reads a template file and returns its contents
+export function readTemplateFile(filePath: string): Template {
 	// TODO: add code
 }
 
@@ -140,10 +145,22 @@ export async function createTemplateFileFromDirectory(
 	postExtractScriptPath: string | null = null,
 	withContent: boolean = false,
 ): Promise<boolean> {
-	const nodes: FileTreeNode[] = getFileTreeNodesFromDirectory(
+	const nodes: FileTreeNode[] = await getFileTreeNodesFromDirectory(
 		dirPath,
 		withContent,
 	);
+
+	const fileTreeASCII = await drawSnippetFileTree(nodes);
+	if (!fileTreeASCII) return false;
+
+	function createFileSection(
+		sectionType: string,
+		header: string,
+		content: string,
+	): string {
+		const count = MiscUtils.countLines(content);
+		return `!<${sectionType}>[${header}:${count}]\n${content}\n\n`;
+	}
 
 	let preScript = null;
 	let postScript = null;
@@ -162,7 +179,53 @@ export async function createTemplateFileFromDirectory(
 		postScript = await FileUtils.readTextFile(postExtractScriptPath);
 	}
 
-	// TODO: add code
+	let content: string = "";
+	let parameters: Set<string> = new Set<string>();
+
+	content += createFileSection("Tree", "Tree", fileTreeASCII);
+
+	if (preScript) {
+		content += createFileSection("PreScript", "PreScript", preScript);
+	}
+
+	if (postScript) {
+		content += createFileSection("PostScript", "PostScript", postScript);
+	}
+
+	if (withContent) {
+		for (let i = 0; i < nodes.length; ++i) {
+			// extract parameters from filename
+			const params: string[] = MiscUtils.getParametersFromText(nodes[i].name);
+
+			if (nodes[i].content) {
+				// extract parameters from content
+				params.push(...MiscUtils.getParametersFromText(nodes[i].content!));
+
+				content += createFileSection(
+					"Content",
+					nodes[i].path,
+					nodes[i].content!,
+				);
+			}
+
+			params.forEach((param: string) => {
+				parameters.add(param);
+			});
+		}
+	}
+
+	if (parameters.size > 0) {
+		content += createFileSection(
+			"Parameters",
+			"Parameters",
+			JSON.stringify(Array.from(parameters)),
+		);
+	}
+
+	return FileUtils.writeTextFile(
+		FileUtils.resolveFilePaths([targetTemplateFile])[0],
+		content,
+	);
 }
 
 export function createTree(
@@ -179,7 +242,114 @@ export function addTreeContentInteractive(
 	// TODO: add code
 }
 
+export async function drawSnippetFileTree(
+	structure: SnippetStructure | FileTreeNode[],
+	prefix: string = "",
+	isLast: boolean = true,
+	lines: string[] = [],
+): Promise<string | null> {
+	let struct: SnippetStructure | null = null;
+
+	if (Array.isArray(structure)) {
+		struct = (await getDirectoryStructureFromTree(structure)).structure;
+	} else {
+		struct = structure;
+	}
+
+	if (!struct) return null;
+
+	// Format and add the current node (skip the root DummyNode)
+	if (struct.type !== SnippetStructureItemType.DummyNode) {
+		const connector = isLast ? "└── " : "├── ";
+		const isDir = struct.type === SnippetStructureItemType.Directory;
+		const displayName = isDir ? `${struct.filename}/` : struct.filename;
+
+		lines.push(`${prefix}${connector}${displayName}`);
+	}
+
+	// Recursively process children
+	if (struct.type !== SnippetStructureItemType.File && struct.children) {
+		let childPrefix = prefix;
+		if (struct.type !== SnippetStructureItemType.DummyNode) {
+			childPrefix += isLast ? "    " : "│   ";
+		}
+
+		const count = struct.children.length;
+		for (let i = 0; i < count; ++i) {
+			const childIsLast = i === count - 1;
+			drawSnippetFileTree(struct.children[i], childPrefix, childIsLast, lines);
+		}
+	}
+
+	// Return the complete string separated by newlines
+	return lines.join("\n");
+}
+
 // ------------------------- [private] -----------------------------
+
+async function getDirectoryStructureFromTree(
+	tree: FileTreeNode[],
+): Promise<DirectoryStructure> {
+	const parameters = new Set<string>();
+
+	// Root structure node set up as DummyNode with filename: null
+	const rootStructure: SnippetStructure = {
+		filename: null,
+		type: SnippetStructureItemType.DummyNode,
+		children: [],
+	};
+
+	// Lookup map to find created parent nodes by their normalized path
+	const nodeMap = new Map<string, SnippetStructure>();
+
+	// Sort nodes by level to guarantee parents exist before children are processed
+	const sortedTree = [...tree].sort((a, b) => a.level - b.level);
+
+	for (const node of sortedTree) {
+		// Collect parameters from node name
+		const params = MiscUtils.getParametersFromText(node.name);
+		params.forEach((param: string) => {
+			parameters.add(param);
+		});
+
+		const isDirectory = node.type === "dir";
+
+		const currentStructureNode: SnippetStructure = {
+			filename: node.name,
+			type: isDirectory
+				? SnippetStructureItemType.Directory
+				: SnippetStructureItemType.File,
+			children: isDirectory ? [] : null,
+		};
+
+		// Normalize path by removing leading/trailing slashes (e.g. "/src/components" -> "src/components")
+		const normalizedPath = node.path.replace(/^\/+|\/+$/g, "");
+		nodeMap.set(normalizedPath, currentStructureNode);
+
+		const lastSlashIdx = normalizedPath.lastIndexOf("/");
+
+		if (lastSlashIdx !== -1) {
+			// Child item: resolve parent path
+			const parentPath = normalizedPath.substring(0, lastSlashIdx);
+			const parentNode = nodeMap.get(parentPath);
+
+			if (parentNode && parentNode.children) {
+				parentNode.children.push(currentStructureNode);
+			} else {
+				// Fallback to root if explicit parent dir entry was omitted from tree
+				rootStructure.children?.push(currentStructureNode);
+			}
+		} else {
+			// Top-level item directly under root
+			rootStructure.children?.push(currentStructureNode);
+		}
+	}
+
+	return {
+		structure: rootStructure,
+		parameters: parameters,
+	};
+}
 
 async function getFileTreeNodesFromDirectory(
 	dirPath: string,

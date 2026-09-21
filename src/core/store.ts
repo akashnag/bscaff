@@ -66,6 +66,7 @@ export class Store {
 
 		if (info.triggers) {
 			record.triggers = {
+				type: info.triggers.type,
 				preScript: info.triggers.preScript,
 				postScript: info.triggers.postScript,
 			};

@@ -20,6 +20,7 @@ import {
 	type SnippetStructure,
 	SnippetStructureItemType,
 	SnippetType,
+	Template,
 } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
@@ -369,7 +370,7 @@ export async function saveMultipleFiles(
 		const filename = FileUtils.getFileNameFromPath(filePaths[i]);
 		const newFilePath = Config.getStoragePath([key, filename]);
 
-		const params: string[] = MiscUtils.getParametersFromFilename(filename);
+		const params: string[] = MiscUtils.getParametersFromText(filename);
 		params.forEach((param: string) => {
 			parameters.add(param);
 		});
@@ -481,6 +482,7 @@ export async function saveDirectory(
 		structure: result.structure,
 		parameters: Array.from(result.parameters),
 		triggers: {
+			type: "path",
 			preScript: triggerScripts.preScript,
 			postScript: triggerScripts.postScript,
 		},
@@ -551,6 +553,7 @@ export async function cloneGitRepo(
 		structure: result.structure,
 		parameters: Array.from(result.parameters),
 		triggers: {
+			type: "path",
 			preScript: triggerScripts.preScript,
 			postScript: triggerScripts.postScript,
 		},
@@ -580,7 +583,8 @@ export async function saveTree(
 	// create snippet directory
 	SnippetUtils.createSnippetDirectory(key);
 
-	const triggerScripts = SnippetUtils.copyTriggerScripts(
+	// set type explicitly to prevent undefined -> null assignment errors
+	let triggers: Template["triggers"] = SnippetUtils.copyTriggerScripts(
 		key,
 		preExtractScriptPath,
 		postExtractScriptPath,
@@ -588,10 +592,15 @@ export async function saveTree(
 
 	let structure: FileTreeNode[] | null = null;
 	let parameters: string[] | null = null;
+	let triggerType: "path" | "content" = "path";
 
 	if (templateFilePath) {
-		({ structure, parameters } =
-			TreeUtils.extractStructureFromTemplateFile(templateFilePath));
+		({ structure, parameters, triggers } =
+			TreeUtils.readTemplateFile(templateFilePath));
+
+		if (triggers?.preScript || triggers?.postScript) {
+			triggerType = "content";
+		}
 	} else {
 		const tree = (await cm.paste()).trim();
 		({ structure, parameters } = TreeUtils.extractStructureFromTree(tree));
@@ -610,8 +619,9 @@ export async function saveTree(
 		structure: structure,
 		parameters: parameters,
 		triggers: {
-			preScript: triggerScripts.preScript,
-			postScript: triggerScripts.postScript,
+			type: triggerType,
+			preScript: triggers!.preScript,
+			postScript: triggers!.postScript,
 		},
 	});
 

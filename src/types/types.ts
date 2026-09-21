@@ -51,6 +51,17 @@ export interface SnippetRecord {
 	structure: SnippetStructure | FileTreeNode[];
 	parameters: string[] | null;
 	triggers?: {
+		type: "path" | "content";
+		preScript: string | null;
+		postScript: string | null;
+	};
+}
+
+export interface Template {
+	structure: FileTreeNode[];
+	parameters: string[] | null;
+	triggers?: {
+		type: "path" | "content";
 		preScript: string | null;
 		postScript: string | null;
 	};
@@ -64,6 +75,7 @@ export interface SnippetInfo {
 	structure: SnippetStructure | FileTreeNode[];
 	parameters: string[] | null;
 	triggers?: {
+		type: "path" | "content";
 		preScript: string | null;
 		postScript: string | null;
 	};

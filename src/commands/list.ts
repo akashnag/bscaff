@@ -15,6 +15,7 @@ import { Store } from "../core/store.js";
 import { SnippetType } from "../types/types.js";
 import { Logger } from "../utils/logger.js";
 import * as SnippetUtils from "../utils/snippet.js";
+import * as TreeUtils from "../utils/tree.js";
 
 export async function listAllSnippets(): Promise<boolean> {
 	const store = await Store.create();
@@ -44,7 +45,7 @@ export async function listSnippetFiles(key: string): Promise<boolean> {
 		record.type === SnippetType.Tree
 	) {
 		// record.structure.filename will be null here, so iterate over its children
-		console.log(SnippetUtils.drawSnippetFileTree(record.structure));
+		console.log(TreeUtils.drawSnippetFileTree(record.structure));
 	} else if (record.type === SnippetType.File) {
 		if (!("filename" in record.structure)) return false;
 		console.table([

@@ -97,49 +97,6 @@ export function listSnippetFiles(
 	return data;
 }
 
-export async function drawSnippetFileTree(
-	structure: SnippetStructure | FileTreeNode[],
-	prefix: string = "",
-	isLast: boolean = true,
-	lines: string[] = [],
-): Promise<string | null> {
-	let struct: SnippetStructure | null = null;
-
-	if (Array.isArray(structure)) {
-		struct = (await getDirectoryStructureFromTree(structure)).structure;
-	} else {
-		struct = structure;
-	}
-
-	if (!struct) return null;
-
-	// Format and add the current node (skip the root DummyNode)
-	if (struct.type !== SnippetStructureItemType.DummyNode) {
-		const connector = isLast ? "└── " : "├── ";
-		const isDir = struct.type === SnippetStructureItemType.Directory;
-		const displayName = isDir ? `${struct.filename}/` : struct.filename;
-
-		lines.push(`${prefix}${connector}${displayName}`);
-	}
-
-	// Recursively process children
-	if (struct.type !== SnippetStructureItemType.File && struct.children) {
-		let childPrefix = prefix;
-		if (struct.type !== SnippetStructureItemType.DummyNode) {
-			childPrefix += isLast ? "    " : "│   ";
-		}
-
-		const count = struct.children.length;
-		for (let i = 0; i < count; ++i) {
-			const childIsLast = i === count - 1;
-			drawSnippetFileTree(struct.children[i], childPrefix, childIsLast, lines);
-		}
-	}
-
-	// Return the complete string separated by newlines
-	return lines.join("\n");
-}
-
 export async function getDirectoryStructureFromPath(
 	dirPath: string,
 ): Promise<DirectoryStructure> {
@@ -149,7 +106,7 @@ export async function getDirectoryStructureFromPath(
 		const name = FileUtils.getFileNameFromPath(currentPath);
 
 		// Extract parameters from the current file or directory name
-		const params = MiscUtils.getParametersFromFilename(name);
+		const params = MiscUtils.getParametersFromText(name);
 		params.forEach((param: string) => {
 			parameters.add(param);
 		});
@@ -193,77 +150,22 @@ export async function getDirectoryStructureFromPath(
 	};
 }
 
-export async function getDirectoryStructureFromTree(
-	tree: FileTreeNode[],
-): Promise<DirectoryStructure> {
-	const parameters = new Set<string>();
-
-	// Root structure node set up as DummyNode with filename: null
-	const rootStructure: SnippetStructure = {
-		filename: null,
-		type: SnippetStructureItemType.DummyNode,
-		children: [],
-	};
-
-	// Lookup map to find created parent nodes by their normalized path
-	const nodeMap = new Map<string, SnippetStructure>();
-
-	// Sort nodes by level to guarantee parents exist before children are processed
-	const sortedTree = [...tree].sort((a, b) => a.level - b.level);
-
-	for (const node of sortedTree) {
-		// Collect parameters from node name
-		const params = MiscUtils.getParametersFromFilename(node.name);
-		params.forEach((param: string) => {
-			parameters.add(param);
-		});
-
-		const isDirectory = node.type === "dir";
-
-		const currentStructureNode: SnippetStructure = {
-			filename: node.name,
-			type: isDirectory
-				? SnippetStructureItemType.Directory
-				: SnippetStructureItemType.File,
-			children: isDirectory ? [] : null,
-		};
-
-		// Normalize path by removing leading/trailing slashes (e.g. "/src/components" -> "src/components")
-		const normalizedPath = node.path.replace(/^\/+|\/+$/g, "");
-		nodeMap.set(normalizedPath, currentStructureNode);
-
-		const lastSlashIdx = normalizedPath.lastIndexOf("/");
-
-		if (lastSlashIdx !== -1) {
-			// Child item: resolve parent path
-			const parentPath = normalizedPath.substring(0, lastSlashIdx);
-			const parentNode = nodeMap.get(parentPath);
-
-			if (parentNode && parentNode.children) {
-				parentNode.children.push(currentStructureNode);
-			} else {
-				// Fallback to root if explicit parent dir entry was omitted from tree
-				rootStructure.children?.push(currentStructureNode);
-			}
-		} else {
-			// Top-level item directly under root
-			rootStructure.children?.push(currentStructureNode);
-		}
-	}
-
-	return {
-		structure: rootStructure,
-		parameters: parameters,
-	};
-}
-
 export function copyTriggerScripts(
 	key: string,
 	preExtractScriptPath: string | null = null,
 	postExtractScriptPath: string | null = null,
-): { preScript: string | null; postScript: string | null } {
+): {
+	type: "path" | "content";
+	preScript: string | null;
+	postScript: string | null;
+} {
 	const snippetDir = getSnippetDirectory(key);
-	const retVal: { preScript: string | null; postScript: string | null } = {
+	const retVal: {
+		type: "path" | "content";
+		preScript: string | null;
+		postScript: string | null;
+	} = {
+		type: "path",
 		preScript: null,
 		postScript: null,
 	};
