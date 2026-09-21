@@ -16,9 +16,10 @@ import { Store } from "../core/store.js";
 import { Logger } from "../utils/logger.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnippetUtils from "../utils/snippet.js";
+import * as TreeUtils from "../utils/tree.js";
 
 export async function deleteSnippet(key: string): Promise<boolean> {
-	const store = new Store();
+	const store = await Store.create();
 	const logger = new Logger();
 
 	if (!store.doesSnippetKeyExist(key)) {
@@ -41,7 +42,7 @@ export async function renameSnippet(
 	key: string,
 	newKey: string,
 ): Promise<boolean> {
-	const store = new Store();
+	const store = await Store.create();
 	const logger = new Logger();
 
 	if (!store.doesSnippetKeyExist(key)) {
@@ -63,28 +64,29 @@ export async function renameSnippet(
 export async function createTreeDirect(
 	path: string | null = null,
 	overwrite: boolean = false,
+	withContent: boolean = false,
 ): Promise<boolean> {
 	const logger = new Logger();
 	const cm = new ClipboardManager();
 	const tree = (await cm.paste()).trim();
 
-	const { structure, parameters } = MiscUtils.extractStructureFromTree(tree);
+	const { structure, parameters } = TreeUtils.extractStructureFromTree(tree);
 
 	if (!structure) {
 		logger.error("invalid tree structure");
 		return false;
 	}
 
-	const paramValues: Record<string, string> = {};
+	let paramValues: Record<string, string> = {};
 	if (parameters) {
-		for (const param of parameters) {
-			paramValues[param] = await MiscUtils.prompt(
-				`Enter value for parameter '${param}': `,
-			);
-		}
+		paramValues = await MiscUtils.getParameterValuesFromUser(parameters);
 	}
 
-	if (MiscUtils.createTree(structure, paramValues)) {
+	if (TreeUtils.createTree(structure, paramValues)) {
+		if (withContent) {
+			TreeUtils.addTreeContentInteractive(structure, paramValues);
+		}
+
 		logger.success("tree created");
 		return true;
 	}

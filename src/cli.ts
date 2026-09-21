@@ -48,6 +48,15 @@ export class CLI {
 				"--save-dir <path>",
 				"saves a snapshot of the directory specified by path",
 			)
+			.option(
+				"--create-template <path>",
+				"saves a snapshot of the directory as a template file in the current directory (named after key)",
+			)
+			.option(
+				"--create-template-with-content <path>",
+				"saves a snapshot of the directory as a template file in the current directory (named after key) preserving file contents",
+			)
+
 			.option("--save-multi <files...>", "saves a snapshot of the files listed")
 			.option(
 				"--save-text <file>",
@@ -61,8 +70,8 @@ export class CLI {
 			.option("--save-url <url>", "saves a URL")
 			.option("--save-git <repo_url>", "saves a template from a git repo")
 			.option(
-				"--save-tree",
-				"saves a project scaffolding tree copied to clipboard (e.g. generated from LLM tools)",
+				"--save-tree [template_file]",
+				"saves a project scaffolding tree from either a bscaff-template or from clipboard (e.g. generated from LLM tools)",
 			)
 
 			.option(
@@ -77,6 +86,11 @@ export class CLI {
 				"--create-tree <path>",
 				"creates a project scaffolding tree directly from clipboard (e.g. generated from LLM tools)",
 			)
+			.option(
+				"--create-tree-with-content <path>",
+				"creates a project scaffolding tree directly from clipboard (e.g. generated from LLM tools) with contents of each file prompted",
+			)
+
 			.option("-c, --copy", "copies a saved snapshot to clipboard")
 			.option("-e, --edit", "opens a saved file/text for editing")
 			.option(
@@ -162,6 +176,34 @@ export class CLI {
 					? null
 					: options.postExtract,
 			);
+		} else if (options.createTemplate || options.createTemplateWithContent) {
+			if (options.createTemplate) {
+				retVal = await SaveSnippet.createTemplate(
+					options.key,
+					options.createTemplate === true ? null : options.createTemplate,
+					!options.preExtract || options.preExtract === true
+						? null
+						: options.preExtract,
+					!options.postExtract || options.postExtract === true
+						? null
+						: options.postExtract,
+					false,
+				);
+			} else {
+				retVal = await SaveSnippet.createTemplate(
+					options.key,
+					options.createTemplateWithContent === true
+						? null
+						: options.createTemplateWithContent,
+					!options.preExtract || options.preExtract === true
+						? null
+						: options.preExtract,
+					!options.postExtract || options.postExtract === true
+						? null
+						: options.postExtract,
+					true,
+				);
+			}
 		} else if (options.saveMulti) {
 			retVal = await SaveSnippet.saveMultipleFiles(
 				options.key,
@@ -208,6 +250,9 @@ export class CLI {
 			retVal = await SaveSnippet.saveTree(
 				options.key,
 				options.desc,
+				!options.saveTree || options.saveTree === true
+					? null
+					: options.saveTree,
 				!options.preExtract || options.preExtract === true
 					? null
 					: options.preExtract,
@@ -223,11 +268,22 @@ export class CLI {
 				options.extract === true ? undefined : options.extract,
 				options.overwrite,
 			);
-		} else if (options.createTree) {
-			retVal = await MiscSnippetManagement.createTreeDirect(
-				options.createTree === true ? undefined : options.createTree,
-				options.overwrite,
-			);
+		} else if (options.createTree || options.createTreeWithContent) {
+			if (options.createTree) {
+				retVal = await MiscSnippetManagement.createTreeDirect(
+					options.createTree === true ? undefined : options.createTree,
+					options.overwrite,
+					false,
+				);
+			} else {
+				retVal = await MiscSnippetManagement.createTreeDirect(
+					options.createTreeWithContent === true
+						? undefined
+						: options.createTreeWithContent,
+					options.overwrite,
+					true,
+				);
+			}
 		} else if (options.copy) {
 			retVal = await RecallSnippet.copySnippetToMemory(options.key);
 		} else if (options.edit) {

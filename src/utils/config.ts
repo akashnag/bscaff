@@ -21,6 +21,7 @@ export class Config {
 	static readonly SNIPPET_DB_FILE: string = "db.json";
 	static readonly SNIPPET_TEXT_FILE: string = "snippet";
 	static readonly SETTINGS_FILE: string = "settings.json";
+	static readonly TEMPLATE_FILE_EXTENSION: string = "bs_template";
 
 	static getStoragePath(additional: string[] | null = null): string {
 		// return base storage directory (e.g., ~/.bscaff)
@@ -29,16 +30,12 @@ export class Config {
 		else return path.join(os.homedir(), Config.DIRECTORY_NAME);
 	}
 
-	static formPath(items: string[]): string {
-		return path.join(...items);
-	}
-
 	static async ensureStorageDirectoryExists(): Promise<boolean> {
 		const storagePath = Config.getStoragePath();
 
 		try {
 			await fs.mkdir(storagePath, { recursive: true });
-			return Settings.initSettings();
+			return await Settings.initSettings();
 		} catch {
 			return false;
 		}

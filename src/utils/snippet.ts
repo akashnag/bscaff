@@ -18,7 +18,7 @@ import {
 	SnippetStructureItemType,
 } from "../types/types.js";
 import { Config } from "./config.js";
-import * as FileUtils from "./file-utils.js";
+import * as FileUtils from "./files.js";
 import * as MiscUtils from "./misc.js";
 
 export function getSnippetsListDBPath(): string {
@@ -69,9 +69,7 @@ export async function readContentFromSnippetFile(
 	key: string,
 	filePath: string,
 ): Promise<string | null> {
-	return await FileUtils.readSnippetFromFile(
-		getFileUnderSnippet(key, filePath),
-	);
+	return await FileUtils.readTextFile(getFileUnderSnippet(key, filePath));
 }
 
 export function listSnippetFiles(
@@ -165,7 +163,7 @@ export async function getDirectoryStructureFromPath(
 			const children: SnippetStructure[] = [];
 
 			for (const entryName of entryNames) {
-				const childPath = Config.formPath([currentPath, entryName]);
+				const childPath = FileUtils.formPath([currentPath, entryName]);
 
 				// Recursively walk into each child item
 				const childStructure = await walk(childPath);
@@ -178,7 +176,6 @@ export async function getDirectoryStructureFromPath(
 				children: children,
 			};
 		} else {
-			const loc = await MiscUtils.countLOCFromFile(currentPath);
 			return {
 				filename: name,
 				type: SnippetStructureItemType.File,
@@ -262,8 +259,8 @@ export async function getDirectoryStructureFromTree(
 
 export function copyTriggerScripts(
 	key: string,
-	preExtractScript: string | null = null,
-	postExtractScript: string | null = null,
+	preExtractScriptPath: string | null = null,
+	postExtractScriptPath: string | null = null,
 ): { preScript: string | null; postScript: string | null } {
 	const snippetDir = getSnippetDirectory(key);
 	const retVal: { preScript: string | null; postScript: string | null } = {
@@ -271,20 +268,33 @@ export function copyTriggerScripts(
 		postScript: null,
 	};
 
-	if (preExtractScript && FileUtils.doesFileExist(preExtractScript)) {
-		const fileType = MiscUtils.getFileType(preExtractScript, true, "");
+	// resolve file paths to absolute paths
+	if (preExtractScriptPath) {
+		preExtractScriptPath = FileUtils.resolveFilePaths([
+			preExtractScriptPath,
+		])[0];
+	}
+
+	if (postExtractScriptPath) {
+		postExtractScriptPath = FileUtils.resolveFilePaths([
+			postExtractScriptPath,
+		])[0];
+	}
+
+	if (preExtractScriptPath && FileUtils.doesFileExist(preExtractScriptPath)) {
+		const fileType = MiscUtils.getFileType(preExtractScriptPath, true, "");
 		FileUtils.copyFile(
-			preExtractScript,
-			Config.formPath([snippetDir, `pre-script${fileType}`]),
+			preExtractScriptPath,
+			FileUtils.formPath([snippetDir, `pre-script${fileType}`]),
 		);
 		retVal.preScript = `pre-script${fileType}`;
 	}
 
-	if (postExtractScript && FileUtils.doesFileExist(postExtractScript)) {
-		const fileType = MiscUtils.getFileType(postExtractScript, true, "");
+	if (postExtractScriptPath && FileUtils.doesFileExist(postExtractScriptPath)) {
+		const fileType = MiscUtils.getFileType(postExtractScriptPath, true, "");
 		FileUtils.copyFile(
-			postExtractScript,
-			Config.formPath([snippetDir, `post-script${fileType}`]),
+			postExtractScriptPath,
+			FileUtils.formPath([snippetDir, `post-script${fileType}`]),
 		);
 		retVal.postScript = `post-script${fileType}`;
 	}

@@ -8,12 +8,13 @@
 		"scaffold": "./bin/index.js"
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"build": "tsc",
 		"start": "npm run build && node bin/index.js",
-		"dev": "npm run build && node bin/index.js",
 		"prepublishOnly": "npm run build",
 		"lint": "eslint .",
-		"biome:format": "biome format --write ."
+		"biome:format": "biome format --write .",
+		"dev": "tsc --watch & node --watch bin/index.js"
 	},
 	"keywords": [
 		"cli",

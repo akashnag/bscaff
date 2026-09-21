@@ -13,7 +13,7 @@
 
 import type { BScaffSettings } from "../types/types.js";
 import { Config } from "../utils/config.js";
-import * as FileUtils from "../utils/file-utils.js";
+import * as FileUtils from "../utils/files.js";
 import * as MiscUtils from "../utils/misc.js";
 
 export class Settings {
@@ -28,7 +28,7 @@ export class Settings {
 	static settings: BScaffSettings;
 	static settingsFile: string;
 
-	static initSettings(): boolean {
+	static async initSettings(): Promise<boolean> {
 		Settings.settingsFile = Config.getStoragePath([Config.SETTINGS_FILE]);
 		if (!FileUtils.doesFileExist(Settings.settingsFile)) {
 			if (
@@ -42,9 +42,12 @@ export class Settings {
 				return false;
 			}
 		} else {
-			Settings.settings = JSON.parse(
-				FileUtils.readTextFile(Settings.settingsFile)!,
-			);
+			const content = await FileUtils.readTextFile(Settings.settingsFile);
+			if (content) {
+				Settings.settings = JSON.parse(content);
+			} else {
+				Settings.settings = Settings.DEFAULT_SETTINGS;
+			}
 		}
 		return true;
 	}

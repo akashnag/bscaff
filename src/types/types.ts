@@ -12,6 +12,7 @@
  */
 
 export enum SnippetType {
+	Template = "TEMPLATE",
 	Text = "TEXT",
 	Directory = "DIRECTORY",
 	Tree = "TREE", // tree copied from AI output
@@ -31,6 +32,7 @@ export interface FileTreeNode {
 	level: number;
 	name: string;
 	path: string;
+	content?: string | null;
 }
 
 export interface SnippetStructure {

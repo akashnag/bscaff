@@ -18,7 +18,7 @@ import { promisify } from "util";
 import { Settings } from "../core/settings.js";
 import { FileTreeNode } from "../types/types.js";
 import { Config } from "./config.js";
-import * as FileUtils from "./file-utils.js";
+import * as FileUtils from "./files.js";
 import { Logger } from "./logger.js";
 
 const execPromisified = promisify(exec);
@@ -54,7 +54,7 @@ export async function countLOCFromFile(
 ): Promise<number | null> {
 	if (!(await FileUtils.isTextFile(filePath))) return null;
 
-	const data = FileUtils.readTextFile(filePath);
+	const data = await FileUtils.readTextFile(filePath);
 	if (!data) return null;
 
 	return countLOC(data);
@@ -214,22 +214,17 @@ export function replacePlaceholdersInText(
 	});
 }
 
-export async function prompt(question: string): Promise<string> {
-	const rl = readline.createInterface({ input, output });
-	return (await rl.question(question)).trim();
-}
-
-export function replacePlaceholdersInFile(
+export async function replacePlaceholdersInFile(
 	pathType: "directory" | "file",
 	filePath: string,
 	params: Record<string, string>,
-): string {
+): Promise<string> {
 	const exclusions = Settings.get("excludeFromContentModification")!.split(";");
 
 	// rename file
 	const parts = FileUtils.getPathAndFileName(filePath);
 	parts.filename = replacePlaceholdersInText(parts.filename, params);
-	const newFilePath = Config.formPath([parts.path, parts.filename]);
+	const newFilePath = FileUtils.formPath([parts.path, parts.filename]);
 	if (filePath != newFilePath) {
 		if (pathType == "file") FileUtils.renameFile(filePath, newFilePath);
 		else FileUtils.renameDirectory(filePath, newFilePath);
@@ -247,7 +242,7 @@ export function replacePlaceholdersInFile(
 	}
 
 	// perform content modification
-	let text: string | null = FileUtils.readTextFile(newFilePath);
+	let text: string | null = await FileUtils.readTextFile(newFilePath);
 	if (text) {
 		text = replacePlaceholdersInText(text, params);
 		FileUtils.writeTextFile(newFilePath, text);
@@ -256,121 +251,19 @@ export function replacePlaceholdersInFile(
 	return newFilePath;
 }
 
-export function extractStructureFromTree(tree: string): any | null {
-	const chars = {
-		branch: "├",
-		node: "─",
-		comment: "#",
-		lastNode: "└",
-		trunk: "│",
-	};
-
-	const illegalChars = [
-		" ",
-		"<",
-		">",
-		":",
-		'"',
-		"/",
-		"\\",
-		"|",
-		"?",
-		"*",
-		"\0",
-		// Includes ASCII control characters 0 to 31
-		...Array.from({ length: 32 }, (_, i) => String.fromCharCode(i)),
-	];
-
-	const treeLines: string[] = tree.split("\n");
-	const struct: FileTreeNode[] = [];
-	const levelDirs: any = {};
-	const parameters: Set<string> = new Set<string>();
-
-	for (let i = 0; i < treeLines.length; ++i) {
-		let s = treeLines[i];
-		const p = s.indexOf(chars.comment);
-
-		if (p >= 0) {
-			s = s.substring(0, p);
-		}
-
-		const st = s.trim();
-
-		if (st.length == 0 || st.endsWith(chars.trunk)) continue;
-
-		let counter = 0;
-		let level = 0;
-		let name = "";
-
-		if (
-			st[0] != chars.branch &&
-			st[0] != chars.node &&
-			st[0] != chars.lastNode &&
-			st[0] != chars.trunk
-		) {
-			name = st.substring(0, st.length - 1).trim();
-			if (name.length == 0) continue;
-			if (containsChar(name, illegalChars)) continue;
-		} else {
-			for (let j = 0; j < s.length; ++j) {
-				if (
-					s[j] == chars.branch ||
-					s[j] == chars.lastNode ||
-					s[j] == chars.trunk
-				) {
-					counter = 1;
-				} else if (s[j] == " " || s[j] == chars.node) {
-					++counter;
-					if (counter == 3) {
-						counter = 0;
-						++level;
-					}
-				} else if (s[j] != chars.node) {
-					name = s.substring(j).trim();
-					break;
-				}
-			}
-
-			name = st.endsWith("/") ? name.substring(0, name.length - 1) : name;
-			if (name.length == 0) continue;
-			if (containsChar(name, illegalChars)) continue;
-		}
-
-		let path = "";
-		for (let j = 0; j < level; ++j) {
-			path += "/" + levelDirs[j];
-		}
-		path += "/" + name;
-
-		struct.push({
-			type: st.endsWith("/") ? "dir" : "file",
-			level: level,
-			name: name,
-			path: path,
-		});
-
-		const params = getParametersFromFilename(name);
-		params.forEach((param: string) => {
-			parameters.add(param);
-		});
-
-		if (st.endsWith("/")) levelDirs[level] = name;
-	}
-
-	if (struct.length <= 1) {
-		return null;
-	}
-
-	return { structure: struct, parameters: parameters };
+export async function prompt(question: string): Promise<string> {
+	const rl = readline.createInterface({ input, output });
+	return (await rl.question(question)).trim();
 }
 
-export function createTree(
-	structure: FileTreeNode[],
-	parameters: Record<string, string>,
-): boolean {
-	// TODO: add code
-
-	return true;
+export async function getParameterValuesFromUser(
+	parameters: string[],
+): Promise<Record<string, string>> {
+	const paramValues: Record<string, string> = {};
+	for (const param of parameters) {
+		paramValues[param] = await prompt(`Enter value for parameter '${param}': `);
+	}
+	return paramValues;
 }
 
 // ------------------------- [private] -------------------------

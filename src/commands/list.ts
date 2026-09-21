@@ -17,14 +17,14 @@ import { Logger } from "../utils/logger.js";
 import * as SnippetUtils from "../utils/snippet.js";
 
 export async function listAllSnippets(): Promise<boolean> {
-	const store = new Store();
+	const store = await Store.create();
 	const data = store.getList();
 	console.table(data);
 	return true;
 }
 
 export async function listSnippetFiles(key: string): Promise<boolean> {
-	const store = new Store();
+	const store = await Store.create();
 	const logger = new Logger();
 
 	if (!store.doesSnippetKeyExist(key)) {

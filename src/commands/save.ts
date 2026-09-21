@@ -22,10 +22,11 @@ import {
 	SnippetType,
 } from "../types/types.js";
 import { Config } from "../utils/config.js";
-import * as FileUtils from "../utils/file-utils.js";
+import * as FileUtils from "../utils/files.js";
 import { Logger } from "../utils/logger.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnippetUtils from "../utils/snippet.js";
+import * as TreeUtils from "../utils/tree.js";
 
 export async function saveTextFromFile(
 	key: string,
@@ -46,14 +47,14 @@ export async function saveTextFromFile(
 
 	filePath = FileUtils.resolveFilePaths([filePath])[0];
 
-	const store = new Store();
+	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
 		return false;
 	}
 
-	const snippet = await FileUtils.readSnippetFromFile(filePath);
+	const snippet = await FileUtils.readTextFile(filePath);
 	if (!snippet) {
 		logger.error(
 			"cannot read file: ensure it exists, is a text file and you have read permissions",
@@ -108,7 +109,7 @@ export async function saveFile(
 
 	filePath = FileUtils.resolveFilePaths([filePath])[0];
 
-	const store = new Store();
+	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
@@ -186,7 +187,7 @@ export async function saveURL(
 		url = url.trim();
 	}
 
-	const store = new Store();
+	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
@@ -220,7 +221,7 @@ export async function saveURL(
 }
 
 export async function editSnippetContent(key: string): Promise<boolean> {
-	const store = new Store();
+	const store = await Store.create();
 	const logger = new Logger();
 
 	if (!store.doesSnippetKeyExist(key)) {
@@ -253,7 +254,7 @@ export async function editSnippetContent(key: string): Promise<boolean> {
 		record.structure.filename!,
 	);
 
-	const snippet = await FileUtils.readSnippetFromFile(filePath);
+	const snippet = await FileUtils.readTextFile(filePath);
 
 	if (!snippet) {
 		logger.error("error reading data");
@@ -293,7 +294,10 @@ export async function editSnippetContent(key: string): Promise<boolean> {
 	}
 
 	if (
-		FileUtils.writeTextFile(filePath, FileUtils.readTextFile(tempFilePath)!)
+		FileUtils.writeTextFile(
+			filePath,
+			(await FileUtils.readTextFile(tempFilePath))!,
+		)
 	) {
 		store.update();
 		return true;
@@ -336,7 +340,7 @@ export async function saveMultipleFiles(
 		return false;
 	}
 
-	const store = new Store();
+	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
@@ -438,7 +442,7 @@ export async function saveDirectory(
 		return false;
 	}
 
-	const store = new Store();
+	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
@@ -501,7 +505,7 @@ export async function cloneGitRepo(
 		return false;
 	}
 
-	const store = new Store();
+	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
@@ -522,7 +526,7 @@ export async function cloneGitRepo(
 		repoName = repoName.substring(repoName.length - 4);
 
 	const snippetDir = SnippetUtils.getSnippetDirectory(key);
-	const repoLocalDir = Config.formPath([snippetDir, repoName]);
+	const repoLocalDir = FileUtils.formPath([snippetDir, repoName]);
 	FileUtils.createDirectory(repoLocalDir);
 
 	const git: SimpleGit = simpleGit.simpleGit();
@@ -560,13 +564,13 @@ export async function cloneGitRepo(
 export async function saveTree(
 	key: string,
 	description: string | null = null,
+	templateFilePath: string | null = null,
 	preExtractScriptPath: string | null = null,
 	postExtractScriptPath: string | null = null,
 ): Promise<boolean> {
 	const cm = new ClipboardManager();
-	const tree = (await cm.paste()).trim();
 	const logger = new Logger();
-	const store = new Store();
+	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
@@ -582,7 +586,16 @@ export async function saveTree(
 		postExtractScriptPath,
 	);
 
-	const { structure, parameters } = MiscUtils.extractStructureFromTree(tree);
+	let structure: FileTreeNode[] | null = null;
+	let parameters: string[] | null = null;
+
+	if (templateFilePath) {
+		({ structure, parameters } =
+			TreeUtils.extractStructureFromTemplateFile(templateFilePath));
+	} else {
+		const tree = (await cm.paste()).trim();
+		({ structure, parameters } = TreeUtils.extractStructureFromTree(tree));
+	}
 
 	//	console.log(JSON.stringify(struct, null, 2));
 	if (!structure) {
@@ -595,7 +608,7 @@ export async function saveTree(
 		description: description,
 		type: SnippetType.Tree,
 		structure: structure,
-		parameters: Array.from(parameters),
+		parameters: parameters,
 		triggers: {
 			preScript: triggerScripts.preScript,
 			postScript: triggerScripts.postScript,
@@ -605,4 +618,35 @@ export async function saveTree(
 	store.update();
 	logger.success("tree saved");
 	return true;
+}
+
+export async function createTemplate(
+	key: string,
+	dirPath: string | null = null,
+	preExtractScriptPath: string | null = null,
+	postExtractScriptPath: string | null = null,
+	withContent: boolean = false,
+): Promise<boolean> {
+	const logger = new Logger();
+
+	if (!dirPath) {
+		logger.error("path to directory not specified");
+		return false;
+	}
+
+	const templateFile = `${key.replaceAll(/\s/g, "-")}.${Config.TEMPLATE_FILE_EXTENSION}`;
+	const retVal = await TreeUtils.createTemplateFileFromDirectory(
+		dirPath,
+		templateFile,
+		preExtractScriptPath,
+		postExtractScriptPath,
+		withContent,
+	);
+
+	if (retVal) {
+		logger.success("template file created");
+		return true;
+	}
+
+	return false;
 }

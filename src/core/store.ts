@@ -13,16 +13,20 @@
 
 import type { SnippetInfo, SnippetRecord } from "../types/types.js";
 import { Config } from "../utils/config.js";
-import * as FileUtils from "../utils/file-utils.js";
+import * as FileUtils from "../utils/files.js";
 import * as SnippetUtils from "../utils/snippet.js";
 
 export class Store {
 	private snippetsList: SnippetRecord[];
 
-	constructor() {
-		let data = Store.readSnippetsList();
-		if (!data) data = [];
-		this.snippetsList = data;
+	constructor(data: SnippetRecord[] | null = null) {
+		this.snippetsList = data || [];
+	}
+
+	// Static factory method handles the async logic
+	static async create() {
+		const data = await Store.readSnippetsList();
+		return new Store(data);
 	}
 
 	renameSnippetKey(oldKey: string, newKey: string): boolean {
@@ -95,7 +99,6 @@ export class Store {
 					key: record.key,
 					updated: record.modifiedAt,
 					type: record.type.toString(),
-					loc: record.structure.loc ? record.structure.loc.toString() : "-", // TODO: change loc to content and show URLs (if type URL) else '-'
 				};
 
 				data.push(outRec);
@@ -118,9 +121,9 @@ export class Store {
 		FileUtils.writeTextFile(filePath, text);
 	}
 
-	static readSnippetsList(): SnippetRecord[] | null {
+	static async readSnippetsList(): Promise<SnippetRecord[] | null> {
 		const filePath = SnippetUtils.getSnippetsListDBPath();
-		const text = FileUtils.readTextFile(filePath);
+		const text = await FileUtils.readTextFile(filePath);
 		if (text) {
 			const data: SnippetRecord[] = JSON.parse(text);
 			return data;

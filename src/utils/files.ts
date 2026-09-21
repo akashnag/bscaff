@@ -16,6 +16,14 @@ import { isBinaryFile } from "isbinaryfile";
 import * as path from "path";
 import * as MiscUtils from "./misc.js";
 
+export function formPath(items: string[]): string {
+	return path.join(...items);
+}
+
+export function formRelativePath(rootPath: string, fullPath: string) {
+	return path.relative(rootPath, fullPath).replace(/\\/g, "/");
+}
+
 export function doesFileExist(filePath: string): boolean {
 	try {
 		return fs.statSync(filePath).isFile();
@@ -35,6 +43,14 @@ export function doesDirectoryExist(dirPath: string): boolean {
 export function readDirectoryContents(dirPath: string): string[] {
 	try {
 		return fs.readdirSync(dirPath);
+	} catch {
+		return [];
+	}
+}
+
+export function readDirectoryContentsWithTypes(dirPath: string): fs.Dirent[] {
+	try {
+		return fs.readdirSync(dirPath, { withFileTypes: true });
 	} catch {
 		return [];
 	}
@@ -92,14 +108,6 @@ export async function isTextFile(filePath: string): Promise<boolean> {
 		return !isBinary;
 	} catch {
 		return false;
-	}
-}
-
-export function readTextFile(filePath: string): string | null {
-	try {
-		return fs.readFileSync(filePath, "utf-8");
-	} catch {
-		return null;
 	}
 }
 
@@ -162,9 +170,7 @@ export function deleteDirectory(path: string): boolean {
 	}
 }
 
-export async function readSnippetFromFile(
-	filePath: string,
-): Promise<string | null> {
+export async function readTextFile(filePath: string): Promise<string | null> {
 	if (!doesFileExist(filePath)) {
 		// file does not exist
 		return null;
@@ -175,13 +181,12 @@ export async function readSnippetFromFile(
 		return null;
 	}
 
-	const snippet = readTextFile(filePath);
-	if (!snippet) {
-		// error reading from file
+	try {
+		const content = fs.readFileSync(filePath, "utf-8");
+		return content;
+	} catch {
 		return null;
 	}
-
-	return snippet;
 }
 
 export function copyDirectory(src: string, dest: string): void {
