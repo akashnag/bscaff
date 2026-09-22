@@ -252,6 +252,8 @@ export async function extractSnippet(
 		return false;
 	}
 
+	path = FileUtils.resolvePath(path);
+
 	const store = await Store.create();
 
 	if (!store.doesSnippetKeyExist(key)) {
@@ -323,7 +325,12 @@ export async function extractSnippet(
 		);
 	} else if (record.type == SnippetType.Tree) {
 		if (!Array.isArray(record.structure)) return false;
-		return await TreeUtils.createTree(record.structure, paramValues);
+		return await TreeUtils.createTree(
+			path,
+			record.structure,
+			paramValues,
+			overwrite,
+		);
 	} else {
 		logger.error(
 			"can only use snippets of type file/multi-file/directory/github-template",

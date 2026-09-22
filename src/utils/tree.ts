@@ -209,6 +209,7 @@ export async function readTemplateFile(filePath: string): Promise<Template> {
 	return { parameters, structure, triggers };
 }
 
+// scans a directory and creates a template file based off it (including file contents optionally)
 export async function createTemplateFileFromDirectory(
 	dirPath: string,
 	targetTemplateFile: string,
@@ -287,17 +288,48 @@ export async function createTemplateFileFromDirectory(
 	return FileUtils.writeTextFile(targetTemplateFile, content);
 }
 
-export function createTree(
+// creates the file structure on disk (include content if available)
+export async function createTree(
+	path: string | null,
 	structure: FileTreeNode[],
 	parameters: Record<string, string>,
-): boolean {
-	// TODO: add code
+	overwrite: boolean = false,
+): Promise<boolean> {
+	if (!path) return false;
+
+	for (let i = 0; i < structure.length; ++i) {
+		const subPath = MiscUtils.replacePlaceholdersInText(
+			structure[i].path,
+			parameters,
+		);
+		const fullPath = FileUtils.formPath([path, subPath]);
+
+		if (structure[i].type == "file") {
+			const dir = FileUtils.getPathAndFileName(fullPath).path;
+			if (!FileUtils.doesDirectoryExist(dir))
+				FileUtils.createDirectory(dir, true);
+			if (structure[i].content) {
+				if (!overwrite && FileUtils.doesFileExist(fullPath)) {
+					const shouldOverwrite = await MiscUtils.prompt(
+						`File at '${fullPath}' already exists, overwrite (Y/N)? `,
+					);
+					if (!shouldOverwrite || shouldOverwrite.toLowerCase() !== "y")
+						continue;
+				}
+				FileUtils.writeTextFile(fullPath, structure[i].content!);
+			}
+		} else {
+			FileUtils.createDirectory(fullPath, true);
+		}
+	}
+
+	return true;
 }
 
-export function addTreeContentInteractive(
+export async function addTreeContentInteractive(
 	structure: FileTreeNode[],
 	parameters: Record<string, string>,
-): boolean {
+): Promise<boolean> {
 	// TODO: add code
 }
 

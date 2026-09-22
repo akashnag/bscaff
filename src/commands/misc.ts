@@ -13,6 +13,7 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
+import * as FileUtils from "../utils/files.js";
 import { Logger } from "../utils/logger.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnippetUtils from "../utils/snippet.js";
@@ -77,14 +78,21 @@ export async function createTreeDirect(
 		return false;
 	}
 
+	if (!path) {
+		logger.error("path not specified");
+		return false;
+	}
+
+	path = FileUtils.resolvePath(path);
+
 	let paramValues: Record<string, string> = {};
 	if (parameters) {
 		paramValues = await MiscUtils.getParameterValuesFromUser(parameters);
 	}
 
-	if (TreeUtils.createTree(structure, paramValues)) {
+	if (await TreeUtils.createTree(path, structure, paramValues, overwrite)) {
 		if (withContent) {
-			TreeUtils.addTreeContentInteractive(structure, paramValues);
+			await TreeUtils.addTreeContentInteractive(structure, paramValues);
 		}
 
 		logger.success("tree created");

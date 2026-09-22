@@ -152,9 +152,12 @@ export function renameDirectory(oldPath: string, newPath: string): boolean {
 	}
 }
 
-export function createDirectory(path: string): boolean {
+export function createDirectory(
+	path: string,
+	recursive: boolean = false,
+): boolean {
 	try {
-		fs.mkdirSync(path, { recursive: false });
+		fs.mkdirSync(path, { recursive: recursive });
 		return true;
 	} catch {
 		return false;
