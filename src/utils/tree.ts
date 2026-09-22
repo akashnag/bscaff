@@ -18,6 +18,7 @@ import {
 	SnippetStructureItemType,
 	Template,
 } from "../types/types.js";
+import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
 import * as MiscUtils from "./misc.js";
 
@@ -133,9 +134,79 @@ export function extractStructureFromTree(tree: string): {
 	return { structure: struct, parameters: Array.from(parameters) };
 }
 
-// reads a template file and returns its contents
-export function readTemplateFile(filePath: string): Template {
-	// TODO: add code
+// reads a template file and returns its contents as a Template
+export async function readTemplateFile(filePath: string): Promise<Template> {
+	const content = await FileUtils.readTextFile(filePath);
+	const blankTemplate = {
+		structure: null,
+		parameters: null,
+	};
+
+	if (!content) {
+		return blankTemplate;
+	}
+
+	const contentLines = content.split(/\r?\n/);
+	const parts: Record<string, string> = {};
+	let pointer = 0;
+	while (pointer < contentLines.length) {
+		if (
+			contentLines[pointer].startsWith("!<") &&
+			contentLines[pointer].endsWith("]")
+		) {
+			const s = contentLines[pointer];
+			const p1 = s.indexOf(">[");
+			const p2 = s.lastIndexOf(":");
+			const sectionType = s.substring(2, p1);
+			const header = s.substring(p1 + 2, p2);
+			const count = parseInt(s.substring(p2 + 1, s.length - 1));
+			let sectionContent = "";
+
+			for (let i = 0; i < count; ++i) {
+				sectionContent += contentLines[pointer + i + 1] + "\n";
+			}
+
+			if (sectionType == "Content")
+				parts[header] = sectionContent; // remove sectionType so that we can find by file-path in O(1)
+			else parts[`${sectionType}|${header}`] = sectionContent;
+
+			pointer += count + 2;
+		} else {
+			console.log("ERROR");
+		}
+	}
+
+	const header = parts["Header|Header"].trim().split("\n");
+	for (let i = 0; i < header.length; ++i) {
+		if (header[i].trim().startsWith("Version=")) {
+			const version = header[i].substring(header[i].indexOf("=") + 1).trim();
+			if (version != Config.TEMPLATE_FILE_VERSION) return blankTemplate;
+		}
+	}
+
+	const parameters = JSON.parse(parts["Parameters|Parameters"]);
+	const structure = extractStructureFromTree(parts["Tree|Tree"]).structure; // ignore parameters because it is not the complete set (i.e. doesnt contain parameters in file contents)
+
+	if (!structure) return blankTemplate;
+
+	let triggers: Template["triggers"] = undefined;
+
+	if (parts["PreScript"] || parts["PostScript"]) {
+		triggers = {
+			type: "content",
+			preScript: parts["PreScript"] ?? null,
+			postScript: parts["PostScript"] ?? null,
+		};
+	}
+
+	// add content for each file to structure
+	for (let i = 0; i < structure.length; ++i) {
+		if (parts[structure[i].path]) {
+			structure[i].content = parts[structure[i].path];
+		}
+	}
+
+	return { parameters, structure, triggers };
 }
 
 export async function createTemplateFileFromDirectory(
@@ -165,23 +236,14 @@ export async function createTemplateFileFromDirectory(
 	let preScript = null;
 	let postScript = null;
 
-	if (preExtractScriptPath) {
-		preExtractScriptPath = FileUtils.resolveFilePaths([
-			preExtractScriptPath,
-		])[0];
-		preScript = await FileUtils.readTextFile(preExtractScriptPath);
-	}
-
-	if (postExtractScriptPath) {
-		postExtractScriptPath = FileUtils.resolveFilePaths([
-			postExtractScriptPath,
-		])[0];
-		postScript = await FileUtils.readTextFile(postExtractScriptPath);
-	}
-
 	let content: string = "";
 	let parameters: Set<string> = new Set<string>();
 
+	content += createFileSection(
+		"Header",
+		"Header",
+		`Version=${Config.TEMPLATE_FILE_VERSION}`,
+	);
 	content += createFileSection("Tree", "Tree", fileTreeASCII);
 
 	if (preScript) {
@@ -222,10 +284,7 @@ export async function createTemplateFileFromDirectory(
 		);
 	}
 
-	return FileUtils.writeTextFile(
-		FileUtils.resolveFilePaths([targetTemplateFile])[0],
-		content,
-	);
+	return FileUtils.writeTextFile(targetTemplateFile, content);
 }
 
 export function createTree(
@@ -242,6 +301,7 @@ export function addTreeContentInteractive(
 	// TODO: add code
 }
 
+// given a SnippetStructure or a FileTreeNode[] draws the file tree as ASCII-art and returns as a string
 export async function drawSnippetFileTree(
 	structure: SnippetStructure | FileTreeNode[],
 	prefix: string = "",
@@ -355,7 +415,6 @@ async function getFileTreeNodesFromDirectory(
 	dirPath: string,
 	readContent: boolean = false,
 ): Promise<FileTreeNode[]> {
-	const rootPath = FileUtils.resolveFilePaths([dirPath])[0];
 	const nodes: FileTreeNode[] = [];
 
 	async function traverse(currentDirPath: string, level: number) {
@@ -372,7 +431,7 @@ async function getFileTreeNodesFromDirectory(
 			const fullPath = FileUtils.formPath([currentDirPath, entry.name]);
 
 			// Calculate relative path starting with a leading slash
-			const relativePath = "/" + FileUtils.formRelativePath(rootPath, fullPath);
+			const relativePath = "/" + FileUtils.formRelativePath(dirPath, fullPath);
 
 			if (entry.isDirectory()) {
 				nodes.push({
@@ -403,6 +462,6 @@ async function getFileTreeNodesFromDirectory(
 		}
 	}
 
-	await traverse(rootPath, 0);
+	await traverse(dirPath, 0);
 	return nodes;
 }

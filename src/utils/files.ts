@@ -213,7 +213,7 @@ export function copyDirectory(src: string, dest: string): void {
 	}
 }
 
-export function resolveFilePaths(paths: string[]): string[] {
+export function resolvePaths(paths: string[]): string[] {
 	const cwd = process.cwd();
 	const newPaths = [];
 
@@ -222,4 +222,8 @@ export function resolveFilePaths(paths: string[]): string[] {
 	}
 
 	return newPaths;
+}
+
+export function resolvePath(path: string): string {
+	return resolvePaths([path])[0];
 }

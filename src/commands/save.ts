@@ -46,7 +46,7 @@ export async function saveTextFromFile(
 		return false;
 	}
 
-	filePath = FileUtils.resolveFilePaths([filePath])[0];
+	filePath = FileUtils.resolvePath(filePath);
 
 	const store = await Store.create();
 
@@ -108,7 +108,7 @@ export async function saveFile(
 		return false;
 	}
 
-	filePath = FileUtils.resolveFilePaths([filePath])[0];
+	filePath = FileUtils.resolvePath(filePath);
 
 	const store = await Store.create();
 
@@ -349,7 +349,7 @@ export async function saveMultipleFiles(
 	}
 
 	// files contains possibly relative filenames, filePaths contain absolute filenames
-	const filePaths = FileUtils.resolveFilePaths(files);
+	const filePaths = FileUtils.resolvePaths(files);
 
 	// ensure all files exist before proceeding
 	for (let i = 0; i < filePaths.length; ++i) {
@@ -451,7 +451,7 @@ export async function saveDirectory(
 	}
 
 	// files contains possibly relative filenames, filePaths contain absolute filenames
-	dirPath = FileUtils.resolveFilePaths([dirPath])[0];
+	dirPath = FileUtils.resolvePath(dirPath);
 
 	// ensure the source directory before proceeding
 	if (!FileUtils.doesDirectoryExist(dirPath)) {
@@ -596,7 +596,7 @@ export async function saveTree(
 
 	if (templateFilePath) {
 		({ structure, parameters, triggers } =
-			TreeUtils.readTemplateFile(templateFilePath));
+			await TreeUtils.readTemplateFile(templateFilePath));
 
 		if (triggers?.preScript || triggers?.postScript) {
 			triggerType = "content";
@@ -644,7 +644,20 @@ export async function createTemplate(
 		return false;
 	}
 
-	const templateFile = `${key.replaceAll(/\s/g, "-")}.${Config.TEMPLATE_FILE_EXTENSION}`;
+	const templateFile = FileUtils.resolvePath(
+		`./${key.replaceAll(/\s/g, "-")}.${Config.TEMPLATE_FILE_EXTENSION}`,
+	);
+
+	dirPath = FileUtils.resolvePath(dirPath);
+
+	if (preExtractScriptPath) {
+		preExtractScriptPath = FileUtils.resolvePath(preExtractScriptPath);
+	}
+
+	if (postExtractScriptPath) {
+		postExtractScriptPath = FileUtils.resolvePath(postExtractScriptPath);
+	}
+
 	const retVal = await TreeUtils.createTemplateFileFromDirectory(
 		dirPath,
 		templateFile,

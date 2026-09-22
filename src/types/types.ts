@@ -58,7 +58,7 @@ export interface SnippetRecord {
 }
 
 export interface Template {
-	structure: FileTreeNode[];
+	structure: FileTreeNode[] | null;
 	parameters: string[] | null;
 	triggers?: {
 		type: "path" | "content";

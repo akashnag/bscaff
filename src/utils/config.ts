@@ -22,6 +22,7 @@ export class Config {
 	static readonly SNIPPET_TEXT_FILE: string = "snippet";
 	static readonly SETTINGS_FILE: string = "settings.json";
 	static readonly TEMPLATE_FILE_EXTENSION: string = "bs_template";
+	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
 
 	static getStoragePath(additional: string[] | null = null): string {
 		// return base storage directory (e.g., ~/.bscaff)

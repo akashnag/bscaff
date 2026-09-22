@@ -172,15 +172,11 @@ export function copyTriggerScripts(
 
 	// resolve file paths to absolute paths
 	if (preExtractScriptPath) {
-		preExtractScriptPath = FileUtils.resolveFilePaths([
-			preExtractScriptPath,
-		])[0];
+		preExtractScriptPath = FileUtils.resolvePath(preExtractScriptPath);
 	}
 
 	if (postExtractScriptPath) {
-		postExtractScriptPath = FileUtils.resolveFilePaths([
-			postExtractScriptPath,
-		])[0];
+		postExtractScriptPath = FileUtils.resolvePath(postExtractScriptPath);
 	}
 
 	if (preExtractScriptPath && FileUtils.doesFileExist(preExtractScriptPath)) {

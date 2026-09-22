@@ -176,7 +176,7 @@ export async function appendOrPrependToFile(
 	}
 
 	// paths contains possibly relative filenames, filePaths contain absolute filenames
-	const filePaths = FileUtils.resolveFilePaths(paths);
+	const filePaths = FileUtils.resolvePaths(paths);
 
 	let c: number = 0;
 	for (let i: number = 0; i < paths.length; ++i) {
@@ -271,7 +271,7 @@ export async function extractSnippet(
 	}
 
 	// resolve paths
-	path = FileUtils.resolveFilePaths([path])[0];
+	path = FileUtils.resolvePath(path);
 
 	if (record.type == SnippetType.File) {
 		if (!("filename" in record.structure)) return false;
