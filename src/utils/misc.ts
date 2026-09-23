@@ -11,15 +11,14 @@
  * GNU General Public License for more details.
  */
 
+import * as process from "node:process";
 import { stdin as input, stdout as output } from "node:process";
 import * as readline from "node:readline/promises";
 import { exec, execSync, spawnSync } from "child_process";
 import { promisify } from "util";
 import { Settings } from "../core/settings.js";
-import { FileTreeNode } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
-import { Logger } from "./logger.js";
 
 const execPromisified = promisify(exec);
 
@@ -270,6 +269,43 @@ export async function replacePlaceholdersInFile(
 export async function prompt(question: string): Promise<string> {
 	const rl = readline.createInterface({ input, output });
 	return (await rl.question(question)).trim();
+}
+
+export function getche(question?: string): Promise<string> {
+	return new Promise((resolve) => {
+		if (question) {
+			process.stdout.write(question);
+		}
+
+		const { stdin } = process;
+
+		// Enable raw mode to read keypresses immediately without waiting for Enter
+		const isRaw = stdin.isRaw;
+		stdin.setRawMode(true);
+		stdin.resume();
+		stdin.setEncoding("utf-8");
+
+		const onData = (data: Buffer | string) => {
+			const char = data.toString();
+
+			// Handle Ctrl+C (SIGINT) so the process can still be exited
+			if (char === "\u0003") {
+				process.exit();
+			}
+
+			// Restore previous raw mode setting and cleanup event listener
+			stdin.setRawMode(isRaw);
+			stdin.pause();
+			stdin.removeListener("data", onData);
+
+			// Print a newline so subsequent output starts on a fresh line
+			process.stdout.write("\n");
+
+			resolve(char);
+		};
+
+		stdin.on("data", onData);
+	});
 }
 
 export async function getParameterValuesFromUser(

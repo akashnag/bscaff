@@ -286,7 +286,7 @@ export async function extractSnippet(
 
 		if (fileExists && !overwrite) {
 			shouldOverwrite =
-				(await MiscUtils.prompt(`Overwrite (Y/N)? `)).toLowerCase() == "y";
+				(await MiscUtils.getche(`Overwrite (Y/N)? `)).toLowerCase() == "y";
 		}
 
 		if (!fileExists || overwrite || shouldOverwrite) {
@@ -373,7 +373,7 @@ async function extractMultiFileTemplate(
 		if (fileExists && !overwrite) {
 			shouldOverwrite =
 				(
-					await MiscUtils.prompt(
+					await MiscUtils.getche(
 						`Overwrite '${filesToExtract[i].filename}' (Y/N)? `,
 					)
 				).toLowerCase() == "y";
@@ -428,7 +428,7 @@ async function extractDirectoryTemplate(
 	if (FileUtils.doesDirectoryExist(destRootDirPath) && !overwrite) {
 		const shouldOverwrite =
 			(
-				await MiscUtils.prompt(
+				await MiscUtils.getche(
 					`Overwrite '${concretizedRootDirName}' and any of its contents (Y/N)? `,
 				)
 			).toLowerCase() == "y";

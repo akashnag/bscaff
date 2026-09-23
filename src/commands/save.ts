@@ -265,7 +265,7 @@ export async function editSnippetContent(key: string): Promise<boolean> {
 	if (record.type === SnippetType.URL) {
 		console.log(`Current URL: ${snippet.trim()}`);
 
-		const newURL = await MiscUtils.prompt(
+		const newURL = await MiscUtils.getche(
 			"Enter new URL (press Enter to abort): ",
 		);
 

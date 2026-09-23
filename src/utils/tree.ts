@@ -314,7 +314,7 @@ export async function createTree(
 
 			if (structure[i].content) {
 				if (!overwrite && FileUtils.doesFileExist(fullPath)) {
-					const shouldOverwrite = await MiscUtils.prompt(
+					const shouldOverwrite = await MiscUtils.getche(
 						`File at '${fullPath}' already exists, overwrite (Y/N)? `,
 					);
 					if (!shouldOverwrite || shouldOverwrite.trim().toLowerCase() !== "y")
@@ -330,6 +330,7 @@ export async function createTree(
 	return true;
 }
 
+// given a tree-directory structure already exists, prompts the user for content to be put into the files to be copied from clipboard once user is ready
 export async function addTreeContentInteractive(
 	path: string,
 	structure: FileTreeNode[],
@@ -349,13 +350,13 @@ export async function addTreeContentInteractive(
 		const fullPath = FileUtils.formPath([path, subPath]);
 
 		if (FileUtils.doesFileExist(fullPath)) {
-			const shouldOverwrite = await MiscUtils.prompt(
+			const shouldOverwrite = await MiscUtils.getche(
 				`File at '${fullPath}' already exists, overwrite (Y/N)? `,
 			);
 			if (shouldOverwrite.toLowerCase() !== "y") continue;
 		}
 
-		const choice = await MiscUtils.prompt(
+		const choice = await MiscUtils.getche(
 			`File: '${fullPath}'\n\tWhen ready press C else press Enter to skip: `,
 		);
 		if (choice && choice.trim().toLowerCase() == "c") {
