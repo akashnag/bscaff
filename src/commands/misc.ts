@@ -92,7 +92,7 @@ export async function createTreeDirect(
 
 	if (await TreeUtils.createTree(path, structure, paramValues, overwrite)) {
 		if (withContent) {
-			await TreeUtils.addTreeContentInteractive(structure, paramValues);
+			await TreeUtils.addTreeContentInteractive(path, structure, paramValues);
 		}
 
 		logger.success("tree created");

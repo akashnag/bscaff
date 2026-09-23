@@ -230,3 +230,29 @@ export function resolvePaths(paths: string[]): string[] {
 export function resolvePath(path: string): string {
 	return resolvePaths([path])[0];
 }
+
+export function getFormattedFileSize(
+	filePath: string,
+	decimals: number = 2,
+): string | null {
+	try {
+		const stats = fs.statSync(filePath);
+		if (!stats.isFile()) return null;
+
+		const bytes = stats.size;
+		if (bytes === 0) return "0 bytes";
+
+		const k = 1024;
+		const dm = decimals < 0 ? 0 : decimals;
+		const sizes = ["bytes", "KB", "MB", "GB", "TB"];
+
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+		// Safeguard against extreme sizes matching beyond the array boundary
+		const unitIndex = Math.min(i, sizes.length - 1);
+
+		return `${parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(dm))} ${sizes[unitIndex]}`;
+	} catch {
+		return null;
+	}
+}

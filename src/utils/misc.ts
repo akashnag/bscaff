@@ -36,6 +36,17 @@ export function countLines(str: string): number {
 	return str.split(/\r?\n/).length;
 }
 
+export function indentLines(str: string, n: number = 0): string {
+	if (n <= 0) return str;
+
+	const lines = str.split(/\r?\n/);
+	for (let i = 0; i < lines.length; ++i) {
+		lines[i] = " ".repeat(n) + lines[i];
+	}
+
+	return lines.join("\n");
+}
+
 export function countLOC(codeString: string): number {
 	const lines = codeString.split(/\r?\n/);
 

@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { ClipboardManager } from "../core/clipboard.js";
 import {
 	DirectoryStructure,
 	FileTreeNode,
@@ -20,6 +21,7 @@ import {
 } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
+import { Logger } from "./logger.js";
 import * as MiscUtils from "./misc.js";
 
 // converts an ASCII-art file-tree to FileTreeNode[]
@@ -306,14 +308,16 @@ export async function createTree(
 
 		if (structure[i].type == "file") {
 			const dir = FileUtils.getPathAndFileName(fullPath).path;
-			if (!FileUtils.doesDirectoryExist(dir))
+			if (!FileUtils.doesDirectoryExist(dir)) {
 				FileUtils.createDirectory(dir, true);
+			}
+
 			if (structure[i].content) {
 				if (!overwrite && FileUtils.doesFileExist(fullPath)) {
 					const shouldOverwrite = await MiscUtils.prompt(
 						`File at '${fullPath}' already exists, overwrite (Y/N)? `,
 					);
-					if (!shouldOverwrite || shouldOverwrite.toLowerCase() !== "y")
+					if (!shouldOverwrite || shouldOverwrite.trim().toLowerCase() !== "y")
 						continue;
 				}
 				FileUtils.writeTextFile(fullPath, structure[i].content!);
@@ -327,10 +331,45 @@ export async function createTree(
 }
 
 export async function addTreeContentInteractive(
+	path: string,
 	structure: FileTreeNode[],
 	parameters: Record<string, string>,
 ): Promise<boolean> {
-	// TODO: add code
+	const cm = new ClipboardManager();
+	const logger = new Logger();
+
+	for (let i = 0; i < structure.length; ++i) {
+		if (structure[i].type !== "file") continue;
+
+		const subPath = MiscUtils.replacePlaceholdersInText(
+			structure[i].path,
+			parameters,
+		);
+
+		const fullPath = FileUtils.formPath([path, subPath]);
+
+		if (FileUtils.doesFileExist(fullPath)) {
+			const shouldOverwrite = await MiscUtils.prompt(
+				`File at '${fullPath}' already exists, overwrite (Y/N)? `,
+			);
+			if (shouldOverwrite.toLowerCase() !== "y") continue;
+		}
+
+		const choice = await MiscUtils.prompt(
+			`File: '${fullPath}'\n\tWhen ready press C else press Enter to skip: `,
+		);
+		if (choice && choice.trim().toLowerCase() == "c") {
+			const content = await cm.paste();
+			if (content) {
+				FileUtils.writeTextFile(fullPath, content);
+				logger.info("written");
+			}
+		} else {
+			logger.info("skipped");
+		}
+	}
+
+	return true;
 }
 
 // given a SnippetStructure or a FileTreeNode[] draws the file tree as ASCII-art and returns as a string
