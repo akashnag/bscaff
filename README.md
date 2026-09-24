@@ -4,6 +4,11 @@
 
 ---
 
+> [!WARNING]
+> This CLI tool is currently in an **unstable, pre-release state** and may contain critical bugs. 
+> **Do not use in production** or for automated, mission-critical workflows. Command-line flags, configuration syntax, and outputs may change without notice.
+
+
 **A cross-platform project scaffolding and developer template toolkit.**
 
 Save project structures, files, directories, code, Git repositories, URLs, and reusable templates — then quickly recall and use them whenever you need them.

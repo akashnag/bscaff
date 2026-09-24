@@ -33,6 +33,7 @@ export interface FileTreeNode {
 	name: string;
 	path: string;
 	content?: string | null;
+	sizeInBytes?: number;
 }
 
 export interface SnippetStructure {

@@ -508,7 +508,7 @@ export async function saveDirectory(
 	logger.success("template saved");
 	ui.successSnapshotTaken(
 		key,
-		FileUtils.formatSize(result.sizeInBytes!),
+		MiscUtils.formatFileSize(result.sizeInBytes!),
 		result.fileCount!,
 		result.dirCount!,
 	);

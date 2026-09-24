@@ -236,7 +236,7 @@ export function getFormattedFileSize(
 	filePath: string,
 	decimals: number = 2,
 ): string | null {
-	return formatSize(getFileSizeInBytes(filePath), decimals);
+	return MiscUtils.formatFileSize(getFileSizeInBytes(filePath), decimals);
 }
 
 export function getFileSizeInBytes(filePath: string) {
@@ -249,24 +249,6 @@ export function getFileSizeInBytes(filePath: string) {
 	} catch {
 		return null;
 	}
-}
-
-export function formatSize(
-	bytes: number | null,
-	decimals: number = 2,
-): string | null {
-	if (bytes === null) return null;
-
-	const k = 1024;
-	const dm = decimals < 0 ? 0 : decimals;
-	const sizes = ["bytes", "KB", "MB", "GB", "TB"];
-
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-	// Safeguard against extreme sizes matching beyond the array boundary
-	const unitIndex = Math.min(i, sizes.length - 1);
-
-	return `${parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(dm))} ${sizes[unitIndex]}`;
 }
 
 export function getRelativePath(
