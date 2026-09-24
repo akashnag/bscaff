@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/bscaff-logo_with_wordmark_large.png" alt="bscaff" width="300">
+  <img src="docs/images/bscaff-logo_with_wordmark_small.png" alt="bscaff" width="600">
 </p>
 
 ---

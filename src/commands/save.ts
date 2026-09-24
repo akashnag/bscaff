@@ -14,6 +14,7 @@
 import simpleGit, { type SimpleGit } from "simple-git";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
+import { ScriptMissingError } from "../types/errors.js";
 import {
 	type DirectoryStructure,
 	FileTreeNode,
@@ -23,6 +24,7 @@ import {
 	Template,
 } from "../types/types.js";
 import { Config } from "../utils/config.js";
+import { SaveDirectoryUI } from "../utils/console-ui.js";
 import * as FileUtils from "../utils/files.js";
 import { Logger } from "../utils/logger.js";
 import * as MiscUtils from "../utils/misc.js";
@@ -63,7 +65,7 @@ export async function saveTextFromFile(
 		return false;
 	}
 
-	const fileType = MiscUtils.getFileType(filePath, true, "txt");
+	const fileType = FileUtils.getFileType(filePath, true, "txt");
 
 	SnippetUtils.createSnippetDirectory(key);
 	SnippetUtils.writeContentToSnippetFile(
@@ -283,7 +285,7 @@ export async function editSnippetContent(key: string): Promise<boolean> {
 		return true;
 	}
 
-	const fileType = MiscUtils.getFileType(filePath, true, "txt");
+	const fileType = FileUtils.getFileType(filePath, true, "txt");
 	const tempFilePath = MiscUtils.createRandomFileAndOpenInEditor(
 		fileType,
 		snippet,
@@ -437,9 +439,11 @@ export async function saveDirectory(
 	*/
 
 	const logger = new Logger();
+	const ui = new SaveDirectoryUI();
 
 	if (!dirPath) {
 		logger.error("missing parameter: path to the directory");
+		ui.errorMissingParameter("path");
 		return false;
 	}
 
@@ -447,6 +451,7 @@ export async function saveDirectory(
 
 	if (store.doesSnippetKeyExist(key)) {
 		logger.error("key already exists");
+		ui.errorDuplicateKey(key);
 		return false;
 	}
 
@@ -456,6 +461,7 @@ export async function saveDirectory(
 	// ensure the source directory before proceeding
 	if (!FileUtils.doesDirectoryExist(dirPath)) {
 		logger.error("directory does not exist or you don't have read permissions");
+		ui.errorSourceDirectoryMissing(dirPath);
 		return false;
 	}
 
@@ -466,11 +472,21 @@ export async function saveDirectory(
 	const destPath = SnippetUtils.getSnippetDirectory(key);
 	FileUtils.copyDirectory(dirPath, destPath);
 
-	const triggerScripts = SnippetUtils.copyTriggerScripts(
-		key,
-		preExtractScriptPath,
-		postExtractScriptPath,
-	);
+	let triggerScripts = null;
+
+	try {
+		triggerScripts = SnippetUtils.copyTriggerScripts(
+			key,
+			preExtractScriptPath,
+			postExtractScriptPath,
+		);
+	} catch (error: unknown) {
+		if (error instanceof ScriptMissingError) {
+			logger.error("script is missing");
+			ui.errorTriggerScriptsMissing(error.scriptType, error.path);
+			return false;
+		}
+	}
 
 	const result: DirectoryStructure =
 		await SnippetUtils.getDirectoryStructureFromPath(destPath);
@@ -483,13 +499,19 @@ export async function saveDirectory(
 		parameters: Array.from(result.parameters),
 		triggers: {
 			type: "path",
-			preScript: triggerScripts.preScript,
-			postScript: triggerScripts.postScript,
+			preScript: triggerScripts!.preScript,
+			postScript: triggerScripts!.postScript,
 		},
 	});
 
 	store.update();
 	logger.success("template saved");
+	ui.successSnapshotTaken(
+		key,
+		FileUtils.formatSize(result.sizeInBytes!),
+		result.fileCount!,
+		result.dirCount!,
+	);
 	return true;
 }
 

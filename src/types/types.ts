@@ -39,6 +39,7 @@ export interface SnippetStructure {
 	filename: string | null;
 	type: SnippetStructureItemType;
 	children: SnippetStructure[] | null;
+	sizeInBytes?: number | null;
 }
 
 // actual format in which snippet record is stored on database
@@ -92,4 +93,7 @@ export interface BScaffSettings {
 export interface DirectoryStructure {
 	structure: SnippetStructure;
 	parameters: Set<string>;
+	fileCount?: number;
+	dirCount?: number;
+	sizeInBytes?: number;
 }

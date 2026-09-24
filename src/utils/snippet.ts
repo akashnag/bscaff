@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { ScriptMissingError } from "../types/errors.js";
 import {
 	DirectoryStructure,
 	FileTreeNode,
@@ -101,6 +102,9 @@ export async function getDirectoryStructureFromPath(
 	dirPath: string,
 ): Promise<DirectoryStructure> {
 	const parameters = new Set<string>();
+	let totalSize = 0,
+		fileCount = 0,
+		dirCount = 0;
 
 	async function walk(currentPath: string): Promise<SnippetStructure> {
 		const name = FileUtils.getFileNameFromPath(currentPath);
@@ -115,6 +119,8 @@ export async function getDirectoryStructureFromPath(
 		const isDir = FileUtils.doesDirectoryExist(currentPath);
 
 		if (isDir) {
+			++dirCount;
+
 			// Read all direct children inside the folder
 			const entryNames = FileUtils.readDirectoryContents(currentPath);
 			const children: SnippetStructure[] = [];
@@ -133,10 +139,15 @@ export async function getDirectoryStructureFromPath(
 				children: children,
 			};
 		} else {
+			const size = FileUtils.getFileSizeInBytes(currentPath);
+			++fileCount;
+			if (size !== null) totalSize += size;
+
 			return {
 				filename: name,
 				type: SnippetStructureItemType.File,
 				children: null,
+				sizeInBytes: size,
 			};
 		}
 	}
@@ -147,6 +158,9 @@ export async function getDirectoryStructureFromPath(
 	return {
 		structure: rootStructure,
 		parameters: parameters,
+		sizeInBytes: totalSize,
+		fileCount: fileCount,
+		dirCount: dirCount,
 	};
 }
 
@@ -173,14 +187,20 @@ export function copyTriggerScripts(
 	// resolve file paths to absolute paths
 	if (preExtractScriptPath) {
 		preExtractScriptPath = FileUtils.resolvePath(preExtractScriptPath);
+		if (!FileUtils.doesFileExist(preExtractScriptPath)) {
+			throw new ScriptMissingError("pre", preExtractScriptPath);
+		}
 	}
 
 	if (postExtractScriptPath) {
 		postExtractScriptPath = FileUtils.resolvePath(postExtractScriptPath);
+		if (!FileUtils.doesFileExist(postExtractScriptPath)) {
+			throw new ScriptMissingError("post", postExtractScriptPath);
+		}
 	}
 
-	if (preExtractScriptPath && FileUtils.doesFileExist(preExtractScriptPath)) {
-		const fileType = MiscUtils.getFileType(preExtractScriptPath, true, "");
+	if (preExtractScriptPath) {
+		const fileType = FileUtils.getFileType(preExtractScriptPath, true, "");
 		FileUtils.copyFile(
 			preExtractScriptPath,
 			FileUtils.formPath([snippetDir, `pre-script${fileType}`]),
@@ -188,8 +208,8 @@ export function copyTriggerScripts(
 		retVal.preScript = `pre-script${fileType}`;
 	}
 
-	if (postExtractScriptPath && FileUtils.doesFileExist(postExtractScriptPath)) {
-		const fileType = MiscUtils.getFileType(postExtractScriptPath, true, "");
+	if (postExtractScriptPath) {
+		const fileType = FileUtils.getFileType(postExtractScriptPath, true, "");
 		FileUtils.copyFile(
 			postExtractScriptPath,
 			FileUtils.formPath([snippetDir, `post-script${fileType}`]),

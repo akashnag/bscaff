@@ -110,6 +110,7 @@ export class CLI {
 				"--overwrite",
 				"force overwrite if destination file/directory exists",
 			)
+
 			.option(
 				"--pre-extract <path-to-script-file>",
 				"executes this script before extracting a directory/git-template",

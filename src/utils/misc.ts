@@ -75,23 +75,6 @@ export async function countLOCFromFile(
 	return countLOC(data);
 }
 
-// Given a path to a file, returns the extension of that file
-export function getFileType(
-	filePath: string,
-	includeDot: boolean = true,
-	defaultExtension: string = "txt",
-): string {
-	const pos = filePath.lastIndexOf(".");
-	if (pos < 0) {
-		return (
-			(includeDot && defaultExtension.trim().length > 0 ? "." : "") +
-			defaultExtension
-		);
-	} else {
-		return filePath.substring(pos);
-	}
-}
-
 export function createRandomFileAndOpenInEditor(
 	fileType: string = "txt",
 	content: string | null = null,

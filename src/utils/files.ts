@@ -14,6 +14,7 @@
 import * as fs from "fs";
 import { isBinaryFile } from "isbinaryfile";
 import * as path from "path";
+import process from "process";
 import * as MiscUtils from "./misc.js";
 
 export function formPath(items: string[]): string {
@@ -235,24 +236,60 @@ export function getFormattedFileSize(
 	filePath: string,
 	decimals: number = 2,
 ): string | null {
+	return formatSize(getFileSizeInBytes(filePath), decimals);
+}
+
+export function getFileSizeInBytes(filePath: string) {
 	try {
 		const stats = fs.statSync(filePath);
 		if (!stats.isFile()) return null;
 
 		const bytes = stats.size;
-		if (bytes === 0) return "0 bytes";
-
-		const k = 1024;
-		const dm = decimals < 0 ? 0 : decimals;
-		const sizes = ["bytes", "KB", "MB", "GB", "TB"];
-
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-		// Safeguard against extreme sizes matching beyond the array boundary
-		const unitIndex = Math.min(i, sizes.length - 1);
-
-		return `${parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(dm))} ${sizes[unitIndex]}`;
+		return bytes;
 	} catch {
 		return null;
+	}
+}
+
+export function formatSize(
+	bytes: number | null,
+	decimals: number = 2,
+): string | null {
+	if (bytes === null) return null;
+
+	const k = 1024;
+	const dm = decimals < 0 ? 0 : decimals;
+	const sizes = ["bytes", "KB", "MB", "GB", "TB"];
+
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+	// Safeguard against extreme sizes matching beyond the array boundary
+	const unitIndex = Math.min(i, sizes.length - 1);
+
+	return `${parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(dm))} ${sizes[unitIndex]}`;
+}
+
+export function getRelativePath(
+	fullPath: string,
+	basePath: string | null = null,
+): string {
+	if (!basePath) basePath = process.cwd();
+	return path.relative(basePath, fullPath);
+}
+
+// Given a path to a file, returns the extension of that file
+export function getFileType(
+	filePath: string,
+	includeDot: boolean = true,
+	defaultExtension: string = "txt",
+): string {
+	const pos = filePath.lastIndexOf(".");
+	if (pos < 0) {
+		return (
+			(includeDot && defaultExtension.trim().length > 0 ? "." : "") +
+			defaultExtension
+		);
+	} else {
+		return filePath.substring(pos);
 	}
 }

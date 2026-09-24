@@ -119,7 +119,7 @@ export async function openSnippet(key: string): Promise<boolean> {
 			return false;
 		}
 
-		const fileType = MiscUtils.getFileType(filePath);
+		const fileType = FileUtils.getFileType(filePath);
 		const tempFile = MiscUtils.createRandomFileAndOpenInEditor(
 			fileType,
 			snippet,
