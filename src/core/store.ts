@@ -11,7 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import type { SnippetInfo, SnippetRecord } from "../types/types.js";
+import type {
+	SnippetInfo,
+	SnippetRecord,
+	SnippetType,
+} from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
 import * as SnippetUtils from "../utils/snippet.js";
@@ -108,6 +112,12 @@ export class Store {
 		}
 
 		return data;
+	}
+
+	getRawListByType(sTypes: SnippetType[]): SnippetRecord[] {
+		return this.snippetsList
+			.filter((item) => sTypes.indexOf(item.type) > -1)
+			.sort((a, b) => a.key.localeCompare(b.key));
 	}
 
 	getRawList(key: string): SnippetRecord {

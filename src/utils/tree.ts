@@ -12,6 +12,7 @@
  */
 
 import { ClipboardManager } from "../core/clipboard.js";
+import { Logger } from "../io/logger.js";
 import {
 	DirectoryStructure,
 	FileTreeNode,
@@ -21,7 +22,6 @@ import {
 } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
-import { Logger } from "./logger.js";
 import * as MiscUtils from "./misc.js";
 
 // converts an ASCII-art file-tree to FileTreeNode[]

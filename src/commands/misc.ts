@@ -13,8 +13,8 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
+import { Logger } from "../io/logger.js";
 import * as FileUtils from "../utils/files.js";
-import { Logger } from "../utils/logger.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnippetUtils from "../utils/snippet.js";
 import * as TreeUtils from "../utils/tree.js";

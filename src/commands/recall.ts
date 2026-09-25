@@ -13,10 +13,10 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
+import { Logger } from "../io/logger.js";
 import { type SnippetRecord, SnippetType } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
-import { Logger } from "../utils/logger.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnippetUtils from "../utils/snippet.js";
 import * as TreeUtils from "../utils/tree.js";
@@ -198,45 +198,6 @@ export async function appendOrPrependToFile(
 	}
 
 	logger.success(`${c} files updated`);
-	return true;
-}
-
-export async function displaySnippet(key: string): Promise<boolean> {
-	const store = await Store.create();
-	const logger = new Logger();
-
-	if (!store.doesSnippetKeyExist(key)) {
-		logger.error("key not found");
-		return false;
-	}
-
-	const record = store.fetchSnippetRecord(key);
-	if (!record) {
-		logger.error("can't fetch record");
-		return false;
-	}
-
-	if (
-		record.type != SnippetType.Text &&
-		record.type != SnippetType.File &&
-		record.type != SnippetType.URL
-	) {
-		logger.error("can only use snippets of type text/file/URL");
-		return false;
-	}
-
-	if (!("filename" in record.structure)) return false;
-
-	const snippet = await FileUtils.readTextFile(
-		SnippetUtils.getFileUnderSnippet(key, record.structure.filename!),
-	);
-
-	if (!snippet) {
-		logger.error("error reading snippet");
-		return false;
-	}
-
-	console.log(snippet);
 	return true;
 }
 

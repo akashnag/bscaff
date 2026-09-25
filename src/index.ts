@@ -12,8 +12,8 @@
  */
 
 import { CLI } from "./cli.js";
+import { Logger } from "./io/logger.js";
 import { Config } from "./utils/config.js";
-import { Logger } from "./utils/logger.js";
 
 async function main(): Promise<void> {
 	const logger = new Logger();

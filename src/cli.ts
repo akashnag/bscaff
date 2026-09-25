@@ -17,8 +17,9 @@ import * as ListSnippet from "./commands/list.js";
 import * as MiscSnippetManagement from "./commands/misc.js";
 import * as RecallSnippet from "./commands/recall.js";
 import * as SaveSnippet from "./commands/save.js";
+import { ConsoleUI } from "./io/io.js";
+import { Logger } from "./io/logger.js";
 import { Config } from "./utils/config.js";
-import { Logger } from "./utils/logger.js";
 import * as MiscUtils from "./utils/misc.js";
 
 export class CLI {
@@ -59,8 +60,8 @@ export class CLI {
 
 			.option("--save-multi <files...>", "saves a snapshot of the files listed")
 			.option(
-				"--save-text <file>",
-				"saves a snapshot of the text contained in the file",
+				"--save-snippet [file]",
+				"saves a snapshot of the text contained in the file / clipboard",
 			)
 			.option("--save-file <file>", "saves a snapshot of the file")
 			.option(
@@ -75,8 +76,8 @@ export class CLI {
 			)
 
 			.option(
-				"-d, --display [relative_path]",
-				"display the contents of the saved text/file",
+				"-f, --fetch [relative_path]",
+				"display the contents of the saved text/file (if path mentioned) else the snapshot itself (if directory type)",
 			)
 			.option(
 				"-x, --extract <path>",
@@ -121,8 +122,8 @@ export class CLI {
 			)
 
 			.option(
-				"-l, --list",
-				"lists down the structure of the saved snapshot (or the text of the file if path mentioned)",
+				"-l, --list <type>",
+				"lists down the snapshots of <type> = url|snippet|dir|file|multi-file",
 			)
 			.option("-r, --rename <new_key>", "updates a snippet key to the new_key")
 			.option("--delete", "removes a snippet from record")
@@ -153,7 +154,10 @@ export class CLI {
 			return 0;
 		}
 
-		if (options.quiet) Logger.setSilentMode();
+		if (options.quiet) {
+			Logger.setSilentMode();
+			ConsoleUI.setSilentMode();
+		}
 
 		if (
 			(!options.key || options.key === true) &&
@@ -211,10 +215,10 @@ export class CLI {
 				options.saveMulti === true ? null : options.saveMulti,
 				options.desc,
 			);
-		} else if (options.saveText) {
-			retVal = await SaveSnippet.saveTextFromFile(
+		} else if (options.saveSnippet) {
+			retVal = await SaveSnippet.saveSnippetFromFileOrClipboard(
 				options.key,
-				options.saveText === true ? undefined : options.saveText,
+				options.saveSnippet === true ? undefined : options.saveSnippet,
 				options.desc,
 			);
 		} else if (options.saveFile) {
@@ -261,8 +265,6 @@ export class CLI {
 					? null
 					: options.postExtract,
 			);
-		} else if (options.display) {
-			retVal = await RecallSnippet.displaySnippet(options.key);
 		} else if (options.extract) {
 			retVal = await RecallSnippet.extractSnippet(
 				options.key,
@@ -303,12 +305,15 @@ export class CLI {
 				"prepend",
 				options.prepend === true ? [] : options.prepend,
 			);
+		} else if (options.fetch) {
+			retVal = await ListSnippet.fetch(
+				options.key,
+				options.fetch === true ? null : options.fetch,
+			);
 		} else if (options.list) {
-			if (options.key) {
-				retVal = await ListSnippet.listSnippetFiles(options.key);
-			} else {
-				retVal = await ListSnippet.listAllSnippets();
-			}
+			retVal = await ListSnippet.list(
+				options.list === true ? null : options.list,
+			);
 		} else if (options.rename) {
 			retVal = await MiscSnippetManagement.renameSnippet(
 				options.key,

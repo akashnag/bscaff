@@ -14,6 +14,8 @@
 import simpleGit, { type SimpleGit } from "simple-git";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
+import { SaveDirectoryUI } from "../io/io.js";
+import { Logger } from "../io/logger.js";
 import { ScriptMissingError } from "../types/errors.js";
 import {
 	type DirectoryStructure,
@@ -24,14 +26,12 @@ import {
 	Template,
 } from "../types/types.js";
 import { Config } from "../utils/config.js";
-import { SaveDirectoryUI } from "../utils/console-ui.js";
 import * as FileUtils from "../utils/files.js";
-import { Logger } from "../utils/logger.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnippetUtils from "../utils/snippet.js";
 import * as TreeUtils from "../utils/tree.js";
 
-export async function saveTextFromFile(
+export async function saveSnippetFromFileOrClipboard(
 	key: string,
 	filePath: string | null = null,
 	description: string | null = null,
@@ -41,14 +41,25 @@ export async function saveTextFromFile(
 		(2) create snippet directory and create a new file under it (with name = <Config.SNIPPET_TEXT_FILE>, and extension = filetype identified in step 1)
 		(3) SnippetRecord.structure<SnippetStructure> = { filename: as in step-2, type: FILE, children: null }
 	*/
+
 	const logger = new Logger();
+	const cm = new ClipboardManager();
 
-	if (!filePath) {
-		logger.error("missing file path");
-		return false;
+	let snippet = null;
+	let fileType = "txt";
+
+	if (filePath) {
+		filePath = FileUtils.resolvePath(filePath);
+		if (FileUtils.doesFileExist(filePath)) {
+			snippet = await FileUtils.readTextFile(filePath);
+			fileType = FileUtils.getFileType(filePath, true, "txt");
+		} else {
+			logger.error("invalid file path");
+			return false;
+		}
+	} else {
+		snippet = await cm.paste();
 	}
-
-	filePath = FileUtils.resolvePath(filePath);
 
 	const store = await Store.create();
 
@@ -57,15 +68,10 @@ export async function saveTextFromFile(
 		return false;
 	}
 
-	const snippet = await FileUtils.readTextFile(filePath);
 	if (!snippet) {
-		logger.error(
-			"cannot read file: ensure it exists, is a text file and you have read permissions",
-		);
+		logger.error("no snippet found");
 		return false;
 	}
-
-	const fileType = FileUtils.getFileType(filePath, true, "txt");
 
 	SnippetUtils.createSnippetDirectory(key);
 	SnippetUtils.writeContentToSnippetFile(
@@ -166,7 +172,7 @@ export async function saveLiveInput(
 		logger.error("could not launch text editor");
 		return false;
 	}
-	const success = await saveTextFromFile(key, path, description);
+	const success = await saveSnippetFromFileOrClipboard(key, path, description);
 	if (success) return FileUtils.deleteFile(path);
 	return false;
 }

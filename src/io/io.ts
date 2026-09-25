@@ -12,7 +12,7 @@
  */
 
 import chalk from "chalk";
-import * as FileUtils from "./files.js";
+import * as FileUtils from "../utils/files.js";
 
 const SYMBOL_ERROR: string = "✖";
 const SYMBOL_SUCCESS: string = "✔";
@@ -22,17 +22,20 @@ const SYMBOL_SEPARATOR: string = "─";
 
 const INDENTATION: string = "  ";
 const FIELD_WIDTH: number = 10;
-const ERROR_FOOTER: string = "Run `bscaff --help` for all available options.";
+
+export const ERROR_FOOTER: string =
+	"Run `bscaff --help` for all available options.";
+export var QUIET_MODE: boolean = false;
 
 function padField(s: string): string {
 	return s.padEnd(FIELD_WIDTH, " ");
 }
 
-function printField(field: string, msg: string) {
+export function printField(field: string, msg: string) {
 	console.log(chalk.bold(`${INDENTATION}${padField(field)}:`) + ` ${msg}`);
 }
 
-function printHeader(msg: string, success: boolean) {
+export function printHeader(msg: string, success: boolean) {
 	if (success) {
 		console.log(chalk.bold(chalk.green(`${SYMBOL_SUCCESS} ${msg}\n`)));
 	} else {
@@ -40,27 +43,37 @@ function printHeader(msg: string, success: boolean) {
 	}
 }
 
-function printBullet(msg: string) {
+export function printBullet(msg: string) {
 	console.log(`${INDENTATION}${SYMBOL_BULLET} ${msg}`);
 }
 
-function printIndented(msg: string) {
+export function printIndented(msg: string) {
 	console.log(`${INDENTATION}${msg}`);
 }
 
-abstract class ConsoleUI {
+export abstract class ConsoleUI {
+	static setSilentMode() {
+		QUIET_MODE = true;
+	}
+
 	errorMissingParameter(param: string): void {
+		if (QUIET_MODE) return;
+
 		printHeader("Missing Required Parameter", false);
 		printField("Error", `Missing required argument <${param}>\n`);
 	}
 
 	errorDuplicateKey(key: string): void {
+		if (QUIET_MODE) return;
+
 		printHeader("Key Already Exists", false);
 		printField("Key", key);
 		printField("Status", `A snapshot with this key already exists.\n`);
 	}
 
 	errorSourceDirectoryMissing(path: string): void {
+		if (QUIET_MODE) return;
+
 		printHeader("Source Directory Not Found", false);
 		printField("Path", FileUtils.getRelativePath(path));
 		printField("Error", "Directory does not exist or no read-permissions.");
@@ -78,6 +91,8 @@ abstract class ConsoleUI {
 		path: string,
 		mode: "save" | "recall",
 	): void {
+		if (QUIET_MODE) return;
+
 		printHeader(
 			`Lifecycle Hook Error: ${scriptType == "pre" ? "Pre" : "Post"}-Script Not Found`,
 			false,
@@ -102,6 +117,8 @@ abstract class ConsoleUI {
 		desc: string | null = null,
 		type: string,
 	): void {
+		if (QUIET_MODE) return;
+
 		printHeader(`Snapshot saved!`, true);
 		printField("Key", key);
 		printField("Type", type);
@@ -115,50 +132,5 @@ abstract class ConsoleUI {
 		}
 
 		printField("Contents", `${fileCount} files, ${dirCount} directories\n`);
-	}
-}
-
-export class SaveDirectoryUI extends ConsoleUI {
-	errorMissingParameter(param: string): void {
-		super.errorMissingParameter(param);
-		console.log(`Usage:`);
-		printIndented(`bscaff -k <key> --save-dir <path> [options]`);
-		console.log(`\nExample:`);
-		printIndented(`bscaff -k react-app --save-dir ~/projects/my-react-app`);
-		console.log(`\n${ERROR_FOOTER}\n`);
-	}
-
-	errorDuplicateKey(key: string): void {
-		super.errorDuplicateKey(key);
-		console.log(`To resolve:`);
-		printBullet(
-			`Delete existing key and retry: bscaff -k ${key} --delete && bscaff -k ${key} --save-dir <path> [options]`,
-		);
-		printBullet(`Save with a different key\n`);
-	}
-
-	errorTriggerScriptsMissing(scriptType: "pre" | "post", path: string): void {
-		super.errorTriggerScriptsMissing(scriptType, path, "recall");
-		printIndented(`Operation aborted. No snapshot was taken.`);
-		console.log(`\nTo resolve:`);
-		printBullet(`Verify the script path exists`);
-		printBullet(`Omit the hook option\n`);
-	}
-
-	successSnapshotTaken(
-		key: string,
-		size: string | null,
-		fileCount: number,
-		dirCount: number,
-		desc: string | null = null,
-	): void {
-		super.successSnapshotTaken(
-			key,
-			size,
-			fileCount,
-			dirCount,
-			desc,
-			"Directory",
-		);
 	}
 }

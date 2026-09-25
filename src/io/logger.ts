@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import * as MiscUtils from "./misc.js";
+import * as MiscUtils from "../utils/misc.js";
 
 export class Logger {
 	private static silentMode: boolean;
