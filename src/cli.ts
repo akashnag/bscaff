@@ -17,7 +17,7 @@ import * as ListSnippet from "./commands/list.js";
 import * as MiscSnippetManagement from "./commands/misc.js";
 import * as RecallSnippet from "./commands/recall.js";
 import * as SaveSnippet from "./commands/save.js";
-import { ConsoleUI } from "./io/io.js";
+import { ConsoleIO } from "./io/io.js";
 import { Logger } from "./io/logger.js";
 import { Config } from "./utils/config.js";
 import * as MiscUtils from "./utils/misc.js";
@@ -39,10 +39,14 @@ export class CLI {
 			.description(pkg.description)
 			.version(pkg.version)
 
-			.option("-k, --key <key>", "key for the snippet")
+			.option("-k, --key <key>", "key for the snapshot")
 			.option(
 				"--desc <description>",
-				"description of the snippet (in double-quotes)",
+				"brief description of the snapshot (in double-quotes)",
+			)
+			.option(
+				"--tags=<list-of-tags>",
+				"list of tags (comma-separated, no spaces) associated with this snapshot",
 			)
 
 			.option(
@@ -122,7 +126,7 @@ export class CLI {
 			)
 
 			.option(
-				"-l, --list <type>",
+				"-l, --list [type]",
 				"lists down the snapshots of <type> = url|snippet|dir|file|multi-file",
 			)
 			.option("-r, --rename <new_key>", "updates a snippet key to the new_key")
@@ -156,7 +160,7 @@ export class CLI {
 
 		if (options.quiet) {
 			Logger.setSilentMode();
-			ConsoleUI.setSilentMode();
+			ConsoleIO.setSilentMode();
 		}
 
 		if (

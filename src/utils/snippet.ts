@@ -17,6 +17,7 @@ import {
 	FileTreeNode,
 	SnippetStructure,
 	SnippetStructureItemType,
+	SnippetType,
 } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
@@ -218,4 +219,9 @@ export function copyTriggerScripts(
 	}
 
 	return retVal;
+}
+
+export function computeSnippetSize(key: string, sType: SnippetType): string {
+	// TODO: add code
+	return "0 B";
 }

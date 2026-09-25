@@ -12,6 +12,7 @@
  */
 
 import { Store } from "../core/store.js";
+import { ListSnapshotsIO } from "../io/list.js";
 import { Logger } from "../io/logger.js";
 import { SnippetType } from "../types/types.js";
 import * as SnippetUtils from "../utils/snippet.js";
@@ -108,13 +109,6 @@ export async function fetch(
 	key: string,
 	rel_path: string | null,
 ): Promise<boolean> {
-	const logger = new Logger();
-
-	if (!key) {
-		logger.error("key not specified");
-		return false;
-	}
-
 	// TODO: add code
 
 	return true;
@@ -122,20 +116,26 @@ export async function fetch(
 
 // lists down all snapshots by type
 export async function list(sType: string | null): Promise<boolean> {
-	const logger = new Logger();
+	const io = new ListSnapshotsIO();
+	const store = await Store.create();
 
 	if (!sType) {
-		logger.error("type not specified");
-		return false;
+		return listDBStats(io, store);
 	}
 
 	sType = sType.toLowerCase();
 	if (["template", "snippet", "tree", "files", "url"].indexOf(sType) == -1) {
-		logger.error("invalid type specified");
+		io.errorInvalidValue("type", [
+			"template",
+			"snippet",
+			"tree",
+			"files",
+			"url",
+		]);
 		return false;
 	}
 
-	const mapper: Record<string, SnippetType[]> = {
+	const snippetTypeMapper: Record<string, SnippetType[]> = {
 		template: [SnippetType.Template],
 		snippet: [SnippetType.Text],
 		tree: [SnippetType.Tree, SnippetType.Directory],
@@ -143,9 +143,20 @@ export async function list(sType: string | null): Promise<boolean> {
 		url: [SnippetType.URL],
 	};
 
-	const store = new Store();
-	const data = store.getRawListByType(mapper[sType]);
+	const data = store.getRawListByType(snippetTypeMapper[sType]);
 
-	// TODO: add code
+	if (data.length == 0) {
+		io.warnNoItemsFound(sType);
+		return false;
+	}
+
+	io.listSnapshots(sType, data);
+
+	return true;
+}
+
+function listDBStats(io: ListSnapshotsIO, store: Store): boolean {
+	const data = store.getList();
+	io.showSnapshotInventory(data);
 	return true;
 }

@@ -23,7 +23,7 @@ import * as SnippetUtils from "../utils/snippet.js";
 export class Store {
 	private snippetsList: SnippetRecord[];
 
-	constructor(data: SnippetRecord[] | null = null) {
+	private constructor(data: SnippetRecord[] | null = null) {
 		this.snippetsList = data || [];
 	}
 
@@ -94,16 +94,18 @@ export class Store {
 		Store.writeSnippetsList(this.snippetsList);
 	}
 
-	getList(key: string | null = null): object[] {
-		const data = [];
+	getList(
+		key: string | null = null,
+	): { key: string; updated: Date; type: SnippetType }[] {
+		const data: { key: string; updated: Date; type: SnippetType }[] = [];
 
 		for (let i = 0; i < this.snippetsList.length; ++i) {
 			const record = this.snippetsList[i];
 			if (!key || record.key === key) {
-				const outRec = {
+				const outRec: { key: string; updated: Date; type: SnippetType } = {
 					key: record.key,
 					updated: record.modifiedAt,
-					type: record.type.toString(),
+					type: record.type,
 				};
 
 				data.push(outRec);

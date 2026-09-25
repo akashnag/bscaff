@@ -257,7 +257,7 @@ export function formatFileSize(
 
 	const k = 1024;
 	const dm = decimals < 0 ? 0 : decimals;
-	const sizes = ["bytes", "KB", "MB", "GB", "TB"];
+	const sizes = ["B", "KB", "MB", "GB", "TB"];
 
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 

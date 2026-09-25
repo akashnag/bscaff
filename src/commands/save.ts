@@ -14,8 +14,8 @@
 import simpleGit, { type SimpleGit } from "simple-git";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
-import { SaveDirectoryUI } from "../io/io.js";
 import { Logger } from "../io/logger.js";
+import { SaveDirectoryIO } from "../io/save.js";
 import { ScriptMissingError } from "../types/errors.js";
 import {
 	type DirectoryStructure,
@@ -444,20 +444,17 @@ export async function saveDirectory(
 			}
 	*/
 
-	const logger = new Logger();
-	const ui = new SaveDirectoryUI();
+	const io = new SaveDirectoryIO();
 
 	if (!dirPath) {
-		logger.error("missing parameter: path to the directory");
-		ui.errorMissingParameter("path");
+		io.errorMissingParameter("path");
 		return false;
 	}
 
 	const store = await Store.create();
 
 	if (store.doesSnippetKeyExist(key)) {
-		logger.error("key already exists");
-		ui.errorDuplicateKey(key);
+		io.errorDuplicateKey(key);
 		return false;
 	}
 
@@ -466,8 +463,7 @@ export async function saveDirectory(
 
 	// ensure the source directory before proceeding
 	if (!FileUtils.doesDirectoryExist(dirPath)) {
-		logger.error("directory does not exist or you don't have read permissions");
-		ui.errorSourceDirectoryMissing(dirPath);
+		io.errorSourceDirectoryMissing(dirPath);
 		return false;
 	}
 
@@ -488,8 +484,7 @@ export async function saveDirectory(
 		);
 	} catch (error: unknown) {
 		if (error instanceof ScriptMissingError) {
-			logger.error("script is missing");
-			ui.errorTriggerScriptsMissing(error.scriptType, error.path);
+			io.errorTriggerScriptsMissing(error.scriptType, error.path);
 			return false;
 		}
 	}
@@ -511,8 +506,7 @@ export async function saveDirectory(
 	});
 
 	store.update();
-	logger.success("template saved");
-	ui.successSnapshotTaken(
+	io.successSnapshotTaken(
 		key,
 		MiscUtils.formatFileSize(result.sizeInBytes!),
 		result.fileCount!,

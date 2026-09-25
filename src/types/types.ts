@@ -52,6 +52,7 @@ export interface SnippetRecord {
 	modifiedAt: Date;
 	structure: SnippetStructure | FileTreeNode[];
 	parameters: string[] | null;
+	tags?: string[] | null;
 	triggers?: {
 		type: "path" | "content";
 		preScript: string | null;
