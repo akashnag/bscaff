@@ -82,26 +82,48 @@ export class CLI {
 			[Save git repo]									-->	bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
 		*/
 		saveGroup
-			.command("tree <dir-path_or_repo-url>")
+			.command("tree [dir-path_or_repo-url]")
 			.description(
 				"Save a snapshot of a directory tree specified by path/git-repo URL",
 			)
 			.option("--git", "Clone from a git repo")
+			.option(
+				"--prompt-for-content",
+				"Prompt for content of each file (if path omitted)",
+			)
 			.action(
 				async (
-					path: string,
+					path: string | undefined,
 					options: Record<string, any>,
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
 					const parentOpts = command.parent?.opts();
+					let retVal = true;
 
-					const retVal = await SaveSnapshotCommands.saveDirectory(
-						globalOpts.key,
-						parentOpts?.desc,
-						parentOpts?.tags,
-						path,
-					);
+					if (!path) {
+						retVal = await SaveSnapshotCommands.saveASCIITreeFromClipboard(
+							globalOpts.key,
+							parentOpts?.desc,
+							parentOpts?.tags,
+							options.promptForContent,
+						);
+					} else if (options.git) {
+						retVal = await SaveSnapshotCommands.saveGitRepo(
+							globalOpts.key,
+							parentOpts?.desc,
+							parentOpts?.tags,
+							path,
+						);
+					} else {
+						retVal = await SaveSnapshotCommands.saveDirectory(
+							globalOpts.key,
+							parentOpts?.desc,
+							parentOpts?.tags,
+							path,
+						);
+					}
+
 					if (!retVal) throw new Error();
 				},
 			);
@@ -117,7 +139,7 @@ export class CLI {
 				"Save a text/code snippet from a file (or clipboard if path omitted)",
 			)
 			.option(
-				"--type=<file-type>",
+				"--type <file-type>",
 				"If to be copied from clipboard, this signals the type of the code/text",
 			)
 			.action(
@@ -127,7 +149,14 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const parentOpts = command.parent?.opts();
+					const retVal = await SaveSnapshotCommands.saveSnippet(
+						globalOpts.key,
+						parentOpts?.desc,
+						parentOpts?.tags,
+						options.type,
+						path,
+					);
 				},
 			);
 
@@ -155,12 +184,18 @@ export class CLI {
 			[Save link]										--> bscaff -k go-docs save url https://go.dev/doc/
 		*/
 		saveGroup
-			.command("url <url>")
-			.description("Save a web URL/link")
+			.command("url [url]")
+			.description("Save a web URL/link (from clipboard if URL omitted)")
 			.action(
 				async (url: string, options: Record<string, any>, command: Command) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const parentOpts = command.parent?.opts();
+					const retVal = await SaveSnapshotCommands.saveURL(
+						globalOpts.key,
+						parentOpts?.desc,
+						parentOpts?.tags,
+						url,
+					);
 				},
 			);
 
@@ -178,7 +213,13 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const parentOpts = command.parent?.opts();
+					const retVal = await SaveSnapshotCommands.saveTemplate(
+						globalOpts.key,
+						parentOpts?.desc,
+						parentOpts?.tags,
+						path,
+					);
 				},
 			);
 	}
@@ -393,190 +434,4 @@ export class CLI {
 				},
 			);
 	}
-
-	/*
-	// Parses command line args passed to the program, and calls the appropriate helper function to perform the task
-	async parseArgsAndExecute(args: string[]): Promise<number> {
-		const logger = new Logger();
-
-		this.program.parse(args);
-		const options = this.program.opts();
-
-		if (options.quiet) {
-			Logger.setSilentMode();
-			ConsoleIO.setSilentMode();
-		}
-
-		if (
-			(!options.key || options.key === true) &&
-			!(options.list || options.settings || options.createTree)
-		) {
-			logger.error("Missing key");
-			return 1;
-		}
-
-		let retVal: boolean = true;
-
-		if (options.saveDir) {
-			retVal = await SaveSnippet.saveDirectory(
-				options.key,
-				options.saveDir === true ? null : options.saveDir,
-				options.desc,
-				!options.preExtract || options.preExtract === true
-					? null
-					: options.preExtract,
-				!options.postExtract || options.postExtract === true
-					? null
-					: options.postExtract,
-			);
-		} else if (options.createTemplate || options.createTemplateWithContent) {
-			if (options.createTemplate) {
-				retVal = await SaveSnippet.createTemplate(
-					options.key,
-					options.createTemplate === true ? null : options.createTemplate,
-					!options.preExtract || options.preExtract === true
-						? null
-						: options.preExtract,
-					!options.postExtract || options.postExtract === true
-						? null
-						: options.postExtract,
-					false,
-				);
-			} else {
-				retVal = await SaveSnippet.createTemplate(
-					options.key,
-					options.createTemplateWithContent === true
-						? null
-						: options.createTemplateWithContent,
-					!options.preExtract || options.preExtract === true
-						? null
-						: options.preExtract,
-					!options.postExtract || options.postExtract === true
-						? null
-						: options.postExtract,
-					true,
-				);
-			}
-		} else if (options.saveMulti) {
-			retVal = await SaveSnippet.saveMultipleFiles(
-				options.key,
-				options.saveMulti === true ? null : options.saveMulti,
-				options.desc,
-			);
-		} else if (options.saveSnippet) {
-			retVal = await SaveSnippet.saveSnippetFromFileOrClipboard(
-				options.key,
-				options.saveSnippet === true ? undefined : options.saveSnippet,
-				options.desc,
-			);
-		} else if (options.saveFile) {
-			retVal = await SaveSnippet.saveFile(
-				options.key,
-				options.saveFile === true ? undefined : options.saveFile,
-				options.desc,
-			);
-		} else if (options.saveInput) {
-			retVal = await SaveSnippet.saveLiveInput(
-				options.key,
-				options.saveInput === true ? undefined : options.saveInput,
-				options.desc,
-			);
-		} else if (options.saveUrl) {
-			retVal = await SaveSnippet.saveURL(
-				options.key,
-				options.saveUrl === true ? undefined : options.saveUrl,
-				options.desc,
-			);
-		} else if (options.saveGhTemplate) {
-			retVal = await SaveSnippet.cloneGitRepo(
-				options.key,
-				options.saveGhTemplate === true ? undefined : options.saveGhTemplate,
-				options.desc,
-				!options.preExtract || options.preExtract === true
-					? null
-					: options.preExtract,
-				!options.postExtract || options.postExtract === true
-					? null
-					: options.postExtract,
-			);
-		} else if (options.saveTree) {
-			retVal = await SaveSnippet.saveTree(
-				options.key,
-				options.desc,
-				!options.saveTree || options.saveTree === true
-					? null
-					: options.saveTree,
-				!options.preExtract || options.preExtract === true
-					? null
-					: options.preExtract,
-				!options.postExtract || options.postExtract === true
-					? null
-					: options.postExtract,
-			);
-		} else if (options.extract) {
-			retVal = await RecallSnippet.extractSnippet(
-				options.key,
-				options.extract === true ? undefined : options.extract,
-				options.overwrite,
-			);
-		} else if (options.createTree || options.createTreeWithContent) {
-			if (options.createTree) {
-				retVal = await MiscSnippetManagement.createTreeDirect(
-					options.createTree === true ? undefined : options.createTree,
-					options.overwrite,
-					false,
-				);
-			} else {
-				retVal = await MiscSnippetManagement.createTreeDirect(
-					options.createTreeWithContent === true
-						? undefined
-						: options.createTreeWithContent,
-					options.overwrite,
-					true,
-				);
-			}
-		} else if (options.copy) {
-			retVal = await RecallSnippet.copySnippetToMemory(options.key);
-		} else if (options.edit) {
-			retVal = await SaveSnippet.editSnippetContent(options.key);
-		} else if (options.open) {
-			retVal = await RecallSnippet.openSnippet(options.key);
-		} else if (options.append) {
-			retVal = await RecallSnippet.appendOrPrependToFile(
-				options.key,
-				"append",
-				options.append === true ? [] : options.append,
-			);
-		} else if (options.prepend) {
-			retVal = await RecallSnippet.appendOrPrependToFile(
-				options.key,
-				"prepend",
-				options.prepend === true ? [] : options.prepend,
-			);
-		} else if (options.fetch) {
-			retVal = await ListSnippet.fetch(
-				options.key,
-				options.fetch === true ? null : options.fetch,
-			);
-		} else if (options.list) {
-			retVal = await ListSnippet.list(
-				options.list === true ? null : options.list,
-			);
-		} else if (options.rename) {
-			retVal = await MiscSnippetManagement.renameSnippet(
-				options.key,
-				options.rename,
-			);
-		} else if (options.delete) {
-			retVal = await MiscSnippetManagement.deleteSnippet(options.key);
-		} else if (options.settings) {
-			retVal = MiscUtils.openFileInEditor(
-				Config.getStoragePath([Config.SETTINGS_FILE]),
-			);
-			if (retVal) logger.success("settings updated");
-		}
-
-		return retVal ? 0 : 1;
-	}
-	*/
 }

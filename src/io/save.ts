@@ -11,17 +11,30 @@
  * GNU General Public License for more details.
  */
 
+import chalk from "chalk";
+import ora, { Ora } from "ora";
+import { ClipboardManager } from "../core/clipboard.js";
+import { FileTreeNode } from "../types/types.js";
+import { Config } from "../utils/config.js";
+import * as MiscUtils from "../utils/misc.js";
+import * as TreeUtils from "../utils/tree.js";
 import {
 	ConsoleIO,
+	getche,
 	IOHeaderType,
 	printBullet,
 	printErrorFooter,
 	printField,
 	printHeader,
 	printIndented,
+	printLinedHeader,
+	printSeparatorLine,
 	QUIET_MODE,
 } from "./io.js";
 
+// --------------------------------------------------------
+// save tree [path] [--git]
+// --------------------------------------------------------
 export class SaveDirectoryIO extends ConsoleIO {
 	errorMissingParameter(param: string): void {
 		if (QUIET_MODE) return;
@@ -62,6 +75,7 @@ export class SaveDirectoryIO extends ConsoleIO {
 		dirCount: number,
 		desc: string | undefined,
 		tags: string[] | undefined,
+		sType: string = "Tree",
 	): void {
 		if (QUIET_MODE) return;
 
@@ -72,7 +86,245 @@ export class SaveDirectoryIO extends ConsoleIO {
 			dirCount + 1, // since this is a tree, the root is also to be counted
 			desc,
 			tags,
-			"Tree",
+			sType,
 		);
 	}
 }
+
+export class SaveGitRepoIO extends SaveDirectoryIO {
+	private spinner: Ora | null = null;
+
+	cloneStart(localDir: string) {
+		if (QUIET_MODE) return;
+
+		this.spinner = ora(
+			chalk.bold(chalk.cyan(`Cloning into: `)) + localDir,
+		).start();
+	}
+
+	cloneComplete() {
+		if (QUIET_MODE) return;
+
+		this.spinner!.stop();
+	}
+
+	cloneFailed() {
+		if (QUIET_MODE) return;
+
+		printHeader("Clone Failed");
+		printField("Error", "Could not clone git repo");
+		console.log("\nTo resolve:");
+		printBullet("Ensure the Git Repo URL is correct");
+		printBullet("Check your network connectivity");
+	}
+
+	successSnapshotTaken(
+		key: string,
+		size: string | null,
+		fileCount: number,
+		dirCount: number,
+		desc: string | undefined,
+		tags: string[] | undefined,
+	): void {
+		if (QUIET_MODE) return;
+
+		super.successSnapshotTaken(
+			key,
+			size,
+			fileCount,
+			dirCount + 1, // since this is a tree, the root is also to be counted
+			desc,
+			tags,
+			"Tree [Git]",
+		);
+	}
+}
+
+export class SaveASCIITreeIO extends SaveDirectoryIO {
+	errorInvalidTreeStructure(): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Invalid Tree Structure");
+		console.log("Expected a tree structure like:");
+		console.log(`
+			my-app/
+			├── public/
+			│   ├── favicon.ico
+			│   └── index.html
+			├── src/
+			│   ├── assets/
+			│   │   └── logo.svg
+			│   ├── components/
+			│   │   ├── Button.jsx
+			│   │   └── Header.jsx
+			│   ├── App.jsx
+			│   └── main.jsx
+			├── .gitignore
+			├── package.json
+			└── README.md
+		`);
+	}
+
+	successSnapshotTaken(
+		key: string,
+		size: string | null,
+		fileCount: number,
+		dirCount: number,
+		desc: string | undefined,
+		tags: string[] | undefined,
+		sType?: string,
+		structure?: FileTreeNode[],
+	): void {
+		super.successSnapshotTaken(
+			key,
+			size,
+			fileCount,
+			dirCount,
+			desc,
+			tags,
+			sType,
+		);
+
+		printLinedHeader("TREE");
+		TreeUtils.drawFileTree(structure!);
+		printSeparatorLine();
+	}
+
+	async promptForFileContents(
+		cm: ClipboardManager,
+		structure: FileTreeNode[],
+	): Promise<number> {
+		let totalSize = 0;
+		for (let i = 0; i < structure.length; ++i) {
+			if (structure[i].type == "file") {
+				console.log(structure[i].path);
+				const choice = await getche(
+					"\t" +
+						chalk.blue("Press C to copy (from clipboard) or Enter to skip: "),
+				);
+				if (choice.toLowerCase().trim() == "c") {
+					const content = await cm.paste();
+					const sizeInBytes = new TextEncoder().encode(content).length;
+					totalSize += sizeInBytes;
+				}
+			}
+		}
+		return totalSize;
+	}
+}
+// --------------------------------------------------------
+
+// --------------------------------------------------------
+// save snippet [path] [--type file-type]
+// --------------------------------------------------------
+export class SaveSnippetIO extends ConsoleIO {
+	errorNoContentFound(fromFile: boolean) {
+		if (QUIET_MODE) return;
+
+		printHeader("No Content Found");
+		printField(
+			"Error",
+			`No text content found in ${fromFile ? "file" : "clipboard"}`,
+		);
+		console.log("\nTo resolve:");
+		if (fromFile) {
+			printBullet("Copy some text and try again without specifying path");
+		}
+		printBullet("Specify path to a file which has some text");
+	}
+
+	successSnapshotTaken(
+		key: string,
+		size: string | null,
+		fileCount: number,
+		dirCount: number,
+		desc: string | undefined,
+		tags: string[] | undefined,
+		type: string,
+	): void {
+		if (QUIET_MODE) return;
+
+		super.successSnapshotTaken(key, size, 0, 0, desc, tags, "Snippet");
+	}
+}
+// --------------------------------------------------------
+
+// --------------------------------------------------------
+// save url [url]
+// --------------------------------------------------------
+export class SaveURLIO extends ConsoleIO {
+	errorNoURLFound(fromMemory: boolean) {
+		if (QUIET_MODE) return;
+
+		printHeader("No URL Found");
+		printField(
+			"Error",
+			`No URL ${fromMemory ? "was found copied" : "was specified"}`,
+		);
+		console.log("\nTo resolve:");
+		if (fromMemory) {
+			printBullet(
+				"Copy some link and try again without specifying the url in the arguments",
+			);
+		}
+		printBullet("Specify a valid link in the arguments");
+	}
+
+	successSnapshotTaken(
+		key: string,
+		size: string | null,
+		fileCount: number,
+		dirCount: number,
+		desc: string | undefined,
+		tags: string[] | undefined,
+		type: string,
+	): void {
+		if (QUIET_MODE) return;
+
+		super.successSnapshotTaken(key, null, 0, 0, desc, tags, "URL");
+	}
+}
+// --------------------------------------------------------
+
+// --------------------------------------------------------
+// save template <path>
+// --------------------------------------------------------
+export class SaveTemplateIO extends ConsoleIO {
+	errorInvalidTemplateFile(filePath: string) {
+		if (QUIET_MODE) return;
+
+		printHeader("Invalid Template File");
+		printField(
+			"Error",
+			`Template files must be text files of type *.${Config.TEMPLATE_FILE_EXTENSION}`,
+		);
+
+		console.log("\nTo resolve:");
+		printIndented(
+			`Specify a bscaff template file of type *.${Config.TEMPLATE_FILE_EXTENSION}`,
+		);
+	}
+
+	errorTemplateFileEmpty(filePath: string) {
+		if (QUIET_MODE) return;
+
+		printHeader("Empty Template File");
+		printField("Error", `The template file you specified is empty`);
+
+		console.log("\nTo resolve:");
+		printIndented(`Specify a valid bscaff template file`);
+	}
+
+	errorInvalidTemplateFormat(filePath: string) {
+		if (QUIET_MODE) return;
+
+		printHeader("Invalid Template Format");
+		printField("Error", `The template file format was invalid`);
+
+		console.log("\nTo resolve:");
+		printIndented(
+			`Specify a valid bscaff template file (version <= ${Config.TEMPLATE_FILE_VERSION})`,
+		);
+	}
+}
+// --------------------------------------------------------

@@ -15,13 +15,21 @@ import simpleGit, { type SimpleGit } from "simple-git";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
 import { Logger } from "../io/logger.js";
-import { SaveDirectoryIO } from "../io/save.js";
+import {
+	SaveASCIITreeIO,
+	SaveDirectoryIO,
+	SaveGitRepoIO,
+	SaveSnippetIO,
+	SaveTemplateIO,
+	SaveURLIO,
+} from "../io/save.js";
 import { ScriptMissingError } from "../types/errors.js";
 import { FileTreeNode, SnapshotType, Template } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
+import * as TemplateUtils from "../utils/template.js";
 import * as TreeUtils from "../utils/tree.js";
 
 /*
@@ -362,143 +370,6 @@ export async function saveMultipleFiles(
 	return true;
 }
 
-export async function cloneGitRepo(
-	key: string,
-	repoURL: string | null = null,
-	description: string | null = null,
-	preExtractScriptPath: string | null = null,
-	postExtractScriptPath: string | null = null,
-): Promise<boolean> {
-	const logger = new Logger();
-
-	if (!repoURL) {
-		logger.error("git repo URL missing");
-		return false;
-	}
-
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		logger.error("key already exists");
-		return false;
-	}
-
-	// create snippet directory
-	SnapshotUtils.createSnapshotDirectory(key);
-
-	const triggerScripts = SnapshotUtils.copyTriggerScripts(
-		key,
-		preExtractScriptPath,
-		postExtractScriptPath,
-	);
-
-	let repoName = repoURL.substring(1 + repoURL.lastIndexOf("/"));
-	if (repoName.endsWith(".git"))
-		repoName = repoName.substring(repoName.length - 4);
-
-	const snippetDir = SnapshotUtils.getSnapshotDirectory(key);
-	const repoLocalDir = FileUtils.formPath([snippetDir, repoName]);
-	FileUtils.createDirectory(repoLocalDir);
-
-	const git: SimpleGit = simpleGit.simpleGit();
-
-	try {
-		logger.info(`Cloning into ${repoLocalDir}...`);
-		await git.clone(repoURL, repoLocalDir);
-		logger.info("Clone completed successfully!");
-	} catch {
-		logger.error("Clone failed");
-		FileUtils.deleteDirectory(snippetDir);
-		return false;
-	}
-
-	const result: DirectoryStructure =
-		await SnapshotUtils.getDirectoryStructureFromPath(repoLocalDir);
-
-	store.save({
-		key: key,
-		description: description,
-		type: SnippetType.Directory,
-		structure: result.structure,
-		parameters: Array.from(result.parameters),
-		triggers: {
-			type: "path",
-			preScript: triggerScripts.preScript,
-			postScript: triggerScripts.postScript,
-		},
-	});
-
-	store.update();
-	logger.success("template saved");
-	return true;
-}
-
-export async function saveTree(
-	key: string,
-	description: string | null = null,
-	templateFilePath: string | null = null,
-	preExtractScriptPath: string | null = null,
-	postExtractScriptPath: string | null = null,
-): Promise<boolean> {
-	const cm = new ClipboardManager();
-	const logger = new Logger();
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		logger.error("key already exists");
-		return false;
-	}
-
-	// create snippet directory
-	SnapshotUtils.createSnapshotDirectory(key);
-
-	// set type explicitly to prevent undefined -> null assignment errors
-	let triggers: Template["triggers"] = SnapshotUtils.copyTriggerScripts(
-		key,
-		preExtractScriptPath,
-		postExtractScriptPath,
-	);
-
-	let structure: FileTreeNode[] | null = null;
-	let parameters: string[] | null = null;
-	let triggerType: "path" | "content" = "path";
-
-	if (templateFilePath) {
-		({ structure, parameters, triggers } =
-			await TreeUtils.readTemplateFile(templateFilePath));
-
-		if (triggers?.preScript || triggers?.postScript) {
-			triggerType = "content";
-		}
-	} else {
-		const tree = (await cm.paste()).trim();
-		({ structure, parameters } = TreeUtils.extractStructureFromTree(tree));
-	}
-
-	//	console.log(JSON.stringify(struct, null, 2));
-	if (!structure) {
-		logger.error("invalid tree structure");
-		return false;
-	}
-
-	store.save({
-		key: key,
-		description: description,
-		type: SnippetType.Tree,
-		structure: structure,
-		parameters: parameters,
-		triggers: {
-			type: triggerType,
-			preScript: triggers!.preScript,
-			postScript: triggers!.postScript,
-		},
-	});
-
-	store.update();
-	logger.success("tree saved");
-	return true;
-}
-
 export async function createTemplate(
 	key: string,
 	dirPath: string | null = null,
@@ -543,6 +414,150 @@ export async function createTemplate(
 	return false;
 }
 */
+
+// --------------------------------------------------------
+// save tree [path] [--git]
+// --------------------------------------------------------
+export async function saveGitRepo(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	repoURL: string | undefined,
+): Promise<boolean> {
+	const io = new SaveGitRepoIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (!repoURL) {
+		io.errorMissingParameter("repo-url");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	SnapshotUtils.createSnapshotDirectory(key);
+
+	let repoName = repoURL.substring(1 + repoURL.lastIndexOf("/"));
+	if (repoName.endsWith(".git")) {
+		repoName = repoName.substring(repoName.length - 4);
+	}
+
+	const snippetDir = SnapshotUtils.getSnapshotDirectory(key);
+	const repoLocalDir = FileUtils.formPath([snippetDir, repoName]);
+	FileUtils.createDirectory(repoLocalDir);
+
+	const git: SimpleGit = simpleGit.simpleGit();
+
+	try {
+		io.cloneStart(repoLocalDir);
+		await git.clone(repoURL, repoLocalDir);
+		io.cloneComplete();
+	} catch {
+		io.cloneFailed();
+		FileUtils.deleteDirectory(snippetDir);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+	const result = await TreeUtils.extractStructureFromDirectory(repoLocalDir);
+
+	if (!result.structure || !result.parameters) {
+		io.errorGeneric("saveGitRepo::1");
+		return false;
+	}
+
+	store.save({
+		key: key,
+		description: description,
+		type: SnapshotType.Tree,
+		structure: result.structure!,
+		parameters: result.parameters!,
+		tags: tagList,
+	});
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		MiscUtils.formatFileSize(result.stats.sizeInBytes!),
+		result.stats.fileCount!,
+		result.stats.dirCount!,
+		description,
+		tagList,
+	);
+
+	return true;
+}
+
+export async function saveASCIITreeFromClipboard(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	promptForContent: boolean | undefined,
+): Promise<boolean> {
+	const io = new SaveASCIITreeIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	const store = await Store.create();
+	const cm = new ClipboardManager();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+	SnapshotUtils.createSnapshotDirectory(key);
+
+	let structure = null;
+	let parameters = null;
+	let stats = null;
+
+	const tree = (await cm.paste()).trim();
+	({ structure, parameters, stats } =
+		TreeUtils.extractStructureFromASCIITree(tree));
+
+	if (!structure || !stats) {
+		io.errorInvalidTreeStructure();
+		return false;
+	}
+
+	const sizeInBytes = await io.promptForFileContents(cm, structure);
+
+	store.save({
+		key: key,
+		description: description,
+		tags: tagList,
+		type: SnapshotType.Tree,
+		structure: structure,
+		parameters: parameters!,
+	});
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		promptForContent ? MiscUtils.formatFileSize(sizeInBytes) : `0 B`,
+		stats.fileCount,
+		stats.dirCount,
+		description,
+		tagList,
+		"Tree [memory]",
+		structure,
+	);
+
+	return true;
+}
 
 export async function saveDirectory(
 	key: string | undefined,
@@ -615,3 +630,223 @@ export async function saveDirectory(
 
 	return true;
 }
+// --------------------------------------------------------
+
+// --------------------------------------------------------
+// save snippet [path] [--type file-type]
+// --------------------------------------------------------
+export async function saveSnippet(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	fType: string | undefined,
+	filePath: string | undefined,
+): Promise<boolean> {
+	const io = new SaveSnippetIO();
+	const cm = new ClipboardManager();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+	let content: string | null = null;
+	let fileType: string = "txt";
+	let fromFile: boolean = false;
+
+	if (filePath) {
+		filePath = FileUtils.resolvePath(filePath);
+
+		if (!FileUtils.doesFileExist(filePath)) {
+			io.errorSourceFileMissing(filePath);
+			return false;
+		} else {
+			if (fType) {
+				io.errorConflictingArgs("path", "file-type");
+				return false;
+			}
+
+			content = await FileUtils.readTextFile(filePath);
+			fileType = FileUtils.getFileType(filePath);
+			fromFile = true;
+		}
+	} else {
+		content = await cm.paste();
+		if (fType) fileType = fType;
+	}
+
+	if (!content || content.length == 0) {
+		io.errorNoContentFound(fromFile);
+		return false;
+	}
+
+	const localFilePath = `${Config.SINGLE_FILE_NAME}.${fileType}`;
+
+	SnapshotUtils.createSnapshotDirectory(key);
+	SnapshotUtils.writeContentToSnapshotFile(content, key, localFilePath);
+
+	store.save({
+		key: key,
+		description: description,
+		type: SnapshotType.Snippet,
+		tags: tagList,
+		fileName: localFilePath,
+	});
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		`${MiscUtils.countLines(content)} lines`,
+		0,
+		0,
+		description,
+		tagList,
+		"Snippet",
+	);
+
+	return true;
+}
+// --------------------------------------------------------
+
+// --------------------------------------------------------
+// save url [url]
+// --------------------------------------------------------
+export async function saveURL(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	url: string | undefined,
+): Promise<boolean> {
+	const io = new SaveURLIO();
+	const cm = new ClipboardManager();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+	let fromMemory = false;
+
+	// files contains possibly relative filenames, filePaths contain absolute filenames
+	if (!url) {
+		url = await cm.paste();
+		fromMemory = true;
+	}
+
+	if (!url || url.trim().length == 0) {
+		io.errorNoURLFound(fromMemory);
+		return false;
+	}
+
+	store.save({
+		key: key,
+		description: description,
+		type: SnapshotType.URL,
+		tags: tagList,
+		urlContent: url,
+	});
+
+	store.update();
+	io.successSnapshotTaken(key, null, 0, 0, description, tagList, "URL");
+
+	return true;
+}
+// --------------------------------------------------------
+
+// --------------------------------------------------------
+// save template <file-path>
+// --------------------------------------------------------
+export async function saveTemplate(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	filePath: string | undefined,
+): Promise<boolean> {
+	const io = new SaveTemplateIO();
+	const cm = new ClipboardManager();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (!filePath) {
+		io.errorMissingParameter("template-file-path");
+		return false;
+	}
+
+	filePath = FileUtils.resolvePath(filePath);
+
+	if (!filePath.endsWith("." + Config.TEMPLATE_FILE_EXTENSION)) {
+		io.errorInvalidTemplateFile(filePath);
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+
+	if (!FileUtils.doesFileExist(filePath)) {
+		io.errorSourceFileMissing(filePath);
+		return false;
+	}
+
+	const content = await FileUtils.readTextFile(filePath);
+	const localFilePath = `${Config.SINGLE_FILE_NAME}.${Config.TEMPLATE_FILE_EXTENSION}`;
+
+	if (!content) {
+		io.errorTemplateFileEmpty(filePath);
+		return false;
+	}
+
+	if (!TemplateUtils.verifyTemplateStructure(content)) {
+		io.errorInvalidTemplateFormat(filePath);
+		return false;
+	}
+
+	SnapshotUtils.createSnapshotDirectory(key);
+	SnapshotUtils.writeContentToSnapshotFile(content, key, localFilePath);
+
+	store.save({
+		key: key,
+		description: description,
+		type: SnapshotType.Template,
+		tags: tagList,
+		fileName: localFilePath,
+	});
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		FileUtils.getFormattedFileSize(filePath),
+		1,
+		0,
+		description,
+		tagList,
+		"Template",
+	);
+
+	return true;
+}
+// --------------------------------------------------------

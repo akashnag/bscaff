@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { stdin as input, stdout as output } from "node:process";
+import * as readline from "node:readline/promises";
 import chalk from "chalk";
 import * as FileUtils from "../utils/files.js";
 
@@ -36,6 +38,48 @@ export enum IOHeaderType {
 	ERROR = 1,
 	WARNING = 2,
 	INFO = 3,
+}
+
+export async function prompt(question: string): Promise<string> {
+	const rl = readline.createInterface({ input, output });
+	return (await rl.question(question)).trim();
+}
+
+export function getche(question?: string): Promise<string> {
+	return new Promise((resolve) => {
+		if (question) {
+			process.stdout.write(question);
+		}
+
+		const { stdin } = process;
+
+		// Enable raw mode to read keypresses immediately without waiting for Enter
+		const isRaw = stdin.isRaw;
+		stdin.setRawMode(true);
+		stdin.resume();
+		stdin.setEncoding("utf-8");
+
+		const onData = (data: Buffer | string) => {
+			const char = data.toString();
+
+			// Handle Ctrl+C (SIGINT) so the process can still be exited
+			if (char === "\u0003") {
+				process.exit();
+			}
+
+			// Restore previous raw mode setting and cleanup event listener
+			stdin.setRawMode(isRaw);
+			stdin.pause();
+			stdin.removeListener("data", onData);
+
+			// Print a newline so subsequent output starts on a fresh line
+			process.stdout.write("\n");
+
+			resolve(char);
+		};
+
+		stdin.on("data", onData);
+	});
 }
 
 function padField(
@@ -147,6 +191,17 @@ export function printTable(
 	printIndented(separator + "\n");
 }
 
+export function printSeparatorLine(width: number = 60) {
+	console.log(SYMBOL_SEPARATOR.repeat(width));
+}
+
+export function printLinedHeader(title: string, width: number = 60) {
+	const half = width - title.length - 2;
+	console.log(
+		`${SYMBOL_SEPARATOR.repeat(half)} ${title} ${SYMBOL_SEPARATOR.repeat(half)}`,
+	);
+}
+
 export abstract class ConsoleIO {
 	static setSilentMode() {
 		QUIET_MODE = true;
@@ -191,6 +246,22 @@ export abstract class ConsoleIO {
 			`Ensure you have spelt the path correctly and the directory exists`,
 		);
 		printBullet(`Allow read permissions (if directory exists)\n`);
+	}
+
+	errorSourceFileMissing(path: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Source File Not Found");
+		printField("Path", FileUtils.getRelativePath(path));
+		printField(
+			"Error",
+			"File does not exist or you may not have read-permissions.",
+		);
+
+		console.log(`\nTo resolve:`);
+
+		printBullet(`Ensure you have spelt the path correctly and the file exists`);
+		printBullet(`Allow read permissions (if file exists)\n`);
 	}
 
 	errorTriggerScriptsMissing(
@@ -242,14 +313,18 @@ export abstract class ConsoleIO {
 			printField("Size", size);
 		}
 
-		printField("Contents", `${fileCount} files, ${dirCount} directories\n`);
+		if (fileCount + dirCount > 0) {
+			printField("Contents", `${fileCount} files, ${dirCount} directories\n`);
+		}
 	}
 
 	errorGeneric(info: string): void {
-		// TODO: add code
+		printHeader("Unknown Error Encountered");
+		printField("Error", info + "\n");
 	}
 
 	errorConflictingArgs(arg1: string, arg2: string): void {
-		// TODO: add code
+		printHeader("Conflicting Arguments Specified");
+		printField("Error", `<${arg1}> and <${arg2}> can not be used together\n`);
 	}
 }

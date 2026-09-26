@@ -36,11 +36,14 @@ export interface SnapshotRecord {
 
 	type: SnapshotType;
 
+	urlContent?: string; // only for URL types
+	fileName?: string; // only for snippet and template types
+
 	createdAt?: Date;
 	modifiedAt?: Date;
 
-	structure: FileTreeNode[];
-	parameters: string[];
+	structure?: FileTreeNode[];
+	parameters?: string[];
 }
 
 export interface Template {
