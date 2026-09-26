@@ -16,20 +16,20 @@ import { Store } from "../core/store.js";
 import { Logger } from "../io/logger.js";
 import * as FileUtils from "../utils/files.js";
 import * as MiscUtils from "../utils/misc.js";
-import * as SnippetUtils from "../utils/snippet.js";
+import * as SnapshotUtils from "../utils/snapshot.js";
 import * as TreeUtils from "../utils/tree.js";
-
+/*
 export async function deleteSnippet(key: string): Promise<boolean> {
 	const store = await Store.create();
 	const logger = new Logger();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("key not found");
 		return false;
 	}
 
-	if (SnippetUtils.deleteSnippetDirectory(key)) {
-		store.deleteSnippetRecord(key);
+	if (SnapshotUtils.deleteSnapshotDirectory(key)) {
+		store.delete(key);
 	} else {
 		return false;
 	}
@@ -46,13 +46,13 @@ export async function renameSnippet(
 	const store = await Store.create();
 	const logger = new Logger();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("key not found");
 		return false;
 	}
 
-	if (SnippetUtils.renameSnippetDirectory(key, newKey)) {
-		store.renameSnippetKey(key, newKey);
+	if (SnapshotUtils.renameSnapshotDirectory(key, newKey)) {
+		store.renameKey(key, newKey);
 	} else {
 		return false;
 	}
@@ -71,7 +71,8 @@ export async function createTreeDirect(
 	const cm = new ClipboardManager();
 	const tree = (await cm.paste()).trim();
 
-	const { structure, parameters } = TreeUtils.extractStructureFromTree(tree);
+	const { structure, parameters } =
+		TreeUtils.extractStructureFromASCIITree(tree);
 
 	if (!structure) {
 		logger.error("invalid tree structure");
@@ -101,3 +102,4 @@ export async function createTreeDirect(
 
 	return false;
 }
+*/

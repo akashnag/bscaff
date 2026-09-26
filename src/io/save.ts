@@ -28,9 +28,9 @@ export class SaveDirectoryIO extends ConsoleIO {
 
 		super.errorMissingParameter(param);
 		console.log(`Usage:`);
-		printIndented(`bscaff -k <key> --save-dir <path> [options]`);
+		printIndented(`bscaff -k <key> save <path> [options]`);
 		console.log(`\nExample:`);
-		printIndented(`bscaff -k react-app --save-dir ~/projects/my-react-app`);
+		printIndented(`bscaff -k react-app save ~/projects/my-react-app`);
 		printErrorFooter();
 	}
 
@@ -40,7 +40,7 @@ export class SaveDirectoryIO extends ConsoleIO {
 		super.errorDuplicateKey(key);
 		console.log(`To resolve:`);
 		printBullet(
-			`Delete existing key and retry: bscaff -k ${key} --delete && bscaff -k ${key} --save-dir <path> [options]`,
+			`Delete existing key and retry: bscaff -k ${key} delete && bscaff -k ${key} save <path> [options]`,
 		);
 		printBullet(`Save with a different key\n`);
 	}
@@ -60,7 +60,8 @@ export class SaveDirectoryIO extends ConsoleIO {
 		size: string | null,
 		fileCount: number,
 		dirCount: number,
-		desc: string | null = null,
+		desc: string | undefined,
+		tags: string[] | undefined,
 	): void {
 		if (QUIET_MODE) return;
 
@@ -68,9 +69,10 @@ export class SaveDirectoryIO extends ConsoleIO {
 			key,
 			size,
 			fileCount,
-			dirCount,
+			dirCount + 1, // since this is a tree, the root is also to be counted
 			desc,
-			"Directory",
+			tags,
+			"Tree",
 		);
 	}
 }

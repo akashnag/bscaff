@@ -18,8 +18,8 @@ import { Settings } from "../core/settings.js";
 
 export class Config {
 	static readonly DIRECTORY_NAME: string = ".bscaff";
-	static readonly SNIPPET_DB_FILE: string = "db.json";
-	static readonly SNIPPET_TEXT_FILE: string = "snippet";
+	static readonly SNAPSHOT_DB_FILE: string = "db.json";
+	static readonly SINGLE_FILE_NAME: string = "data";
 	static readonly SETTINGS_FILE: string = "settings.json";
 	static readonly TEMPLATE_FILE_EXTENSION: string = "bs_template";
 	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";

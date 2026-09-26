@@ -180,7 +180,10 @@ export abstract class ConsoleIO {
 
 		printHeader("Source Directory Not Found");
 		printField("Path", FileUtils.getRelativePath(path));
-		printField("Error", "Directory does not exist or no read-permissions.");
+		printField(
+			"Error",
+			"Directory does not exist or you may not have read-permissions.",
+		);
 
 		console.log(`\nTo resolve:`);
 
@@ -217,7 +220,8 @@ export abstract class ConsoleIO {
 		size: string | null,
 		fileCount: number,
 		dirCount: number,
-		desc: string | null = null,
+		desc: string | undefined,
+		tags: string[] | undefined,
 		type: string,
 	): void {
 		if (QUIET_MODE) return;
@@ -230,10 +234,22 @@ export abstract class ConsoleIO {
 			printField("Desc.", desc);
 		}
 
+		if (tags && tags.length > 0) {
+			printField("Tags", "#" + tags.join(" #"));
+		}
+
 		if (size) {
 			printField("Size", size);
 		}
 
 		printField("Contents", `${fileCount} files, ${dirCount} directories\n`);
+	}
+
+	errorGeneric(info: string): void {
+		// TODO: add code
+	}
+
+	errorConflictingArgs(arg1: string, arg2: string): void {
+		// TODO: add code
 	}
 }

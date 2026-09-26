@@ -14,8 +14,8 @@
 import { Store } from "../core/store.js";
 import { ListSnapshotsIO } from "../io/list.js";
 import { Logger } from "../io/logger.js";
-import { SnippetType } from "../types/types.js";
-import * as SnippetUtils from "../utils/snippet.js";
+import { SnapshotType } from "../types/types.js";
+import * as SnapshotUtils from "../utils/snapshot.js";
 import * as TreeUtils from "../utils/tree.js";
 
 /*
@@ -30,7 +30,7 @@ export async function listSnippetFiles(key: string): Promise<boolean> {
 	const store = await Store.create();
 	const logger = new Logger();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("key not found");
 		return false;
 	}
@@ -69,7 +69,7 @@ export async function displaySnippet(key: string): Promise<boolean> {
 	const store = await Store.create();
 	const logger = new Logger();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("key not found");
 		return false;
 	}
@@ -92,7 +92,7 @@ export async function displaySnippet(key: string): Promise<boolean> {
 	if (!("filename" in record.structure)) return false;
 
 	const snippet = await FileUtils.readTextFile(
-		SnippetUtils.getFileUnderSnippet(key, record.structure.filename!),
+		SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
 	);
 
 	if (!snippet) {
@@ -115,42 +115,76 @@ export async function fetch(
 }
 
 // lists down all snapshots by type
-export async function list(sType: string | null): Promise<boolean> {
+export async function list(
+	key: string | undefined,
+	sType: string | undefined,
+	tags: string | undefined,
+	relPath: string | undefined,
+): Promise<boolean> {
 	const io = new ListSnapshotsIO();
 	const store = await Store.create();
 
-	if (!sType) {
+	if (key && sType) {
+		io.errorConflictingArgs("key", "type");
+		return false;
+	}
+
+	if (key && tags) {
+		io.errorConflictingArgs("key", "tags");
+		return false;
+	}
+
+	if (sType && relPath) {
+		io.errorConflictingArgs("type", "path");
+		return false;
+	}
+
+	if (tags && relPath) {
+		io.errorConflictingArgs("tags", "path");
+	}
+
+	if (!sType && !key && !tags && !relPath) {
+		// plain listing of all types of snippets [master]
 		return listDBStats(io, store);
 	}
 
-	sType = sType.toLowerCase();
-	if (["template", "snippet", "tree", "files", "url"].indexOf(sType) == -1) {
-		io.errorInvalidValue("type", [
-			"template",
-			"snippet",
-			"tree",
-			"files",
-			"url",
-		]);
-		return false;
+	if (sType || tags) {
+		if (sType) {
+			sType = sType.toLowerCase();
+			if (
+				["template", "snippet", "tree", "files", "url"].indexOf(sType) == -1
+			) {
+				io.errorInvalidValue("type", [
+					"template",
+					"snippet",
+					"tree",
+					"files",
+					"url",
+				]);
+				return false;
+			}
+		}
+
+		const snippetTypeMapper: Record<string, SnapshotType> = {
+			template: SnapshotType.Template,
+			snippet: SnapshotType.Snippet,
+			tree: SnapshotType.Tree,
+			files: SnapshotType.Files,
+			url: SnapshotType.URL,
+		};
+
+		const data = store.getRawListFiltered(
+			sType ? [snippetTypeMapper[sType]] : undefined,
+			tags ? tags.split(",") : undefined,
+		);
+
+		if (data.length == 0) {
+			io.warnNoItemsFound(sType, tags);
+			return false;
+		}
+
+		io.listSnapshots(sType, tags, data);
 	}
-
-	const snippetTypeMapper: Record<string, SnippetType[]> = {
-		template: [SnippetType.Template],
-		snippet: [SnippetType.Text],
-		tree: [SnippetType.Tree, SnippetType.Directory],
-		files: [SnippetType.File, SnippetType.MultiFile],
-		url: [SnippetType.URL],
-	};
-
-	const data = store.getRawListByType(snippetTypeMapper[sType]);
-
-	if (data.length == 0) {
-		io.warnNoItemsFound(sType);
-		return false;
-	}
-
-	io.listSnapshots(sType, data);
 
 	return true;
 }

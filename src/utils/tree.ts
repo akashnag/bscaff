@@ -13,19 +13,13 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Logger } from "../io/logger.js";
-import {
-	DirectoryStructure,
-	FileTreeNode,
-	SnippetStructure,
-	SnippetStructureItemType,
-	Template,
-} from "../types/types.js";
+import { FileTreeNode, Template } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
 import * as MiscUtils from "./misc.js";
 
 // converts an ASCII-art file-tree to FileTreeNode[]
-export function extractStructureFromTree(tree: string): {
+export function extractStructureFromASCIITree(tree: string): {
 	structure: FileTreeNode[] | null;
 	parameters: string[] | null;
 } {
@@ -136,12 +130,96 @@ export function extractStructureFromTree(tree: string): {
 	return { structure: struct, parameters: Array.from(parameters) };
 }
 
+// converts a directory path to FileTreeNode[]
+export async function extractStructureFromDirectory(
+	dirPath: string,
+	readContent: boolean = false,
+): Promise<{
+	structure: FileTreeNode[] | null;
+	parameters: string[] | null;
+	stats: { sizeInBytes: number; fileCount: number; dirCount: number };
+}> {
+	const nodes: FileTreeNode[] = [];
+	const parameters: Set<string> = new Set<string>();
+	const stats = {
+		sizeInBytes: 0,
+		fileCount: 0,
+		dirCount: 0,
+	};
+
+	async function traverse(currentDirPath: string, level: number) {
+		const entries = FileUtils.readDirectoryContentsWithTypes(currentDirPath);
+
+		// Sort entries so directories appear first, then alphabetically
+		entries.sort((a, b) => {
+			if (a.isDirectory() && !b.isDirectory()) return -1;
+			if (!a.isDirectory() && b.isDirectory()) return 1;
+			return a.name.localeCompare(b.name);
+		});
+
+		for (const entry of entries) {
+			const fullPath = FileUtils.formPath([currentDirPath, entry.name]);
+
+			// Calculate relative path starting with a leading slash
+			const relativePath = "/" + FileUtils.formRelativePath(dirPath, fullPath);
+
+			const params: string[] = MiscUtils.getParametersFromText(entry.name);
+
+			if (entry.isDirectory()) {
+				++stats.dirCount;
+
+				nodes.push({
+					type: "dir",
+					level,
+					name: entry.name,
+					path: relativePath,
+					content: null,
+				});
+
+				// Recurse into directory
+				traverse(fullPath, level + 1);
+			} else if (entry.isFile()) {
+				++stats.fileCount;
+				stats.sizeInBytes += FileUtils.getFileSizeInBytes(fullPath) ?? 0;
+
+				let content: string | null = null;
+
+				if (readContent) {
+					content = await FileUtils.readTextFile(fullPath);
+					if (content) params.push(...MiscUtils.getParametersFromText(content));
+				}
+
+				nodes.push({
+					type: "file",
+					level,
+					name: entry.name,
+					path: relativePath,
+					content,
+				});
+			}
+
+			params.forEach((param: string) => {
+				parameters.add(param);
+			});
+		}
+	}
+
+	await traverse(dirPath, 0);
+
+	return {
+		structure: nodes,
+		parameters: Array.from(parameters),
+		stats: stats,
+	};
+}
+
 // reads a template file and returns its contents as a Template
 export async function readTemplateFile(filePath: string): Promise<Template> {
 	const content = await FileUtils.readTextFile(filePath);
 	const blankTemplate = {
 		structure: null,
 		parameters: null,
+		triggers: {},
 	};
 
 	if (!content) {
@@ -149,7 +227,7 @@ export async function readTemplateFile(filePath: string): Promise<Template> {
 	}
 
 	const contentLines = content.split(/\r?\n/);
-	const parts: Record<string, string> = {};
+	const parts: Record<string, any> = {};
 	let pointer = 0;
 	while (pointer < contentLines.length) {
 		if (
@@ -168,9 +246,16 @@ export async function readTemplateFile(filePath: string): Promise<Template> {
 				sectionContent += contentLines[pointer + i + 1] + "\n";
 			}
 
-			if (sectionType == "Content")
+			if (sectionType == "Content") {
 				parts[header] = sectionContent; // remove sectionType so that we can find by file-path in O(1)
-			else parts[`${sectionType}|${header}`] = sectionContent;
+			} else if (sectionType == "PreScript" || sectionType == "PostScript") {
+				parts[sectionType] = {
+					fileType: header,
+					content: sectionContent,
+				};
+			} else {
+				parts[`${sectionType}|${header}`] = sectionContent;
+			}
 
 			pointer += count + 2;
 		} else {
@@ -187,17 +272,23 @@ export async function readTemplateFile(filePath: string): Promise<Template> {
 	}
 
 	const parameters = JSON.parse(parts["Parameters|Parameters"]);
-	const structure = extractStructureFromTree(parts["Tree|Tree"]).structure; // ignore parameters because it is not the complete set (i.e. doesnt contain parameters in file contents)
+	const structure = extractStructureFromASCIITree(parts["Tree|Tree"]).structure; // ignore parameters because it is not the complete set (i.e. doesnt contain parameters in file contents)
 
 	if (!structure) return blankTemplate;
 
-	let triggers: Template["triggers"] = undefined;
+	let triggers: Template["triggers"] = {};
 
-	if (parts["PreScript"] || parts["PostScript"]) {
-		triggers = {
-			type: "content",
-			preScript: parts["PreScript"] ?? null,
-			postScript: parts["PostScript"] ?? null,
+	if (parts["PreScript"]) {
+		triggers["preScript"] = {
+			content: parts["PreScript"].content,
+			fileType: parts["PreScript"].fileType,
+		};
+	}
+
+	if (parts["PostScript"]) {
+		triggers["postScript"] = {
+			content: parts["PostScript"].content,
+			fileType: parts["PostScript"].fileType,
 		};
 	}
 
@@ -219,12 +310,13 @@ export async function createTemplateFileFromDirectory(
 	postExtractScriptPath: string | null = null,
 	withContent: boolean = false,
 ): Promise<boolean> {
-	const nodes: FileTreeNode[] = await getFileTreeNodesFromDirectory(
-		dirPath,
-		withContent,
-	);
+	const nodes: FileTreeNode[] | null = (
+		await extractStructureFromDirectory(dirPath, withContent)
+	).structure;
 
-	const fileTreeASCII = await drawSnippetFileTree(nodes);
+	if (!nodes) return false;
+
+	const fileTreeASCII = await drawFileTree(nodes);
 	if (!fileTreeASCII) return false;
 
 	function createFileSection(
@@ -236,9 +328,6 @@ export async function createTemplateFileFromDirectory(
 		return `!<${sectionType}>[${header}:${count}]\n${content}\n\n`;
 	}
 
-	let preScript = null;
-	let postScript = null;
-
 	let content: string = "";
 	let parameters: Set<string> = new Set<string>();
 
@@ -249,12 +338,22 @@ export async function createTemplateFileFromDirectory(
 	);
 	content += createFileSection("Tree", "Tree", fileTreeASCII);
 
-	if (preScript) {
-		content += createFileSection("PreScript", "PreScript", preScript);
+	if (preExtractScriptPath) {
+		preExtractScriptPath = FileUtils.resolvePath(preExtractScriptPath);
+		const scriptFileType = FileUtils.getFileType(preExtractScriptPath);
+		const scriptContent = await FileUtils.readTextFile(preExtractScriptPath);
+		if (!scriptContent) return false;
+
+		content += createFileSection("PreScript", scriptFileType, scriptContent);
 	}
 
-	if (postScript) {
-		content += createFileSection("PostScript", "PostScript", postScript);
+	if (postExtractScriptPath) {
+		postExtractScriptPath = FileUtils.resolvePath(postExtractScriptPath);
+		const scriptFileType = FileUtils.getFileType(postExtractScriptPath);
+		const scriptContent = await FileUtils.readTextFile(postExtractScriptPath);
+		if (!scriptContent) return false;
+
+		content += createFileSection("PreScript", scriptFileType, scriptContent);
 	}
 
 	if (withContent) {
@@ -373,167 +472,68 @@ export async function addTreeContentInteractive(
 	return true;
 }
 
-// given a SnippetStructure or a FileTreeNode[] draws the file tree as ASCII-art and returns as a string
-export async function drawSnippetFileTree(
-	structure: SnippetStructure | FileTreeNode[],
-	prefix: string = "",
-	isLast: boolean = true,
-	lines: string[] = [],
-): Promise<string | null> {
-	let struct: SnippetStructure | null = null;
+export function drawFileTree(nodes: FileTreeNode[]): string {
+	if (nodes.length === 0) return "";
 
-	if (Array.isArray(structure)) {
-		struct = (await getDirectoryStructureFromTree(structure)).structure;
-	} else {
-		struct = structure;
-	}
+	const lines: string[] = [];
 
-	if (!struct) return null;
+	for (let i = 0; i < nodes.length; i++) {
+		const node = nodes[i];
+		const currentLevel = node.level;
 
-	// Format and add the current node (skip the root DummyNode)
-	if (struct.type !== SnippetStructureItemType.DummyNode) {
-		const connector = isLast ? "└── " : "├── ";
-		const isDir = struct.type === SnippetStructureItemType.Directory;
-		const displayName = isDir ? `${struct.filename}/` : struct.filename;
+		// Determine if the current node is the last sibling at its depth/parent context
+		const isLastChild = isLastSibling(nodes, i);
 
-		lines.push(`${prefix}${connector}${displayName}`);
-	}
+		if (currentLevel === 0) {
+			// Root items do not need leading vertical lines or branches
+			lines.push(node.name);
+		} else {
+			let indent = "";
 
-	// Recursively process children
-	if (struct.type !== SnippetStructureItemType.File && struct.children) {
-		let childPrefix = prefix;
-		if (struct.type !== SnippetStructureItemType.DummyNode) {
-			childPrefix += isLast ? "    " : "│   ";
-		}
+			// Build vertical guidelines for ancestor levels (from level 1 up to level - 1)
+			for (let depth = 1; depth < currentLevel; depth++) {
+				const hasMoreSiblingsAtDepth = hasSiblingBelow(nodes, i, depth);
+				indent += hasMoreSiblingsAtDepth ? "│   " : "    ";
+			}
 
-		const count = struct.children.length;
-		for (let i = 0; i < count; ++i) {
-			const childIsLast = i === count - 1;
-			drawSnippetFileTree(struct.children[i], childPrefix, childIsLast, lines);
+			// Append appropriate branch symbol
+			const branch = isLastChild ? "└── " : "├── ";
+			lines.push(`${indent}${branch}${node.name}`);
 		}
 	}
 
-	// Return the complete string separated by newlines
 	return lines.join("\n");
 }
 
-// ------------------------- [private] -----------------------------
+// ------------------------- [private] --------------------------
 
-async function getDirectoryStructureFromTree(
-	tree: FileTreeNode[],
-): Promise<DirectoryStructure> {
-	const parameters = new Set<string>();
+function isLastSibling(nodes: FileTreeNode[], currentIndex: number): boolean {
+	const currentLevel = nodes[currentIndex].level;
 
-	// Root structure node set up as DummyNode with filename: null
-	const rootStructure: SnippetStructure = {
-		filename: null,
-		type: SnippetStructureItemType.DummyNode,
-		children: [],
-	};
+	for (let j = currentIndex + 1; j < nodes.length; j++) {
+		const nextLevel = nodes[j].level;
 
-	// Lookup map to find created parent nodes by their normalized path
-	const nodeMap = new Map<string, SnippetStructure>();
+		// Higher level (numerically smaller) means we exited this parent's scope
+		if (nextLevel < currentLevel) return true;
 
-	// Sort nodes by level to guarantee parents exist before children are processed
-	const sortedTree = [...tree].sort((a, b) => a.level - b.level);
-
-	for (const node of sortedTree) {
-		// Collect parameters from node name
-		const params = MiscUtils.getParametersFromText(node.name);
-		params.forEach((param: string) => {
-			parameters.add(param);
-		});
-
-		const isDirectory = node.type === "dir";
-
-		const currentStructureNode: SnippetStructure = {
-			filename: node.name,
-			type: isDirectory
-				? SnippetStructureItemType.Directory
-				: SnippetStructureItemType.File,
-			children: isDirectory ? [] : null,
-		};
-
-		// Normalize path by removing leading/trailing slashes (e.g. "/src/components" -> "src/components")
-		const normalizedPath = node.path.replace(/^\/+|\/+$/g, "");
-		nodeMap.set(normalizedPath, currentStructureNode);
-
-		const lastSlashIdx = normalizedPath.lastIndexOf("/");
-
-		if (lastSlashIdx !== -1) {
-			// Child item: resolve parent path
-			const parentPath = normalizedPath.substring(0, lastSlashIdx);
-			const parentNode = nodeMap.get(parentPath);
-
-			if (parentNode && parentNode.children) {
-				parentNode.children.push(currentStructureNode);
-			} else {
-				// Fallback to root if explicit parent dir entry was omitted from tree
-				rootStructure.children?.push(currentStructureNode);
-			}
-		} else {
-			// Top-level item directly under root
-			rootStructure.children?.push(currentStructureNode);
-		}
+		// Same level found means another sibling exists
+		if (nextLevel === currentLevel) return false;
 	}
 
-	return {
-		structure: rootStructure,
-		parameters: parameters,
-	};
+	return true; // Reached end of tree without finding another sibling
 }
 
-async function getFileTreeNodesFromDirectory(
-	dirPath: string,
-	readContent: boolean = false,
-): Promise<FileTreeNode[]> {
-	const nodes: FileTreeNode[] = [];
+function hasSiblingBelow(
+	nodes: FileTreeNode[],
+	currentIndex: number,
+	targetDepth: number,
+): boolean {
+	for (let j = currentIndex + 1; j < nodes.length; j++) {
+		const level = nodes[j].level;
 
-	async function traverse(currentDirPath: string, level: number) {
-		const entries = FileUtils.readDirectoryContentsWithTypes(currentDirPath);
-
-		// Sort entries so directories appear first, then alphabetically
-		entries.sort((a, b) => {
-			if (a.isDirectory() && !b.isDirectory()) return -1;
-			if (!a.isDirectory() && b.isDirectory()) return 1;
-			return a.name.localeCompare(b.name);
-		});
-
-		for (const entry of entries) {
-			const fullPath = FileUtils.formPath([currentDirPath, entry.name]);
-
-			// Calculate relative path starting with a leading slash
-			const relativePath = "/" + FileUtils.formRelativePath(dirPath, fullPath);
-
-			if (entry.isDirectory()) {
-				nodes.push({
-					type: "dir",
-					level,
-					name: entry.name,
-					path: relativePath,
-					content: null,
-				});
-
-				// Recurse into directory
-				traverse(fullPath, level + 1);
-			} else if (entry.isFile()) {
-				let content: string | null = null;
-
-				if (readContent) {
-					content = await FileUtils.readTextFile(fullPath);
-				}
-
-				nodes.push({
-					type: "file",
-					level,
-					name: entry.name,
-					path: relativePath,
-					content,
-				});
-			}
-		}
+		if (level < targetDepth) return false;
+		if (level === targetDepth) return true;
 	}
 
-	await traverse(dirPath, 0);
-	return nodes;
+	return false;
 }

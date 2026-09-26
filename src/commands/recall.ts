@@ -14,20 +14,21 @@
 import { ClipboardManager } from "../core/clipboard.js";
 import { Store } from "../core/store.js";
 import { Logger } from "../io/logger.js";
-import { type SnippetRecord, SnippetType } from "../types/types.js";
+import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
 import * as MiscUtils from "../utils/misc.js";
-import * as SnippetUtils from "../utils/snippet.js";
+import * as SnapshotUtils from "../utils/snapshot.js";
 import * as TreeUtils from "../utils/tree.js";
 
+/*
 export async function copySnippetToMemory(key: string): Promise<boolean> {
 	const cm = new ClipboardManager();
 	const logger = new Logger();
 
 	try {
 		const store = await Store.create();
-		if (!store.doesSnippetKeyExist(key)) {
+		if (!store.doesKeyExist(key)) {
 			logger.error("key not found");
 			return false;
 		}
@@ -50,7 +51,7 @@ export async function copySnippetToMemory(key: string): Promise<boolean> {
 		if (!("filename" in record.structure)) return false;
 
 		const snippet = await FileUtils.readTextFile(
-			SnippetUtils.getFileUnderSnippet(key, record.structure.filename!),
+			SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
 		);
 
 		if (!snippet) {
@@ -71,7 +72,7 @@ export async function openSnippet(key: string): Promise<boolean> {
 	const store = await Store.create();
 	const logger = new Logger();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("key not found");
 		return false;
 	}
@@ -88,7 +89,7 @@ export async function openSnippet(key: string): Promise<boolean> {
 
 		// if URL then open URL via web browser
 		const url = await FileUtils.readTextFile(
-			SnippetUtils.getFileUnderSnippet(key, record.structure.filename!),
+			SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
 		);
 
 		if (!url) {
@@ -108,7 +109,7 @@ export async function openSnippet(key: string): Promise<boolean> {
 		if (!("filename" in record.structure)) return false;
 
 		// if text/file, open it in a text editor
-		const filePath = SnippetUtils.getFileUnderSnippet(
+		const filePath = SnapshotUtils.getFileUnderSnippet(
 			key,
 			record.structure.filename!,
 		);
@@ -144,7 +145,7 @@ export async function appendOrPrependToFile(
 	const store = await Store.create();
 	const logger = new Logger();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("key not found");
 		return false;
 	}
@@ -167,7 +168,7 @@ export async function appendOrPrependToFile(
 	if (!("filename" in record.structure)) return false;
 
 	const snippet = await FileUtils.readTextFile(
-		SnippetUtils.getFileUnderSnippet(key, record.structure.filename!),
+		SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
 	);
 
 	if (!snippet) {
@@ -217,7 +218,7 @@ export async function extractSnippet(
 
 	const store = await Store.create();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("key not found");
 		return false;
 	}
@@ -238,7 +239,7 @@ export async function extractSnippet(
 
 	if (record.type == SnippetType.File) {
 		if (!("filename" in record.structure)) return false;
-		const localFilePath: string = SnippetUtils.getFileUnderSnippet(
+		const localFilePath: string = SnapshotUtils.getFileUnderSnippet(
 			key,
 			record.structure.filename!,
 		);
@@ -316,7 +317,7 @@ async function extractMultiFileTemplate(
 	for (let i = 0; i < record.structure.children!.length; ++i) {
 		filesToExtract.push({
 			filename: record.structure.children![i].filename!,
-			path: SnippetUtils.getFileUnderSnippet(
+			path: SnapshotUtils.getFileUnderSnippet(
 				key,
 				record.structure.children![i].filename!,
 			),
@@ -381,7 +382,7 @@ async function extractDirectoryTemplate(
 		paramValues,
 	);
 	const sourceRootDirPath: string = FileUtils.formPath([
-		SnippetUtils.getSnippetDirectory(key),
+		SnapshotUtils.getSnapshotDirectory(key),
 		rootDirName,
 	]);
 	const destRootDirPath: string = FileUtils.formPath([path, rootDirName]);
@@ -465,7 +466,7 @@ function executeTriggers(
 ) {
 	if (!triggers) return;
 
-	const snippetDir = SnippetUtils.getSnippetDirectory(key);
+	const snippetDir = SnapshotUtils.getSnapshotDirectory(key);
 
 	if (mode == "pre" && triggers.preScript) {
 		const preScriptPath = FileUtils.formPath([snippetDir, triggers.preScript]);
@@ -480,3 +481,4 @@ function executeTriggers(
 		MiscUtils.executeScript(postScriptPath, workingDir);
 	}
 }
+*/

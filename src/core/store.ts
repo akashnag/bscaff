@@ -11,37 +11,33 @@
  * GNU General Public License for more details.
  */
 
-import type {
-	SnippetInfo,
-	SnippetRecord,
-	SnippetType,
-} from "../types/types.js";
+import type { SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
-import * as SnippetUtils from "../utils/snippet.js";
+import * as SnapshotUtils from "../utils/snapshot.js";
 
 export class Store {
-	private snippetsList: SnippetRecord[];
+	private list: SnapshotRecord[];
 
-	private constructor(data: SnippetRecord[] | null = null) {
-		this.snippetsList = data || [];
+	private constructor(data: SnapshotRecord[] | null = null) {
+		this.list = data || [];
 	}
 
 	// Static factory method handles the async logic
 	static async create() {
-		const data = await Store.readSnippetsList();
+		const data = await Store.__read();
 		return new Store(data);
 	}
 
-	renameSnippetKey(oldKey: string, newKey: string): boolean {
-		if (this.doesSnippetKeyExist(newKey)) return false;
-		if (this.doesSnippetKeyExist(oldKey)) return false;
+	renameKey(oldKey: string, newKey: string): boolean {
+		if (this.doesKeyExist(newKey)) return false;
+		if (this.doesKeyExist(oldKey)) return false;
 
 		const oldPath = Config.getStoragePath([oldKey]);
 		const newPath = Config.getStoragePath([newKey]);
 
 		if (FileUtils.renameDirectory(oldPath, newPath)) {
-			const record = this.snippetsList.find((item) => item.key === oldKey);
+			const record = this.list.find((item) => item.key === oldKey);
 			record!.key = newKey;
 			record!.modifiedAt = new Date();
 			return true;
@@ -50,61 +46,45 @@ export class Store {
 		}
 	}
 
-	doesSnippetKeyExist(key: string): boolean {
-		return this.snippetsList.some((record) => record.key === key);
+	doesKeyExist(key: string): boolean {
+		return this.list.some((record) => record.key === key);
 	}
 
-	saveSnippet(info: SnippetInfo): boolean {
-		const { key, type, structure, description } = info;
-		if (this.doesSnippetKeyExist(key)) return false;
+	save(info: SnapshotRecord): boolean {
+		if (this.doesKeyExist(info.key)) return false;
 
-		const record: SnippetRecord = {
-			key: key,
-			description: description,
-			type: type,
-			createdAt: new Date(),
-			modifiedAt: new Date(),
-			structure: structure,
-			parameters: info.parameters,
-		};
+		info.createdAt = new Date();
+		info.modifiedAt = new Date();
 
-		if (info.triggers) {
-			record.triggers = {
-				type: info.triggers.type,
-				preScript: info.triggers.preScript,
-				postScript: info.triggers.postScript,
-			};
-		}
-
-		this.snippetsList.push(record);
+		this.list.push(info);
 		return true;
 	}
 
-	fetchSnippetRecord(key: string): SnippetRecord | null {
-		const record = this.snippetsList.find((item) => item.key === key);
+	fetch(key: string): SnapshotRecord | null {
+		const record = this.list.find((item) => item.key === key);
 		return record ? record : null;
 	}
 
-	deleteSnippetRecord(key: string): boolean {
-		this.snippetsList = this.snippetsList.filter((item) => item.key !== key);
+	delete(key: string): boolean {
+		this.list = this.list.filter((item) => item.key !== key);
 		return true;
 	}
 
 	update(): void {
-		Store.writeSnippetsList(this.snippetsList);
+		Store.__write(this.list);
 	}
 
 	getList(
 		key: string | null = null,
-	): { key: string; updated: Date; type: SnippetType }[] {
-		const data: { key: string; updated: Date; type: SnippetType }[] = [];
+	): { key: string; updated: Date; type: SnapshotType }[] {
+		const data: { key: string; updated: Date; type: SnapshotType }[] = [];
 
-		for (let i = 0; i < this.snippetsList.length; ++i) {
-			const record = this.snippetsList[i];
+		for (let i = 0; i < this.list.length; ++i) {
+			const record = this.list[i];
 			if (!key || record.key === key) {
-				const outRec: { key: string; updated: Date; type: SnippetType } = {
+				const outRec: { key: string; updated: Date; type: SnapshotType } = {
 					key: record.key,
-					updated: record.modifiedAt,
+					updated: record.modifiedAt!,
 					type: record.type,
 				};
 
@@ -116,29 +96,42 @@ export class Store {
 		return data;
 	}
 
-	getRawListByType(sTypes: SnippetType[]): SnippetRecord[] {
-		return this.snippetsList
-			.filter((item) => sTypes.indexOf(item.type) > -1)
-			.sort((a, b) => a.key.localeCompare(b.key));
+	getRawListFiltered(
+		sTypes?: SnapshotType[],
+		tags?: string[],
+	): SnapshotRecord[] {
+		let result = this.list;
+
+		if (sTypes) {
+			result = result.filter((item) => sTypes.indexOf(item.type) > -1);
+		}
+
+		if (tags) {
+			result = result.filter((item) =>
+				tags.every((element) => item.tags?.includes(element)),
+			);
+		}
+
+		return result.sort((a, b) => a.key.localeCompare(b.key));
 	}
 
-	getRawList(key: string): SnippetRecord {
-		return this.snippetsList.find((item) => item.key === key)!;
+	getRawList(key: string): SnapshotRecord {
+		return this.list.find((item) => item.key === key)!;
 	}
 
 	// ---------------- I/O methods -------------------
 
-	static writeSnippetsList(snippets: SnippetRecord[]): void {
-		const filePath = SnippetUtils.getSnippetsListDBPath();
+	private static __write(snippets: SnapshotRecord[]): void {
+		const filePath = SnapshotUtils.getSnapshotDB();
 		const text = JSON.stringify(snippets, null, 2);
 		FileUtils.writeTextFile(filePath, text);
 	}
 
-	static async readSnippetsList(): Promise<SnippetRecord[] | null> {
-		const filePath = SnippetUtils.getSnippetsListDBPath();
+	private static async __read(): Promise<SnapshotRecord[] | null> {
+		const filePath = SnapshotUtils.getSnapshotDB();
 		const text = await FileUtils.readTextFile(filePath);
 		if (text) {
-			const data: SnippetRecord[] = JSON.parse(text);
+			const data: SnapshotRecord[] = JSON.parse(text);
 			return data;
 		}
 		return null;

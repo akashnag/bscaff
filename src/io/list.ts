@@ -12,9 +12,9 @@
  */
 
 import chalk from "chalk";
-import { SnippetRecord, SnippetType } from "../types/types.js";
+import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "../utils/config.js";
-import * as SnippetUtils from "../utils/snippet.js";
+import * as SnapshotUtils from "../utils/snapshot.js";
 import {
 	ConsoleIO,
 	IOHeaderType,
@@ -40,10 +40,25 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printErrorFooter();
 	}
 
-	warnNoItemsFound(sType: string): void {
+	warnNoItemsFound(sType: string | undefined, tags: string | undefined): void {
 		if (QUIET_MODE) return;
 
-		printHeader(`No items found for type: ${sType}`, IOHeaderType.WARNING);
+		if (sType && !tags) {
+			printHeader(`No items found for type: ${sType}`, IOHeaderType.WARNING);
+		} else if (!sType && tags) {
+			printHeader(
+				`No items found with tags: #${tags.split(",").join(" #")}`,
+				IOHeaderType.WARNING,
+			);
+		} else if (sType && tags) {
+			printHeader(
+				`No items found with the given criteria`,
+				IOHeaderType.WARNING,
+			);
+		} else if (!sType && !tags) {
+			printHeader(`No items found`, IOHeaderType.WARNING);
+		}
+
 		console.log(`You haven't saved any snapshots yet.`);
 
 		console.log(`\nTo create your first snapshot:`);
@@ -51,16 +66,27 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printErrorFooter();
 	}
 
-	listSnapshots(sType: string, snapshots: SnippetRecord[]): void {
+	listSnapshots(
+		sType: string | undefined,
+		tags: string | undefined,
+		snapshots: SnapshotRecord[],
+	): void {
 		const headingMapper: Record<string, string> = {
 			template: "Saved Templates",
-			snippet: "Saved Snippets [Code / Text]",
+			snippet: "Saved Snippets",
 			tree: "Saved Scaffolds",
 			files: "Saved Files",
-			url: "Saved Links [URLs]",
+			url: "Saved Links",
 		};
 
-		printHeader(headingMapper[sType], IOHeaderType.INFO);
+		const splitTags = tags ? tags.split(",").join(" #") : null;
+
+		printHeader(
+			(sType ? headingMapper[sType] : "Saved Snapshots") +
+				(splitTags ? ` (#${splitTags})` : ""),
+			IOHeaderType.INFO,
+		);
+
 		printIndented(
 			`Found ${snapshots.length} item(s) ${SYMBOL_BULLET} Sorted by key\n`,
 		);
@@ -92,13 +118,13 @@ export class ListSnapshotsIO extends ConsoleIO {
 			const row: any = { KEY: item.key };
 
 			if (sType === "url") {
-				const url = SnippetUtils.readContentFromSnippetFile(
+				const url = SnapshotUtils.readContentFromSnapshotFile(
 					item.key,
-					`${Config.SNIPPET_TEXT_FILE}.url`,
+					`${Config.SINGLE_FILE_NAME}.url`,
 				);
 				row["URL"] = url;
 			} else {
-				row["SIZE"] = SnippetUtils.computeSnippetSize(item.key, item.type);
+				row["SIZE"] = SnapshotUtils.computeSnapshotSize(item.key, item.type);
 			}
 
 			if (item.tags) {
@@ -114,24 +140,22 @@ export class ListSnapshotsIO extends ConsoleIO {
 	}
 
 	showSnapshotInventory(
-		items: { key: string; updated: Date; type: SnippetType }[],
+		items: { key: string; updated: Date; type: SnapshotType }[],
 	): void {
-		const mapper: Record<SnippetType, string> = {
-			[SnippetType.Directory]: "tree",
-			[SnippetType.Tree]: "tree",
-			[SnippetType.Template]: "template",
-			[SnippetType.Text]: "snippet",
-			[SnippetType.File]: "file/multi-file",
-			[SnippetType.MultiFile]: "file/multi-file",
-			[SnippetType.URL]: "URL",
+		const mapper: Record<SnapshotType, string> = {
+			[SnapshotType.Tree]: "Trees",
+			[SnapshotType.Template]: "Templates",
+			[SnapshotType.Snippet]: "Snippets",
+			[SnapshotType.Files]: "Files",
+			[SnapshotType.URL]: "URLs",
 		};
 
 		const freq: Record<string, number> = {
-			template: 0,
-			snippet: 0,
-			tree: 0,
-			"file/multi-file": 0,
-			URL: 0,
+			Templates: 0,
+			Snippets: 0,
+			Trees: 0,
+			Files: 0,
+			URLs: 0,
 		};
 
 		const columns = [

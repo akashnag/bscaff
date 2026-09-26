@@ -11,20 +11,12 @@
  * GNU General Public License for more details.
  */
 
-export enum SnippetType {
-	Template = "TEMPLATE",
-	Text = "TEXT",
-	Directory = "DIRECTORY",
-	Tree = "TREE", // tree copied from AI output
-	File = "FILE",
-	MultiFile = "MULTI_FILE",
-	URL = "URL", // file saved as <Config.SNIPPET_TEXT_FILE>.url
-}
-
-export enum SnippetStructureItemType {
-	File = "FILE", // used for SnippetType.Text and SnippetType.File
-	Directory = "DIRECTORY", // used for SnippetType.DIRECTORY at the root level and also at sub-directory levels
-	DummyNode = "DUMMY_NODE", // used for SnippetType.MultiFile at the root level
+export enum SnapshotType {
+	Template = "TEMPLATE", // file saved as <Config.SINGLE_FILE_NAME>.bs_template
+	Snippet = "SNIPPET", // file saved as <Config.SINGLE_FILE_NAME>.<type|txt>
+	Tree = "TREE",
+	Files = "FILES",
+	URL = "URL", // file saved as <Config.SINGLE_FILE_NAME>.url
 }
 
 export interface FileTreeNode {
@@ -36,51 +28,33 @@ export interface FileTreeNode {
 	sizeInBytes?: number;
 }
 
-export interface SnippetStructure {
-	filename: string | null;
-	type: SnippetStructureItemType;
-	children: SnippetStructure[] | null;
-	sizeInBytes?: number | null;
-}
-
-// actual format in which snippet record is stored on database
-export interface SnippetRecord {
+// actual format in which snapshot records are stored on database
+export interface SnapshotRecord {
 	key: string;
-	description: string | null;
-	type: SnippetType;
-	createdAt: Date;
-	modifiedAt: Date;
-	structure: SnippetStructure | FileTreeNode[];
-	parameters: string[] | null;
-	tags?: string[] | null;
-	triggers?: {
-		type: "path" | "content";
-		preScript: string | null;
-		postScript: string | null;
-	};
+	description?: string;
+	tags?: string[];
+
+	type: SnapshotType;
+
+	createdAt?: Date;
+	modifiedAt?: Date;
+
+	structure: FileTreeNode[];
+	parameters: string[];
 }
 
 export interface Template {
 	structure: FileTreeNode[] | null;
 	parameters: string[] | null;
-	triggers?: {
-		type: "path" | "content";
-		preScript: string | null;
-		postScript: string | null;
-	};
-}
-
-// used to pass info to snippet utility functions
-export interface SnippetInfo {
-	key: string;
-	description: string | null;
-	type: SnippetType;
-	structure: SnippetStructure | FileTreeNode[];
-	parameters: string[] | null;
-	triggers?: {
-		type: "path" | "content";
-		preScript: string | null;
-		postScript: string | null;
+	triggers: {
+		preScript?: {
+			fileType: string;
+			content: string;
+		};
+		postScript?: {
+			fileType: string;
+			content: string;
+		};
 	};
 }
 
@@ -90,12 +64,4 @@ export interface BScaffSettings {
 	guiEditor: string | null;
 	browser: string | null;
 	excludeFromContentModification: string;
-}
-
-export interface DirectoryStructure {
-	structure: SnippetStructure;
-	parameters: Set<string>;
-	fileCount?: number;
-	dirCount?: number;
-	sizeInBytes?: number;
 }

@@ -17,31 +17,19 @@ import { Store } from "../core/store.js";
 import { Logger } from "../io/logger.js";
 import { SaveDirectoryIO } from "../io/save.js";
 import { ScriptMissingError } from "../types/errors.js";
-import {
-	type DirectoryStructure,
-	FileTreeNode,
-	type SnippetStructure,
-	SnippetStructureItemType,
-	SnippetType,
-	Template,
-} from "../types/types.js";
+import { FileTreeNode, SnapshotType, Template } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
 import * as MiscUtils from "../utils/misc.js";
-import * as SnippetUtils from "../utils/snippet.js";
+import * as SnapshotUtils from "../utils/snapshot.js";
 import * as TreeUtils from "../utils/tree.js";
 
+/*
 export async function saveSnippetFromFileOrClipboard(
 	key: string,
 	filePath: string | null = null,
 	description: string | null = null,
 ): Promise<boolean> {
-	/*
-		(1) get the file type from filePath
-		(2) create snippet directory and create a new file under it (with name = <Config.SNIPPET_TEXT_FILE>, and extension = filetype identified in step 1)
-		(3) SnippetRecord.structure<SnippetStructure> = { filename: as in step-2, type: FILE, children: null }
-	*/
-
 	const logger = new Logger();
 	const cm = new ClipboardManager();
 
@@ -63,7 +51,7 @@ export async function saveSnippetFromFileOrClipboard(
 
 	const store = await Store.create();
 
-	if (store.doesSnippetKeyExist(key)) {
+	if (store.doesKeyExist(key)) {
 		logger.error("key already exists");
 		return false;
 	}
@@ -73,8 +61,8 @@ export async function saveSnippetFromFileOrClipboard(
 		return false;
 	}
 
-	SnippetUtils.createSnippetDirectory(key);
-	SnippetUtils.writeContentToSnippetFile(
+	SnapshotUtils.createSnapshotDirectory(key);
+	SnapshotUtils.writeContentToSnippetFile(
 		snippet,
 		key,
 		`${Config.SNIPPET_TEXT_FILE}${fileType}`,
@@ -86,7 +74,7 @@ export async function saveSnippetFromFileOrClipboard(
 		children: null,
 	};
 
-	store.saveSnippet({
+	store.save({
 		key: key,
 		description: description,
 		type: SnippetType.Text,
@@ -104,11 +92,6 @@ export async function saveFile(
 	filePath: string | null = null,
 	description: string | null = null,
 ): Promise<boolean> {
-	/*
-		(1) create snippet directory and create a new file under it (with name same as in filePath)
-		(2) SnippetRecord.structure<SnippetStructure> = { filename: as in step-1, type: FILE, children: null }
-	*/
-
 	const logger = new Logger();
 
 	if (!filePath) {
@@ -120,7 +103,7 @@ export async function saveFile(
 
 	const store = await Store.create();
 
-	if (store.doesSnippetKeyExist(key)) {
+	if (store.doesKeyExist(key)) {
 		logger.error("key already exists");
 		return false;
 	}
@@ -132,7 +115,7 @@ export async function saveFile(
 
 	const filename = FileUtils.getFileNameFromPath(filePath);
 
-	SnippetUtils.createSnippetDirectory(key);
+	SnapshotUtils.createSnapshotDirectory(key);
 	FileUtils.copyFile(filePath, Config.getStoragePath([key, filename]));
 
 	const structure: SnippetStructure = {
@@ -141,7 +124,7 @@ export async function saveFile(
 		children: null,
 	};
 
-	store.saveSnippet({
+	store.save({
 		key: key,
 		description: description,
 		type: SnippetType.File,
@@ -159,12 +142,6 @@ export async function saveLiveInput(
 	fileType: string = "txt",
 	description: string | null = null,
 ): Promise<boolean> {
-	/*
-		(1) get the file type from command-line args, or 'txt' if omitted by user
-		(2) create snippet directory and create a new file under it (with name = <Config.SNIPPET_TEXT_FILE>, and extension = filetype identified in step 1)
-		(3) SnippetRecord.structure<SnippetStructure> = { filename: as in step-2, type: FILE, children: null }
-	*/
-
 	const logger = new Logger();
 
 	const path = MiscUtils.createRandomFileAndOpenInEditor(fileType);
@@ -182,11 +159,6 @@ export async function saveURL(
 	url: string,
 	description: string | null = null,
 ): Promise<boolean> {
-	/*
-		(1) create snippet directory and create a new file under it (with name = <Config.SNIPPET_TEXT_FILE>, and extension = '.url')
-		(2) SnippetRecord.structure<SnippetStructure> = { filename: as in step-1, type: FILE, children: null }
-	*/
-
 	const logger = new Logger();
 
 	if (!url) {
@@ -198,13 +170,13 @@ export async function saveURL(
 
 	const store = await Store.create();
 
-	if (store.doesSnippetKeyExist(key)) {
+	if (store.doesKeyExist(key)) {
 		logger.error("key already exists");
 		return false;
 	}
 
-	SnippetUtils.createSnippetDirectory(key);
-	SnippetUtils.writeContentToSnippetFile(
+	SnapshotUtils.createSnapshotDirectory(key);
+	SnapshotUtils.writeContentToSnippetFile(
 		url,
 		key,
 		`${Config.SNIPPET_TEXT_FILE}.url`,
@@ -216,7 +188,7 @@ export async function saveURL(
 		children: null,
 	};
 
-	store.saveSnippet({
+	store.save({
 		key: key,
 		description: description,
 		type: SnippetType.URL,
@@ -233,7 +205,7 @@ export async function editSnippetContent(key: string): Promise<boolean> {
 	const store = await Store.create();
 	const logger = new Logger();
 
-	if (!store.doesSnippetKeyExist(key)) {
+	if (!store.doesKeyExist(key)) {
 		logger.error("snippet not found");
 		return false;
 	}
@@ -258,7 +230,7 @@ export async function editSnippetContent(key: string): Promise<boolean> {
 		return false;
 	}
 
-	const filePath = SnippetUtils.getFileUnderSnippet(
+	const filePath = SnapshotUtils.getFileUnderSnippet(
 		key,
 		record.structure.filename!,
 	);
@@ -321,27 +293,6 @@ export async function saveMultipleFiles(
 	files: string[] | null = null,
 	description: string | null = null,
 ): Promise<boolean> {
-	/*
-		(1) create snippet directory and copy the files (passed in args) to under it
-		(2) SnippetRecord.structure<SnippetStructure> = { 
-				filename: null, 
-				type: DUMMY_NODE, 
-				children: [
-					{
-						filename: <same as file #1>,
-						type: FILE,
-						children: null
-					},
-					{
-						filename: <same as file #2>,
-						type: FILE,
-						children: null
-					},
-					...
-				]
-			}
-	*/
-
 	const logger = new Logger();
 
 	if (!files) {
@@ -351,7 +302,7 @@ export async function saveMultipleFiles(
 
 	const store = await Store.create();
 
-	if (store.doesSnippetKeyExist(key)) {
+	if (store.doesKeyExist(key)) {
 		logger.error("key already exists");
 		return false;
 	}
@@ -368,7 +319,7 @@ export async function saveMultipleFiles(
 	}
 
 	// create snippet directory
-	SnippetUtils.createSnippetDirectory(key);
+	SnapshotUtils.createSnapshotDirectory(key);
 
 	// copy each file
 	const children: SnippetStructure[] = [];
@@ -398,7 +349,7 @@ export async function saveMultipleFiles(
 		children: children,
 	};
 
-	store.saveSnippet({
+	store.save({
 		key: key,
 		description: description,
 		type: SnippetType.MultiFile,
@@ -408,110 +359,6 @@ export async function saveMultipleFiles(
 
 	store.update();
 	logger.success("template saved");
-	return true;
-}
-
-export async function saveDirectory(
-	key: string,
-	dirPath: string | null = null,
-	description: string | null = null,
-	preExtractScriptPath: string | null = null,
-	postExtractScriptPath: string | null = null,
-): Promise<boolean> {
-	/*
-		(1) create snippet directory and copy the directory (passed in args) to under it
-		(2) SnippetRecord.structure<SnippetStructure> = { 
-				filename: <name of the root directory>, 
-				type: DIRECTORY, 
-				children: [
-					{
-						filename: <file #1>,
-						type: FILE,
-						children: null
-					},
-					{
-						filename: <file #2>,
-						type: FILE,
-						children: null
-					},
-					{
-						filename: <sub-directory #1>,
-						type: DIRECTORY,
-						children: []
-					},
-					...
-				]
-			}
-	*/
-
-	const io = new SaveDirectoryIO();
-
-	if (!dirPath) {
-		io.errorMissingParameter("path");
-		return false;
-	}
-
-	const store = await Store.create();
-
-	if (store.doesSnippetKeyExist(key)) {
-		io.errorDuplicateKey(key);
-		return false;
-	}
-
-	// files contains possibly relative filenames, filePaths contain absolute filenames
-	dirPath = FileUtils.resolvePath(dirPath);
-
-	// ensure the source directory before proceeding
-	if (!FileUtils.doesDirectoryExist(dirPath)) {
-		io.errorSourceDirectoryMissing(dirPath);
-		return false;
-	}
-
-	// create snippet directory
-	SnippetUtils.createSnippetDirectory(key);
-
-	// copy the directory
-	const destPath = SnippetUtils.getSnippetDirectory(key);
-	FileUtils.copyDirectory(dirPath, destPath);
-
-	let triggerScripts = null;
-
-	try {
-		triggerScripts = SnippetUtils.copyTriggerScripts(
-			key,
-			preExtractScriptPath,
-			postExtractScriptPath,
-		);
-	} catch (error: unknown) {
-		if (error instanceof ScriptMissingError) {
-			io.errorTriggerScriptsMissing(error.scriptType, error.path);
-			return false;
-		}
-	}
-
-	const result: DirectoryStructure =
-		await SnippetUtils.getDirectoryStructureFromPath(destPath);
-
-	store.saveSnippet({
-		key: key,
-		description: description,
-		type: SnippetType.Directory,
-		structure: result.structure,
-		parameters: Array.from(result.parameters),
-		triggers: {
-			type: "path",
-			preScript: triggerScripts!.preScript,
-			postScript: triggerScripts!.postScript,
-		},
-	});
-
-	store.update();
-	io.successSnapshotTaken(
-		key,
-		MiscUtils.formatFileSize(result.sizeInBytes!),
-		result.fileCount!,
-		result.dirCount!,
-	);
 	return true;
 }
 
@@ -531,15 +378,15 @@ export async function cloneGitRepo(
 
 	const store = await Store.create();
 
-	if (store.doesSnippetKeyExist(key)) {
+	if (store.doesKeyExist(key)) {
 		logger.error("key already exists");
 		return false;
 	}
 
 	// create snippet directory
-	SnippetUtils.createSnippetDirectory(key);
+	SnapshotUtils.createSnapshotDirectory(key);
 
-	const triggerScripts = SnippetUtils.copyTriggerScripts(
+	const triggerScripts = SnapshotUtils.copyTriggerScripts(
 		key,
 		preExtractScriptPath,
 		postExtractScriptPath,
@@ -549,7 +396,7 @@ export async function cloneGitRepo(
 	if (repoName.endsWith(".git"))
 		repoName = repoName.substring(repoName.length - 4);
 
-	const snippetDir = SnippetUtils.getSnippetDirectory(key);
+	const snippetDir = SnapshotUtils.getSnapshotDirectory(key);
 	const repoLocalDir = FileUtils.formPath([snippetDir, repoName]);
 	FileUtils.createDirectory(repoLocalDir);
 
@@ -566,9 +413,9 @@ export async function cloneGitRepo(
 	}
 
 	const result: DirectoryStructure =
-		await SnippetUtils.getDirectoryStructureFromPath(repoLocalDir);
+		await SnapshotUtils.getDirectoryStructureFromPath(repoLocalDir);
 
-	store.saveSnippet({
+	store.save({
 		key: key,
 		description: description,
 		type: SnippetType.Directory,
@@ -597,16 +444,16 @@ export async function saveTree(
 	const logger = new Logger();
 	const store = await Store.create();
 
-	if (store.doesSnippetKeyExist(key)) {
+	if (store.doesKeyExist(key)) {
 		logger.error("key already exists");
 		return false;
 	}
 
 	// create snippet directory
-	SnippetUtils.createSnippetDirectory(key);
+	SnapshotUtils.createSnapshotDirectory(key);
 
 	// set type explicitly to prevent undefined -> null assignment errors
-	let triggers: Template["triggers"] = SnippetUtils.copyTriggerScripts(
+	let triggers: Template["triggers"] = SnapshotUtils.copyTriggerScripts(
 		key,
 		preExtractScriptPath,
 		postExtractScriptPath,
@@ -634,7 +481,7 @@ export async function saveTree(
 		return false;
 	}
 
-	store.saveSnippet({
+	store.save({
 		key: key,
 		description: description,
 		type: SnippetType.Tree,
@@ -694,4 +541,77 @@ export async function createTemplate(
 	}
 
 	return false;
+}
+*/
+
+export async function saveDirectory(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	dirPath: string | undefined,
+): Promise<boolean> {
+	const io = new SaveDirectoryIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (!dirPath) {
+		io.errorMissingParameter("path");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+
+	// files contains possibly relative filenames, filePaths contain absolute filenames
+	dirPath = FileUtils.resolvePath(dirPath);
+
+	// ensure the source directory before proceeding
+	if (!FileUtils.doesDirectoryExist(dirPath)) {
+		io.errorSourceDirectoryMissing(dirPath);
+		return false;
+	}
+
+	// create snippet directory
+	SnapshotUtils.createSnapshotDirectory(key);
+
+	// copy the directory
+	const destPath = SnapshotUtils.getSnapshotDirectory(key);
+	FileUtils.copyDirectory(dirPath, destPath);
+
+	const result = await TreeUtils.extractStructureFromDirectory(destPath);
+
+	if (!result.structure || !result.parameters) {
+		io.errorGeneric("saveDirectory::1");
+		return false;
+	}
+
+	store.save({
+		key: key,
+		description: description,
+		type: SnapshotType.Tree,
+		structure: result.structure!,
+		parameters: result.parameters!,
+		tags: tagList,
+	});
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		MiscUtils.formatFileSize(result.stats.sizeInBytes!),
+		result.stats.fileCount!,
+		result.stats.dirCount!,
+		description,
+		tagList,
+	);
+
+	return true;
 }

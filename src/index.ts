@@ -21,12 +21,16 @@ async function main(): Promise<void> {
 	try {
 		if (await Config.ensureStorageDirectoryExists()) {
 			const cli = new CLI();
-			process.exit(await cli.parseArgsAndExecute(process.argv));
+
+			//process.exit(await cli.parseArgsAndExecute(process.argv));
+
+			await cli.program.parseAsync(process.argv);
+			process.exit(0);
 		} else {
 			throw new Error("File path issue");
 		}
 	} catch (error: any) {
-		logger.error("An unexpected error occurred during execution:", error);
+		//logger.error("An unexpected error occurred during execution:", error);
 		process.exit(1);
 	}
 }

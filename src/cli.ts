@@ -13,10 +13,10 @@
 
 import { Command } from "commander";
 import pkg from "../package.json" with { type: "json" };
-import * as ListSnippet from "./commands/list.js";
-import * as MiscSnippetManagement from "./commands/misc.js";
-import * as RecallSnippet from "./commands/recall.js";
-import * as SaveSnippet from "./commands/save.js";
+import * as ListSnapshotCommands from "./commands/list.js";
+import * as SnapshotManagementCommands from "./commands/misc.js";
+import * as RecallSnapshotCommands from "./commands/recall.js";
+import * as SaveSnapshotCommands from "./commands/save.js";
 import { ConsoleIO } from "./io/io.js";
 import { Logger } from "./io/logger.js";
 import { Config } from "./utils/config.js";
@@ -24,7 +24,7 @@ import * as MiscUtils from "./utils/misc.js";
 
 export class CLI {
 	// shared Commander object
-	private readonly program: Command;
+	public readonly program: Command;
 
 	// constructor to initialize Commander
 	constructor() {
@@ -39,124 +39,368 @@ export class CLI {
 			.description(pkg.description)
 			.version(pkg.version)
 
-			.option("-k, --key <key>", "key for the snapshot")
+			// global flags (in addition to --version, --help)
+			.option("-k, --key <key>", "Key for the snapshot")
+			.option(
+				"-q, --quiet",
+				"Works silently without printing anything to screen",
+			)
+			.option("-s, --settings", "Opens bscaff settings for editing")
+
+			// pre-hook
+			.hook("preAction", (thisCommand, actionCommand) => {
+				const options = thisCommand.opts();
+				if (options.quiet) {
+					Logger.setSilentMode();
+					ConsoleIO.setSilentMode();
+				}
+			});
+
+		this.defineSaveGroup();
+		this.defineMiscGroup();
+		this.defineListGroup();
+		this.defineExtractGroup();
+		this.defineCreateGroup();
+	}
+
+	private defineSaveGroup(): void {
+		const saveGroup = this.program
+			.command("save")
+			.description("Save snapshots")
 			.option(
 				"--desc <description>",
-				"brief description of the snapshot (in double-quotes)",
+				"Brief description of the snapshot (in double-quotes)",
+			)
+			.option(
+				"--tags <list-of-tags>",
+				"List of tags (comma-separated, no spaces) associated with this snapshot",
+			);
+
+		/*
+		Examples:
+			[Save directory tree]							-->	bscaff -k react-snapshot --desc --tags=react,app "My awesome react app" save tree ~/projects/my-react-app
+			[Save git repo]									-->	bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
+		*/
+		saveGroup
+			.command("tree <dir-path_or_repo-url>")
+			.description(
+				"Save a snapshot of a directory tree specified by path/git-repo URL",
+			)
+			.option("--git", "Clone from a git repo")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					const parentOpts = command.parent?.opts();
+
+					const retVal = await SaveSnapshotCommands.saveDirectory(
+						globalOpts.key,
+						parentOpts?.desc,
+						parentOpts?.tags,
+						path,
+					);
+					if (!retVal) throw new Error();
+				},
+			);
+
+		/*
+		Examples:
+			[Save snippet from file]						--> bscaff -k react-create-component save snippet ./components/my-component.tsx
+			[Save snippet from memory]						--> bscaff -k react-create-component save snippet --type=tsx
+		*/
+		saveGroup
+			.command("snippet [path/to/file]")
+			.description(
+				"Save a text/code snippet from a file (or clipboard if path omitted)",
+			)
+			.option(
+				"--type=<file-type>",
+				"If to be copied from clipboard, this signals the type of the code/text",
+			)
+			.action(
+				async (
+					path: string | undefined,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		/*
+		Examples:
+			[Save files]									--> bscaff -k my-go-package save files ./*.go
+			[Save files]									--> bscaff -k my-go-package save files format.go main.go test.go
+		*/
+		saveGroup
+			.command("files <...files>")
+			.description("Save one or more files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		/*
+		Examples:
+			[Save link]										--> bscaff -k go-docs save url https://go.dev/doc/
+		*/
+		saveGroup
+			.command("url <url>")
+			.description("Save a web URL/link")
+			.action(
+				async (url: string, options: Record<string, any>, command: Command) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		/*
+		Examples:
+			[Save template]									--> bscaff -k my-template save template ./my-template.bs_template
+		*/
+		saveGroup
+			.command("template <path/to/template-file>")
+			.description("Save a bscaff template")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+	}
+
+	private defineMiscGroup(): void {
+		const updateGroup = this.program
+			.command("update")
+			.description("Update snapshot metadata");
+
+		updateGroup
+			.command("key <new-key>")
+			.description("Update the snapshot key")
+			.action(
+				async (
+					newKey: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		updateGroup
+			.command("desc <new-description>")
+			.description("Update the snapshot description (in double quotes)")
+			.action(
+				async (
+					newDescription: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		updateGroup
+			.command("tags <new-tags>")
+			.description("Update the tags (comma-separated, without spaces)")
+			.action(
+				async (
+					newTags: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const deleteGroup = this.program
+			.command("delete")
+			.description("Delete snapshot")
+			.action(async (options: Record<string, any>, command: Command) => {
+				const globalOpts = command.optsWithGlobals();
+				// TODO: add code
+			});
+	}
+
+	private defineListGroup(): void {
+		const listGroup = this.program
+			.command("list [relative-path]")
+			.description("Lists the saved snapshots")
+			.option(
+				"--type=<tree|snippet|files|url|template>",
+				"Filter by snapshot type",
 			)
 			.option(
 				"--tags=<list-of-tags>",
-				"list of tags (comma-separated, no spaces) associated with this snapshot",
+				"Filter by tags (separated by commas, no spaces)",
 			)
+			.action(
+				async (
+					path: string | undefined,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					const retVal = await ListSnapshotCommands.list(
+						globalOpts.key,
+						options.type,
+						options.tags,
+						path,
+					);
+					if (!retVal) throw new Error();
+				},
+			);
+	}
 
-			.option(
-				"--save-dir <path>",
-				"saves a snapshot of the directory specified by path",
+	private defineExtractGroup(): void {
+		const openGroup = this.program
+			.command("open")
+			.description(
+				"Opens a URL in the browser / snippet in a text-editor (read-only)",
 			)
-			.option(
-				"--create-template <path>",
-				"saves a snapshot of the directory as a template file in the current directory (named after key)",
-			)
-			.option(
-				"--create-template-with-content <path>",
-				"saves a snapshot of the directory as a template file in the current directory (named after key) preserving file contents",
-			)
+			.action(async (options: Record<string, any>, command: Command) => {
+				const globalOpts = command.optsWithGlobals();
+				// TODO: add code
+			});
 
-			.option("--save-multi <files...>", "saves a snapshot of the files listed")
-			.option(
-				"--save-snippet [file]",
-				"saves a snapshot of the text contained in the file / clipboard",
-			)
-			.option("--save-file <file>", "saves a snapshot of the file")
-			.option(
-				"--save-input [file_type]",
-				"saves a snapshot given as input, file_type is the extension (without dot)",
-			)
-			.option("--save-url <url>", "saves a URL")
-			.option("--save-git <repo_url>", "saves a template from a git repo")
-			.option(
-				"--save-tree [template_file]",
-				"saves a project scaffolding tree from either a bscaff-template or from clipboard (e.g. generated from LLM tools)",
-			)
+		const editGroup = this.program
+			.command("edit")
+			.description("Opens a URL / snippet in a text-editor for editing")
+			.action(async (options: Record<string, any>, command: Command) => {
+				const globalOpts = command.optsWithGlobals();
+				// TODO: add code
+			});
 
-			.option(
-				"-f, --fetch [relative_path]",
-				"display the contents of the saved text/file (if path mentioned) else the snapshot itself (if directory type)",
-			)
-			.option(
-				"-x, --extract <path>",
-				"extracts a saved snapshot to the specified path",
-			)
-			.option(
-				"--create-tree <path>",
-				"creates a project scaffolding tree directly from clipboard (e.g. generated from LLM tools)",
-			)
-			.option(
-				"--create-tree-with-content <path>",
-				"creates a project scaffolding tree directly from clipboard (e.g. generated from LLM tools) with contents of each file prompted",
-			)
+		const extractGroup = this.program
+			.command("extract <path>")
+			.description("Extracts a tree / files / template to the directory path")
+			.option("--overwrite", "Overwrite files in destination without prompting")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
 
-			.option("-c, --copy", "copies a saved snapshot to clipboard")
-			.option("-e, --edit", "opens a saved file/text for editing")
-			.option(
-				"-o, --open",
-				"opens the saved URL in the browser OR open saved text/file in editor (read-only)",
-			)
-			.option(
-				"-a, --append <path...>",
-				"adds the text of a saved snapshot to the end of the file(s) specified by path",
-			)
-			.option(
-				"-p, --prepend <path...>",
-				"adds the text of a saved snapshot to the beginning of the file(s) specified by path",
-			)
+		const appendGroup = this.program
+			.command("append <...files>")
+			.description("Append the text snippet to the target files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
 
+		const prependGroup = this.program
+			.command("prepend <...files>")
+			.description("Prepend the text snippet to the target files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const copyGroup = this.program
+			.command("copy")
+			.description(
+				"Copy the snippet / file-tree (ASCII) / file-list / url to clipboard",
+			)
+			.action(async (options: Record<string, any>, command: Command) => {
+				const globalOpts = command.optsWithGlobals();
+				// TODO: add code
+			});
+	}
+
+	private defineCreateGroup(): void {
+		const createGroup = this.program
+			.command("create")
+			.description("Creates templates / scaffolding");
+
+		createGroup
+			.command("tree <to-path>")
+			.description(
+				"Creates a scaffolding tree (ASCII-art copied to clipboard) into the path specified",
+			)
 			.option(
 				"--overwrite",
-				"force overwrite if destination file/directory exists",
+				"Overwrite files in destination (with blank ones) without prompting",
 			)
+			.option("--input", "Prompts to enter content of each file in the tree")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
 
-			.option(
-				"--pre-extract <path-to-script-file>",
-				"executes this script before extracting a directory/git-template",
+		createGroup
+			.command("template <from-path>")
+			.description(
+				"Creates a template from the directory and files contained at the path specified",
 			)
 			.option(
-				"--post-extract <path-to-script-file>",
-				"executes this script after extracting a directory/git-template",
+				"--pre-trigger <path/to/script>",
+				"Saves a pre-trigger script to the template, and executes it when template extracted",
 			)
-
 			.option(
-				"-l, --list [type]",
-				"lists down the snapshots of <type> = url|snippet|dir|file|multi-file",
+				"--post-trigger <path/to/script>",
+				"Saves a pre-trigger script to the template, and executes it when template extracted",
 			)
-			.option("-r, --rename <new_key>", "updates a snippet key to the new_key")
-			.option("--delete", "removes a snippet from record")
-
-			.option(
-				"-q, --quiet",
-				"works silently without printing anything to screen",
-			)
-			.option("-s, --settings", "opens bscaff settings for editing")
-			.option("-h, --help", "displays this help");
+			.option("--exclude-content", "Exclude file contents from the template")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
 	}
 
-	// display to the user the command-line flags we accept
-	showHelp(): void {
-		console.log(`${pkg.name} ${pkg.version}`);
-		this.program.outputHelp();
-	}
-
+	/*
 	// Parses command line args passed to the program, and calls the appropriate helper function to perform the task
 	async parseArgsAndExecute(args: string[]): Promise<number> {
 		const logger = new Logger();
 
 		this.program.parse(args);
 		const options = this.program.opts();
-
-		if (options.help || args.length == 2) {
-			this.showHelp();
-			return 0;
-		}
 
 		if (options.quiet) {
 			Logger.setSilentMode();
@@ -334,4 +578,5 @@ export class CLI {
 
 		return retVal ? 0 : 1;
 	}
+	*/
 }
