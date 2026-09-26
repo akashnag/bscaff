@@ -14,7 +14,7 @@
 import { Store } from "../core/store.js";
 import { ListSnapshotsIO } from "../io/list.js";
 import { Logger } from "../io/logger.js";
-import { SnapshotType } from "../types/types.js";
+import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
 import * as TreeUtils from "../utils/tree.js";
 
@@ -184,13 +184,38 @@ export async function list(
 		}
 
 		await io.listSnapshots(store, sType, tags, data);
+	} else if (key) {
+		const record = store.fetch(key);
+		if (!record) {
+			io.errorKeyNotFound(key);
+			return false;
+		}
+
+		if (relPath) {
+			return displaySnapshotFile(key, record, relPath);
+		} else {
+			return displaySnapshotInfo(key, record);
+		}
 	}
 
 	return true;
 }
 
+// list down number of snapshots by type
 function listDBStats(io: ListSnapshotsIO, store: Store): boolean {
 	const data = store.getList();
 	io.showSnapshotInventory(data);
 	return true;
+}
+
+function displaySnapshotFile(
+	key: string,
+	record: SnapshotRecord,
+	relPath: string,
+): boolean {
+	// TODO: add code
+}
+
+function displaySnapshotInfo(key: string, record: SnapshotRecord): boolean {
+	// TODO: add code
 }

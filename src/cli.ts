@@ -45,7 +45,6 @@ export class CLI {
 				"-q, --quiet",
 				"Works silently without printing anything to screen",
 			)
-			.option("-s, --settings", "Opens bscaff settings for editing")
 
 			// pre-hook
 			.hook("preAction", (thisCommand, actionCommand) => {
@@ -135,9 +134,8 @@ export class CLI {
 		*/
 		saveGroup
 			.command("snippet [path/to/file]")
-			.description(
-				"Save a text/code snippet from a file (or clipboard if path omitted)",
-			)
+			.description("Save a text/code snippet from a file / clipboard")
+			.option("--memory", "Copy from clipboard")
 			.option(
 				"--type <file-type>",
 				"If to be copied from clipboard, this signals the type of the code/text",
@@ -150,13 +148,25 @@ export class CLI {
 				) => {
 					const globalOpts = command.optsWithGlobals();
 					const parentOpts = command.parent?.opts();
-					const retVal = await SaveSnapshotCommands.saveSnippet(
-						globalOpts.key,
-						parentOpts?.desc,
-						parentOpts?.tags,
-						options.type,
-						path,
-					);
+
+					let retVal: boolean = false;
+					if (options.memory || path) {
+						retVal = await SaveSnapshotCommands.saveSnippet(
+							globalOpts.key,
+							parentOpts?.desc,
+							parentOpts?.tags,
+							options.type,
+							options.memory,
+							path,
+						);
+					} else {
+						retVal = await SaveSnapshotCommands.saveSnippetFromLiveInput(
+							globalOpts.key,
+							parentOpts?.desc,
+							parentOpts?.tags,
+							options.type,
+						);
+					}
 					if (!retVal) throw new Error();
 				},
 			);
@@ -235,6 +245,14 @@ export class CLI {
 	}
 
 	private defineMiscGroup(): void {
+		const settingsGroup = this.program
+			.command("settings")
+			.description("Opens bscaff settings for editing")
+			.action(async (options: Record<string, any>, command: Command) => {
+				const globalOpts = command.optsWithGlobals();
+				// TODO: add code
+			});
+
 		const updateGroup = this.program
 			.command("update")
 			.description("Update snapshot metadata");
@@ -273,6 +291,20 @@ export class CLI {
 			.action(
 				async (
 					newTags: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		updateGroup
+			.command("content [relative-path]")
+			.description("Update the content of a snippet / file")
+			.action(
+				async (
+					relPath: string | undefined,
 					options: Record<string, any>,
 					command: Command,
 				) => {
@@ -326,14 +358,6 @@ export class CLI {
 			.description(
 				"Opens a URL in the browser / snippet in a text-editor (read-only)",
 			)
-			.action(async (options: Record<string, any>, command: Command) => {
-				const globalOpts = command.optsWithGlobals();
-				// TODO: add code
-			});
-
-		const editGroup = this.program
-			.command("edit")
-			.description("Opens a URL / snippet in a text-editor for editing")
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
 				// TODO: add code

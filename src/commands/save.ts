@@ -33,118 +33,6 @@ import * as TemplateUtils from "../utils/template.js";
 import * as TreeUtils from "../utils/tree.js";
 
 /*
-export async function saveSnippetFromFileOrClipboard(
-	key: string,
-	filePath: string | null = null,
-	description: string | null = null,
-): Promise<boolean> {
-	const logger = new Logger();
-	const cm = new ClipboardManager();
-
-	let snippet = null;
-	let fileType = "txt";
-
-	if (filePath) {
-		filePath = FileUtils.resolvePath(filePath);
-		if (FileUtils.doesFileExist(filePath)) {
-			snippet = await FileUtils.readTextFile(filePath);
-			fileType = FileUtils.getFileType(filePath, true, "txt");
-		} else {
-			logger.error("invalid file path");
-			return false;
-		}
-	} else {
-		snippet = await cm.paste();
-	}
-
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		logger.error("key already exists");
-		return false;
-	}
-
-	if (!snippet) {
-		logger.error("no snippet found");
-		return false;
-	}
-
-	SnapshotUtils.createSnapshotDirectory(key);
-	SnapshotUtils.writeContentToSnippetFile(
-		snippet,
-		key,
-		`${Config.SNIPPET_TEXT_FILE}${fileType}`,
-	);
-
-	const structure: SnippetStructure = {
-		filename: `${Config.SNIPPET_TEXT_FILE}${fileType}`,
-		type: SnippetStructureItemType.File,
-		children: null,
-	};
-
-	store.save({
-		key: key,
-		description: description,
-		type: SnippetType.Text,
-		structure: structure,
-		parameters: null,
-	});
-
-	store.update();
-	logger.success("snippet saved");
-	return true;
-}
-
-export async function saveFile(
-	key: string,
-	filePath: string | null = null,
-	description: string | null = null,
-): Promise<boolean> {
-	const logger = new Logger();
-
-	if (!filePath) {
-		logger.error("missing file path");
-		return false;
-	}
-
-	filePath = FileUtils.resolvePath(filePath);
-
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		logger.error("key already exists");
-		return false;
-	}
-
-	if (!FileUtils.doesFileExist(filePath)) {
-		logger.error("file not found");
-		return false;
-	}
-
-	const filename = FileUtils.getFileNameFromPath(filePath);
-
-	SnapshotUtils.createSnapshotDirectory(key);
-	FileUtils.copyFile(filePath, Config.getStoragePath([key, filename]));
-
-	const structure: SnippetStructure = {
-		filename: filename,
-		type: SnippetStructureItemType.File,
-		children: null,
-	};
-
-	store.save({
-		key: key,
-		description: description,
-		type: SnippetType.File,
-		structure: structure,
-		parameters: null,
-	});
-
-	store.update();
-	logger.success("snippet saved");
-	return true;
-}
-
 export async function saveLiveInput(
 	key: string,
 	fileType: string = "txt",
@@ -160,53 +48,6 @@ export async function saveLiveInput(
 	const success = await saveSnippetFromFileOrClipboard(key, path, description);
 	if (success) return FileUtils.deleteFile(path);
 	return false;
-}
-
-export async function saveURL(
-	key: string,
-	url: string,
-	description: string | null = null,
-): Promise<boolean> {
-	const logger = new Logger();
-
-	if (!url) {
-		logger.error("URL missing");
-		return false;
-	} else {
-		url = url.trim();
-	}
-
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		logger.error("key already exists");
-		return false;
-	}
-
-	SnapshotUtils.createSnapshotDirectory(key);
-	SnapshotUtils.writeContentToSnippetFile(
-		url,
-		key,
-		`${Config.SNIPPET_TEXT_FILE}.url`,
-	);
-
-	const structure: SnippetStructure = {
-		filename: `${Config.SNIPPET_TEXT_FILE}.url`,
-		type: SnippetStructureItemType.File,
-		children: null,
-	};
-
-	store.save({
-		key: key,
-		description: description,
-		type: SnippetType.URL,
-		structure: structure,
-		parameters: null,
-	});
-
-	store.update();
-	logger.success("URL saved");
-	return true;
 }
 
 export async function editSnippetContent(key: string): Promise<boolean> {
@@ -294,80 +135,6 @@ export async function editSnippetContent(key: string): Promise<boolean> {
 
 	logger.error("failed to read/write files");
 	return false;
-}
-
-export async function saveMultipleFiles(
-	key: string,
-	files: string[] | null = null,
-	description: string | null = null,
-): Promise<boolean> {
-	const logger = new Logger();
-
-	if (!files) {
-		logger.error("missing file paths");
-		return false;
-	}
-
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		logger.error("key already exists");
-		return false;
-	}
-
-	// files contains possibly relative filenames, filePaths contain absolute filenames
-	const filePaths = FileUtils.resolvePaths(files);
-
-	// ensure all files exist before proceeding
-	for (let i = 0; i < filePaths.length; ++i) {
-		if (!FileUtils.doesFileExist(filePaths[i])) {
-			logger.error(`file not found: ${files[i]}`);
-			return false;
-		}
-	}
-
-	// create snippet directory
-	SnapshotUtils.createSnapshotDirectory(key);
-
-	// copy each file
-	const children: SnippetStructure[] = [];
-	const parameters: Set<string> = new Set<string>();
-
-	for (let i = 0; i < filePaths.length; ++i) {
-		const filename = FileUtils.getFileNameFromPath(filePaths[i]);
-		const newFilePath = Config.getStoragePath([key, filename]);
-
-		const params: string[] = MiscUtils.getParametersFromText(filename);
-		params.forEach((param: string) => {
-			parameters.add(param);
-		});
-
-		FileUtils.copyFile(filePaths[i], newFilePath);
-
-		children.push({
-			filename: filename,
-			type: SnippetStructureItemType.File,
-			children: null,
-		});
-	}
-
-	const structure: SnippetStructure = {
-		filename: null,
-		type: SnippetStructureItemType.DummyNode,
-		children: children,
-	};
-
-	store.save({
-		key: key,
-		description: description,
-		type: SnippetType.MultiFile,
-		structure: structure,
-		parameters: Array.from(parameters),
-	});
-
-	store.update();
-	logger.success("template saved");
-	return true;
 }
 
 export async function createTemplate(
@@ -650,13 +417,14 @@ export async function saveDirectory(
 // --------------------------------------------------------
 
 // --------------------------------------------------------
-// save snippet [path] [--type file-type]
+// save snippet [path] [--type file-type [--memory]]
 // --------------------------------------------------------
 export async function saveSnippet(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
 	fType: string | undefined,
+	fromMemory: boolean | undefined,
 	filePath: string | undefined,
 ): Promise<boolean> {
 	const io = new SaveSnippetIO();
@@ -664,6 +432,11 @@ export async function saveSnippet(
 
 	if (!key) {
 		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (fromMemory && filePath) {
+		io.errorConflictingArgs("--memory", "file-path");
 		return false;
 	}
 
@@ -695,9 +468,12 @@ export async function saveSnippet(
 			fileType = FileUtils.getFileType(filePath);
 			fromFile = true;
 		}
-	} else {
+	} else if (fromMemory) {
 		content = await cm.paste();
 		if (fType) fileType = fType;
+	} else {
+		io.errorGeneric("saveSnippet::1");
+		return false;
 	}
 
 	if (!content || content.length == 0) {
@@ -730,6 +506,38 @@ export async function saveSnippet(
 	);
 
 	return true;
+}
+
+// --------------------------------------------------------
+// save snippet [--type file-type]
+// --------------------------------------------------------
+export async function saveSnippetFromLiveInput(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	fType: string | undefined,
+): Promise<boolean> {
+	const io = new SaveSnippetIO();
+
+	if (!fType) fType = "txt";
+
+	const filePath = MiscUtils.createRandomFileAndOpenInEditor(fType);
+	if (!filePath) {
+		io.errorLaunchingTextEditor();
+		return false;
+	}
+
+	const success = await saveSnippet(
+		key,
+		description,
+		tags,
+		undefined,
+		false,
+		filePath,
+	);
+	if (success) return FileUtils.deleteFile(filePath);
+
+	return false;
 }
 // --------------------------------------------------------
 

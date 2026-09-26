@@ -157,32 +157,22 @@ export function executeScript(
 }
 
 // opens file for editing in terminal-editor or if it fails then a gui-editor (unless in settings user has set preference to gui first)
-export function openFileInEditor(
-	filePath: string,
-	preferredTerminalEditor: string | null = null,
-): boolean {
-	if (!preferredTerminalEditor)
-		preferredTerminalEditor = Settings.get("terminalEditor");
-	const isTerminalAvailable =
-		Settings.get("editorPreference") == "terminal"
-			? isCommandAvailable(preferredTerminalEditor!)
-			: false;
+export function openFileInEditor(filePath: string): boolean {
+	const textEditor = Settings.get("textEditor");
+	const isAvailable = isCommandAvailable(textEditor!);
 
-	if (isTerminalAvailable) {
+	if (isAvailable) {
 		try {
 			// stdio: 'inherit' attaches TTY so interactive terminal editors (nano/vim) work
-			const result = spawnSync(preferredTerminalEditor!, [filePath], {
+			const result = spawnSync(textEditor!, [filePath], {
 				stdio: "inherit",
 			});
 			return result.status === 0 && result.error === undefined;
 		} catch (err) {
-			console.error(`Failed to launch ${preferredTerminalEditor}:`, err);
+			console.error(`Failed to launch ${textEditor}:`, err);
 			return false;
 		}
 	} else {
-		console.warn(
-			`'${preferredTerminalEditor}' not found. Falling back to GUI editor...`,
-		);
 		return openFileInGUIEditor(filePath);
 	}
 }

@@ -62,9 +62,7 @@ export interface Template {
 }
 
 export interface BScaffSettings {
-	editorPreference: string;
-	terminalEditor: string | null;
-	guiEditor: string | null;
+	textEditor: string | null;
 	browser: string | null;
 	excludeFromContentModification: string;
 }

@@ -18,9 +18,7 @@ import * as MiscUtils from "../utils/misc.js";
 
 export class Settings {
 	static readonly DEFAULT_SETTINGS: BScaffSettings = {
-		editorPreference: "terminal",
-		terminalEditor: "nano",
-		guiEditor: MiscUtils.getPlatform() == "win32" ? "notepad" : "gedit",
+		textEditor: MiscUtils.getPlatform() == "win32" ? "notepad" : "nano",
 		browser: "google-chrome",
 		excludeFromContentModification: "*.html;*.j2",
 	};

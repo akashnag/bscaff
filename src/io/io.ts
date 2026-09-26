@@ -364,4 +364,14 @@ export abstract class ConsoleIO {
 			fileContents: fileContents,
 		};
 	}
+
+	errorKeyNotFound(key: string): void {
+		printHeader("Key Not Found");
+		printField("Error", `The given key '${key}' was not found in records`);
+		console.log(`\nTo resolve:`);
+		printIndented(
+			"Ensure you have spelt the key correctly, or check the list of valid keys using the command: ",
+		);
+		printIndented("bscaff list");
+	}
 }

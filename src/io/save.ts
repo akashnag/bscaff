@@ -14,6 +14,7 @@
 import chalk from "chalk";
 import ora, { Ora } from "ora";
 import { ClipboardManager } from "../core/clipboard.js";
+import { Settings } from "../core/settings.js";
 import { FileTreeNode } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as MiscUtils from "../utils/misc.js";
@@ -209,6 +210,21 @@ export class SaveSnippetIO extends ConsoleIO {
 			printBullet("Copy some text and try again without specifying path");
 		}
 		printBullet("Specify path to a file which has some text");
+	}
+
+	errorLaunchingTextEditor(): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Error Launching Text-Editor");
+		printField(
+			"Error",
+			`The text-editor '${Settings.get("textEditor")}' could not be launched`,
+		);
+		console.log("\nTo resolve:");
+		printBullet("Ensure the text-editor is installed");
+		printBullet(
+			"Change the default text-editor in settings, run: bscaff --settings",
+		);
 	}
 
 	successSnapshotTaken(
