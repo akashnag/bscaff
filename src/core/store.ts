@@ -50,11 +50,17 @@ export class Store {
 		return this.list.some((record) => record.key === key);
 	}
 
-	save(info: SnapshotRecord): boolean {
+	save(info: SnapshotRecord, removeContent: boolean = false): boolean {
 		if (this.doesKeyExist(info.key)) return false;
 
 		info.createdAt = new Date();
 		info.modifiedAt = new Date();
+
+		if (removeContent && info.structure) {
+			for (let i = 0; i < info.structure.length; ++i) {
+				info.structure[i].content = undefined;
+			}
+		}
 
 		this.list.push(info);
 		return true;

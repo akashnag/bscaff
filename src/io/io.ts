@@ -14,7 +14,10 @@
 import { stdin as input, stdout as output } from "node:process";
 import * as readline from "node:readline/promises";
 import chalk from "chalk";
+import { ClipboardManager } from "../core/clipboard.js";
+import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "../utils/files.js";
+import * as MiscUtils from "../utils/misc.js";
 
 const SYMBOL_INFO: string = "ℹ";
 const SYMBOL_ERROR: string = "✖";
@@ -326,5 +329,39 @@ export abstract class ConsoleIO {
 	errorConflictingArgs(arg1: string, arg2: string): void {
 		printHeader("Conflicting Arguments Specified");
 		printField("Error", `<${arg1}> and <${arg2}> can not be used together\n`);
+	}
+
+	async promptForFileContents(
+		cm: ClipboardManager,
+		structure: FileTreeNode[],
+		updateStructureWithContent: boolean = false,
+	): Promise<{ sizeInBytes: number; fileContents: Record<string, string> }> {
+		let totalSize = 0;
+		const fileContents: Record<string, string> = {};
+
+		for (let i = 0; i < structure.length; ++i) {
+			if (structure[i].type == "file") {
+				console.log(structure[i].path);
+				const choice = await getche(
+					"\t" +
+						chalk.blue("Press C to copy (from clipboard) or Enter to skip: "),
+				);
+
+				if (choice.toLowerCase().trim() == "c") {
+					const content = await cm.paste();
+					const sizeInBytes = MiscUtils.getSizeOfTextContent(content);
+					totalSize += sizeInBytes;
+					fileContents[structure[i].path] = content;
+					if (updateStructureWithContent) {
+						structure[i].content = content;
+					}
+				}
+			}
+		}
+
+		return {
+			sizeInBytes: totalSize,
+			fileContents: fileContents,
+		};
 	}
 }

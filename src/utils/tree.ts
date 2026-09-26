@@ -232,16 +232,15 @@ export async function extractStructureFromDirectory(
 export async function createTree(
 	path: string | null,
 	structure: FileTreeNode[],
-	parameters: Record<string, string>,
+	parameters?: Record<string, string>,
 	overwrite: boolean = false,
 ): Promise<boolean> {
 	if (!path) return false;
 
 	for (let i = 0; i < structure.length; ++i) {
-		const subPath = MiscUtils.replacePlaceholdersInText(
-			structure[i].path,
-			parameters,
-		);
+		const subPath = parameters
+			? MiscUtils.replacePlaceholdersInText(structure[i].path, parameters)
+			: structure[i].path;
 		const fullPath = FileUtils.formPath([path, subPath]);
 
 		if (structure[i].type == "file") {

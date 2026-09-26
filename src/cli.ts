@@ -157,6 +157,7 @@ export class CLI {
 						options.type,
 						path,
 					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -175,7 +176,14 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const parentOpts = command.parent?.opts();
+					const retVal = await SaveSnapshotCommands.saveFiles(
+						globalOpts.key,
+						parentOpts?.desc,
+						parentOpts?.tags,
+						files,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -196,6 +204,7 @@ export class CLI {
 						parentOpts?.tags,
 						url,
 					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -220,6 +229,7 @@ export class CLI {
 						parentOpts?.tags,
 						path,
 					);
+					if (!retVal) throw new Error();
 				},
 			);
 	}

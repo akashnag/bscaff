@@ -188,18 +188,44 @@ export function openFileInEditor(
 }
 
 // Extracts all parameters enclosed within {{ and }} from a string
-export function getParametersFromText(filename: string): string[] {
+export function getParametersFromText(text: string): string[] {
 	// Regex matching {{ followed by non-}} characters, capturing the inner content
 	const regex = /\{\{([^}]+)\}\}/g;
 	const matches: string[] = [];
 
 	let match: RegExpExecArray | null;
-	while ((match = regex.exec(filename)) !== null) {
+	while ((match = regex.exec(text)) !== null) {
 		// match[1] refers to the first capture group (inside {{ }})
 		matches.push(match[1].trim());
 	}
 
 	return matches;
+}
+
+export function getSizeOfTextContent(text: string): number {
+	return new TextEncoder().encode(text).length;
+}
+
+export async function getParametersFromFileContent(
+	filePath: string,
+): Promise<string[]> {
+	const fileType = FileUtils.getFileType(filePath, true);
+	const exclusions = Settings.get("excludeFromContentModification")?.split(";");
+
+	if (exclusions) {
+		for (let i = 0; i < exclusions.length; ++i) {
+			if (
+				exclusions[i].substring(1).toLocaleLowerCase() ==
+				fileType.toLocaleLowerCase()
+			)
+				return [];
+		}
+	}
+
+	const content = await FileUtils.readTextFile(filePath);
+	if (!content) return [];
+
+	return getParametersFromText(content);
 }
 
 export function replacePlaceholdersInText(

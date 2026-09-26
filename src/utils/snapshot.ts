@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { Store } from "../core/store.js";
 import { ScriptMissingError } from "../types/errors.js";
 import { FileTreeNode, SnapshotType } from "../types/types.js";
 import { Config } from "./config.js";
@@ -124,7 +125,99 @@ export function copyTriggerScripts(
 	return retVal;
 }
 
-export function computeSnapshotSize(key: string, sType: SnapshotType): string {
-	// TODO: add code
-	return "0 B";
+export async function computeSnapshotSize(
+	store: Store,
+	key: string,
+): Promise<string> {
+	const record = store.fetch(key);
+	if (!record) return `0 B`;
+
+	if (record.type == SnapshotType.URL) {
+		return "1 line";
+	} else if (
+		record.type == SnapshotType.Snippet ||
+		record.type == SnapshotType.Template
+	) {
+		const content = await readContentFromSnapshotFile(key, record.fileName!);
+		if (!content) return `0 B`;
+		if (record.type == SnapshotType.Snippet) {
+			return `${MiscUtils.countLines(content)} lines`;
+		} else {
+			return (
+				MiscUtils.formatFileSize(MiscUtils.getSizeOfTextContent(content)) ??
+				`0 B`
+			);
+		}
+	} else if (
+		record.type == SnapshotType.Tree ||
+		record.type == SnapshotType.Files
+	) {
+		if (!record.structure) return `0 B`;
+		let size = 0;
+		for (let i = 0; i < record.structure.length; ++i) {
+			if (record.structure[i].type == "file") {
+				size +=
+					record.structure[i].sizeInBytes ??
+					FileUtils.getFileSizeInBytes(
+						getFileUnderSnapshot(key, record.structure[i].path),
+					) ??
+					0;
+			}
+		}
+		return MiscUtils.formatFileSize(size) ?? `0 B`;
+	} else {
+		return `0 B`;
+	}
+}
+
+// only copies files, not directories. assumes filenames are absolute paths
+export async function copyFilesToSnapshotDirectory(
+	key: string,
+	files: string[],
+): Promise<{
+	structure: FileTreeNode[];
+	parameters: string[];
+	stats: { sizeInBytes: number; fileCount: number; dirCount: number };
+}> {
+	const localDir = getSnapshotDirectory(key);
+
+	const structure: FileTreeNode[] = [];
+	const parameters: Set<string> = new Set<string>();
+	const stats = {
+		sizeInBytes: 0,
+		fileCount: 0,
+		dirCount: 0,
+	};
+
+	for (let i = 0; i < files.length; ++i) {
+		const fileName = FileUtils.getFileNameFromPath(files[i]);
+		const localFile = FileUtils.formPath([localDir, fileName]);
+
+		if (FileUtils.copyFile(files[i], localFile)) {
+			const size = FileUtils.getFileSizeInBytes(localFile) ?? 0;
+			const params = MiscUtils.getParametersFromText(fileName);
+
+			stats.sizeInBytes + size;
+			++stats.fileCount;
+			params.push(...(await MiscUtils.getParametersFromFileContent(localFile)));
+
+			params.forEach((param) => {
+				parameters.add(param);
+			});
+
+			structure.push({
+				type: "file",
+				level: 0,
+				name: fileName,
+				path: fileName,
+				sizeInBytes: size,
+			});
+		}
+	}
+
+	return {
+		structure,
+		parameters: Array.from(parameters),
+		stats,
+	};
 }

@@ -533,16 +533,33 @@ export async function saveASCIITreeFromClipboard(
 		return false;
 	}
 
-	const sizeInBytes = await io.promptForFileContents(cm, structure);
+	let sizeInBytes = 0;
+	let fileContents = null;
 
-	store.save({
-		key: key,
-		description: description,
-		tags: tagList,
-		type: SnapshotType.Tree,
-		structure: structure,
-		parameters: parameters!,
-	});
+	if (promptForContent) {
+		({ sizeInBytes, fileContents } = await io.promptForFileContents(
+			cm,
+			structure,
+			true,
+		));
+	}
+
+	await TreeUtils.createTree(
+		SnapshotUtils.getSnapshotDirectory(key),
+		structure,
+	);
+
+	store.save(
+		{
+			key: key,
+			description: description,
+			tags: tagList,
+			type: SnapshotType.Tree,
+			structure: structure,
+			parameters: parameters!,
+		},
+		true,
+	); // true = remove content from structure to not pollute database
 
 	store.update();
 	io.successSnapshotTaken(
@@ -845,6 +862,74 @@ export async function saveTemplate(
 		description,
 		tagList,
 		"Template",
+	);
+
+	return true;
+}
+// --------------------------------------------------------
+
+// --------------------------------------------------------
+// save files <...files>
+// --------------------------------------------------------
+export async function saveFiles(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	files: string[] | undefined,
+): Promise<boolean> {
+	const io = new SaveTemplateIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (!files) {
+		io.errorMissingParameter("...files");
+		return false;
+	}
+
+	files = FileUtils.resolvePaths(files);
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+
+	for (let i = 0; i < files.length; ++i) {
+		if (!FileUtils.doesFileExist(files[i])) {
+			io.errorSourceFileMissing(files[i]);
+			return false;
+		}
+	}
+
+	SnapshotUtils.createSnapshotDirectory(key);
+
+	const { structure, parameters, stats } =
+		await SnapshotUtils.copyFilesToSnapshotDirectory(key, files);
+
+	store.save({
+		key: key,
+		description: description,
+		type: SnapshotType.Template,
+		tags: tagList,
+		structure: structure,
+		parameters: parameters,
+	});
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		MiscUtils.formatFileSize(stats.sizeInBytes),
+		stats.fileCount,
+		stats.dirCount,
+		description,
+		tagList,
+		"Files",
 	);
 
 	return true;

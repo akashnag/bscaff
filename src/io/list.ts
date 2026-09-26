@@ -12,6 +12,7 @@
  */
 
 import chalk from "chalk";
+import { Store } from "../core/store.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
@@ -66,11 +67,12 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printErrorFooter();
 	}
 
-	listSnapshots(
+	async listSnapshots(
+		store: Store,
 		sType: string | undefined,
 		tags: string | undefined,
 		snapshots: SnapshotRecord[],
-	): void {
+	): Promise<void> {
 		const headingMapper: Record<string, string> = {
 			template: "Saved Templates",
 			snippet: "Saved Snippets",
@@ -124,7 +126,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 				);
 				row["URL"] = url;
 			} else {
-				row["SIZE"] = SnapshotUtils.computeSnapshotSize(item.key, item.type);
+				row["SIZE"] = await SnapshotUtils.computeSnapshotSize(store, item.key);
 			}
 
 			if (item.tags) {

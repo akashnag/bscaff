@@ -183,7 +183,7 @@ export async function list(
 			return false;
 		}
 
-		io.listSnapshots(sType, tags, data);
+		await io.listSnapshots(store, sType, tags, data);
 	}
 
 	return true;

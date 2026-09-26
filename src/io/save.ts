@@ -189,28 +189,6 @@ export class SaveASCIITreeIO extends SaveDirectoryIO {
 		TreeUtils.drawFileTree(structure!);
 		printSeparatorLine();
 	}
-
-	async promptForFileContents(
-		cm: ClipboardManager,
-		structure: FileTreeNode[],
-	): Promise<number> {
-		let totalSize = 0;
-		for (let i = 0; i < structure.length; ++i) {
-			if (structure[i].type == "file") {
-				console.log(structure[i].path);
-				const choice = await getche(
-					"\t" +
-						chalk.blue("Press C to copy (from clipboard) or Enter to skip: "),
-				);
-				if (choice.toLowerCase().trim() == "c") {
-					const content = await cm.paste();
-					const sizeInBytes = new TextEncoder().encode(content).length;
-					totalSize += sizeInBytes;
-				}
-			}
-		}
-		return totalSize;
-	}
 }
 // --------------------------------------------------------
 
