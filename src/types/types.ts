@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+export type UUID = string & { readonly __brand: unique symbol };
+
 export enum SnapshotType {
 	Template = "Template", // file saved as <Config.SINGLE_FILE_NAME>.bs_template
 	Snippet = "Snippet", // file saved as <Config.SINGLE_FILE_NAME>.<type|txt>
@@ -37,28 +39,17 @@ export interface SnapshotRecord {
 	type: SnapshotType;
 
 	urlContent?: string; // only for URL types
-	fileName?: string; // only for snippet and template types
+	fileName?: string; // stores filename for Snippet, and config filename for Template
 
 	createdAt?: Date;
 	modifiedAt?: Date;
 
-	structure?: FileTreeNode[];
+	structure?: FileTreeNode[]; // only for tree, template and files
 	parameters?: string[];
 }
 
 export interface Template {
-	structure: FileTreeNode[] | null;
-	parameters: string[] | null;
-	triggers: {
-		preScript?: {
-			fileType: string;
-			content: string;
-		};
-		postScript?: {
-			fileType: string;
-			content: string;
-		};
-	};
+	// TODO: add code
 }
 
 export interface BScaffSettings {

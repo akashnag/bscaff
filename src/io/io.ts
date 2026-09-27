@@ -15,7 +15,7 @@ import { stdin as input, stdout as output } from "node:process";
 import * as readline from "node:readline/promises";
 import chalk from "chalk";
 import { ClipboardManager } from "../core/clipboard.js";
-import { FileTreeNode } from "../types/types.js";
+import { FileTreeNode, SnapshotRecord } from "../types/types.js";
 import * as FileUtils from "../utils/files.js";
 import * as MiscUtils from "../utils/misc.js";
 
@@ -435,5 +435,23 @@ export abstract class ConsoleIO {
 			"Ensure you have spelt the key correctly, or check the list of valid keys using the command: ",
 		);
 		printIndented("bscaff list");
+	}
+
+	errorInvalidFile(key: string, record: SnapshotRecord, relPath: string): void {
+		printHeader("File Does Not Exist");
+
+		printField("Error", "The requested file does not exist");
+		printField("Key", key);
+		printField("File", relPath);
+
+		console.log("\nTo resolve:");
+		printIndented(
+			"Check the snapshot structure to ensure you are requesting the correct file path:",
+		);
+		printIndented(`  bscaff list -k ${key}`);
+	}
+
+	errorFetchingSnapshot(key: string): void {
+		// TODO: add code
 	}
 }

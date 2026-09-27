@@ -50,13 +50,17 @@ export function extractStructureFromASCIITree(tree: string): {
 	];
 
 	const treeLines: string[] = tree.split("\n");
-	const struct: FileTreeNode[] = [];
-	const levelDirs: any = {};
 	const parameters: Set<string> = new Set<string>();
 
-	let fileCount = 0,
-		dirCount = 0;
+	interface IntermediateNode {
+		level: number;
+		name: string;
+		isExplicitDir: boolean;
+	}
 
+	const intermediateNodes: IntermediateNode[] = [];
+
+	// PASS 1: Extract node levels, sanitized names, and explicit directory hints
 	for (let i = 0; i < treeLines.length; ++i) {
 		let s = treeLines[i];
 		const p = s.indexOf(chars.comment);
@@ -79,7 +83,9 @@ export function extractStructureFromASCIITree(tree: string): {
 			st[0] != chars.lastNode &&
 			st[0] != chars.trunk
 		) {
-			name = st.substring(0, st.length - 1).trim();
+			name = st.endsWith("/")
+				? st.substring(0, st.length - 1).trim()
+				: st.trim();
 			if (name.length == 0) continue;
 			if (MiscUtils.containsChar(name, illegalChars)) continue;
 		} else {
@@ -102,40 +108,67 @@ export function extractStructureFromASCIITree(tree: string): {
 				}
 			}
 
-			name = st.endsWith("/") ? name.substring(0, name.length - 1) : name;
+			const isExplicit = name.endsWith("/");
+			name = isExplicit ? name.substring(0, name.length - 1) : name;
 			if (name.length == 0) continue;
 			if (MiscUtils.containsChar(name, illegalChars)) continue;
 		}
 
-		let path = "";
-		for (let j = 0; j < level; ++j) {
-			path += "/" + levelDirs[j];
-		}
-		path += "/" + name;
+		const isExplicitDir = st.endsWith("/");
 
-		if (st.endsWith("/")) {
-			++dirCount;
-		} else {
-			++fileCount;
-		}
-
-		struct.push({
-			type: st.endsWith("/") ? "dir" : "file",
-			level: level,
-			name: name,
-			path: path,
+		intermediateNodes.push({
+			level,
+			name,
+			isExplicitDir,
 		});
 
 		const params = MiscUtils.getParametersFromText(name);
 		params.forEach((param: string) => {
 			parameters.add(param);
 		});
-
-		if (st.endsWith("/")) levelDirs[level] = name;
 	}
 
-	if (struct.length <= 1) {
+	if (intermediateNodes.length <= 1) {
 		return { structure: null, parameters: null, stats: undefined };
+	}
+
+	const struct: FileTreeNode[] = [];
+	const levelDirs: { [level: number]: string } = {};
+	let fileCount = 0;
+	let dirCount = 0;
+
+	// PASS 2: Infer directory vs file types based on child relationships and resolve paths
+	for (let i = 0; i < intermediateNodes.length; ++i) {
+		const current = intermediateNodes[i];
+		const next = intermediateNodes[i + 1];
+
+		// A node is a directory if its next sibling/child is at a deeper level,
+		// or if it was explicitly defined with a trailing slash
+		const isDir =
+			current.isExplicitDir ||
+			(next !== undefined && next.level > current.level);
+
+		let path = "";
+		for (let j = 0; j < current.level; ++j) {
+			if (levelDirs[j]) {
+				path += "/" + levelDirs[j];
+			}
+		}
+		path += "/" + current.name;
+
+		if (isDir) {
+			++dirCount;
+			levelDirs[current.level] = current.name;
+		} else {
+			++fileCount;
+		}
+
+		struct.push({
+			type: isDir ? "dir" : "file",
+			level: current.level,
+			name: current.name,
+			path: path,
+		});
 	}
 
 	return {
@@ -336,7 +369,9 @@ export function drawFileTree(nodes: FileTreeNode[]): string {
 
 			// Append appropriate branch symbol
 			const branch = isLastChild ? "└── " : "├── ";
-			lines.push(`${indent}${branch}${node.name}`);
+			lines.push(
+				`${indent}${branch}${node.name}${node.type == "dir" ? "/" : ""}`,
+			);
 		}
 	}
 

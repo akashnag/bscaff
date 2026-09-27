@@ -284,32 +284,7 @@ export class SaveURLIO extends ConsoleIO {
 // save template <path>
 // --------------------------------------------------------
 export class SaveTemplateIO extends ConsoleIO {
-	errorInvalidTemplateFile(filePath: string) {
-		if (QUIET_MODE) return;
-
-		printHeader("Invalid Template File");
-		printField(
-			"Error",
-			`Template files must be text files of type *.${Config.TEMPLATE_FILE_EXTENSION}`,
-		);
-
-		console.log("\nTo resolve:");
-		printIndented(
-			`Specify a bscaff template file of type *.${Config.TEMPLATE_FILE_EXTENSION}`,
-		);
-	}
-
-	errorTemplateFileEmpty(filePath: string) {
-		if (QUIET_MODE) return;
-
-		printHeader("Empty Template File");
-		printField("Error", `The template file you specified is empty`);
-
-		console.log("\nTo resolve:");
-		printIndented(`Specify a valid bscaff template file`);
-	}
-
-	errorInvalidTemplateFormat(filePath: string) {
+	errorInvalidTemplateFormat(filePath: string): void {
 		if (QUIET_MODE) return;
 
 		printHeader("Invalid Template Format");
@@ -319,6 +294,22 @@ export class SaveTemplateIO extends ConsoleIO {
 		printIndented(
 			`Specify a valid bscaff template file (version <= ${Config.TEMPLATE_FILE_VERSION})`,
 		);
+	}
+
+	errorTemplateFileMissing(repoPath: string, isGit: boolean): void {
+		// TODO: add code
+	}
+
+	errorExpectedZipFile(filePath: string): void {
+		// TODO: add code
+	}
+
+	errorExtractingZip(filePath: string): void {
+		// TODO: add code
+	}
+
+	invalidTemplateZipFile(filePath: string): void {
+		// TODO: add code
 	}
 }
 // --------------------------------------------------------

@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import type { SnapshotRecord, SnapshotType } from "../types/types.js";
+import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
@@ -31,19 +31,60 @@ export class Store {
 
 	renameKey(oldKey: string, newKey: string): boolean {
 		if (this.doesKeyExist(newKey)) return false;
-		if (this.doesKeyExist(oldKey)) return false;
+		if (!this.doesKeyExist(oldKey)) return false;
 
-		const oldPath = Config.getStoragePath([oldKey]);
-		const newPath = Config.getStoragePath([newKey]);
+		if (SnapshotUtils.renameSnapshotDirectory(oldKey, newKey)) {
+			const record = this.fetch(oldKey);
+			if (!record) return false;
 
-		if (FileUtils.renameDirectory(oldPath, newPath)) {
-			const record = this.list.find((item) => item.key === oldKey);
-			record!.key = newKey;
-			record!.modifiedAt = new Date();
+			record.key = newKey;
+			record.modifiedAt = new Date();
 			return true;
 		} else {
 			return false;
 		}
+	}
+
+	updateDescription(key: string, desc: string): boolean {
+		if (this.doesKeyExist(key)) return false;
+		const record = this.fetch(key);
+		if (!record) return false;
+
+		record.description = desc;
+		record.modifiedAt = new Date();
+		return true;
+	}
+
+	updateTags(key: string, tags: string | string[]): boolean {
+		if (this.doesKeyExist(key)) return false;
+		const record = this.fetch(key);
+		if (!record) return false;
+
+		if (!Array.isArray(tags)) tags = tags.split(",");
+		record.tags = tags;
+		record.modifiedAt = new Date();
+		return true;
+	}
+
+	updateURL(key: string, url: string): boolean {
+		if (this.doesKeyExist(key)) return false;
+		const record = this.fetch(key);
+		if (!record) return false;
+		if (record.type != SnapshotType.URL) return false;
+
+		record.urlContent = url;
+		record.modifiedAt = new Date();
+		return true;
+	}
+
+	updateStructure(key: string, newStructure: FileTreeNode[]): boolean {
+		if (this.doesKeyExist(key)) return false;
+		const record = this.fetch(key);
+		if (!record) return false;
+
+		record.structure = newStructure;
+		record.modifiedAt = new Date();
+		return true;
 	}
 
 	doesKeyExist(key: string): boolean {
@@ -72,8 +113,15 @@ export class Store {
 	}
 
 	delete(key: string): boolean {
-		this.list = this.list.filter((item) => item.key !== key);
-		return true;
+		if (this.doesKeyExist(key)) {
+			const success = SnapshotUtils.deleteSnapshotDirectory(key);
+			if (success) {
+				this.list = this.list.filter((item) => item.key !== key);
+			}
+			return success;
+		}
+
+		return false;
 	}
 
 	update(): void {

@@ -169,8 +169,7 @@ async function displaySnapshotInfo(
 			break;
 
 		case SnapshotType.Template:
-			const template = await TemplateUtils.readTemplateFile(record.fileName!);
-			if (template) io.listTemplateInfo(key, record, template);
+			io.listTemplateInfo(key, record);
 			break;
 
 		case SnapshotType.URL:

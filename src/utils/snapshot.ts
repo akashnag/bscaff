@@ -27,10 +27,10 @@ export function getSnapshotDirectory(key: string): string {
 	return Config.getStoragePath([key]);
 }
 
-export function getFileUnderSnapshot(key: string, filePath: string): string {
+export function getFileUnderSnapshot(key: string, relFilePath: string): string {
 	const platform = MiscUtils.getPlatform();
 	const delim = platform === "win32" ? "\\" : "/";
-	const parts = filePath.split(delim);
+	const parts = relFilePath.split(delim);
 	return Config.getStoragePath([key, ...parts]);
 }
 
@@ -50,8 +50,44 @@ export function renameSnapshotDirectory(
 ): boolean {
 	const oldPath = getSnapshotDirectory(oldKey);
 	const newPath = getSnapshotDirectory(newKey);
-	FileUtils.renameDirectory(oldPath, newPath);
-	return true;
+	return FileUtils.renameDirectory(oldPath, newPath);
+}
+
+export function deleteFileUnderSnapshot(
+	store: Store,
+	key: string,
+	relPath: string,
+): boolean {
+	const record = store.fetch(key);
+	if (!record) return false;
+
+	if (
+		record.type != SnapshotType.Files &&
+		record.type != SnapshotType.Tree &&
+		record.type != SnapshotType.Template
+	) {
+		return false;
+	}
+
+	const struct = record.structure;
+	if (!struct) return false;
+
+	if (!relPath.startsWith("/")) relPath = "/" + relPath;
+
+	for (let i = 0; i < struct.length; ++i) {
+		if (struct[i].path === relPath && struct[i].type === "file") {
+			const filePath = getFileUnderSnapshot(key, relPath);
+			struct.splice(i, 1);
+			if (store.updateStructure(key, struct)) {
+				if (FileUtils.deleteFile(filePath)) {
+					return true;
+				}
+			}
+			break;
+		}
+	}
+
+	return false;
 }
 
 export function writeContentToSnapshotFile(
@@ -176,12 +212,10 @@ export async function doesSnapshotContainFile(
 ): Promise<boolean> {
 	let structure: FileTreeNode[] | undefined | null = undefined;
 
-	if (record.type == SnapshotType.Template) {
-		const template = await TemplateUtils.readTemplateFile(record.fileName!);
-		structure = template.structure;
-	} else if (
+	if (
 		record.type == SnapshotType.Files ||
-		record.type == SnapshotType.Tree
+		record.type == SnapshotType.Tree ||
+		record.type == SnapshotType.Template
 	) {
 		structure = record.structure;
 	}

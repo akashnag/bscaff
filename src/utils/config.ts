@@ -21,7 +21,7 @@ export class Config {
 	static readonly SNAPSHOT_DB_FILE: string = "db.json";
 	static readonly SINGLE_FILE_NAME: string = "data";
 	static readonly SETTINGS_FILE: string = "settings.json";
-	static readonly TEMPLATE_FILE_EXTENSION: string = "bs_template";
+	static readonly TEMPLATE_CONFIG_FILE: string = "bscaff-template.yml";
 	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
 
 	static getStoragePath(additional: string[] | null = null): string {

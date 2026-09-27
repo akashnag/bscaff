@@ -177,7 +177,7 @@ export class CLI {
 			[Save files]									--> bscaff -k my-go-package save files format.go main.go test.go
 		*/
 		saveGroup
-			.command("files <...files>")
+			.command("files <files...>")
 			.description("Save one or more files")
 			.action(
 				async (
@@ -220,10 +220,12 @@ export class CLI {
 
 		/*
 		Examples:
-			[Save template]									--> bscaff -k my-template save template ./my-template.bs_template
+			[Save template from zip]			--> bscaff -k my-template save template ./bscaff-react-template.zip
+			[Save template from git repo]		--> bscaff -k my-template save template https://github.com/bscaff/bscaff-react-template.git --git
 		*/
 		saveGroup
-			.command("template <path/to/template-file>")
+			.command("template <path-to-zip-OR-git-repo>")
+			.option("--git", "Clone template directly from git repo")
 			.description("Save a bscaff template")
 			.action(
 				async (
@@ -237,6 +239,7 @@ export class CLI {
 						globalOpts.key,
 						parentOpts?.desc,
 						parentOpts?.tags,
+						options.git,
 						path,
 					);
 					if (!retVal) throw new Error();
@@ -250,7 +253,9 @@ export class CLI {
 			.description("Opens bscaff settings for editing")
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
-				// TODO: add code
+				const retVal =
+					await SnapshotManagementCommands.openSettingsForEditing();
+				if (!retVal) throw new Error();
 			});
 
 		const updateGroup = this.program
@@ -267,7 +272,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await SnapshotManagementCommands.updateSnapshotKey(
+						globalOpts.key,
+						options.key,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -281,7 +290,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await SnapshotManagementCommands.updateDescription(
+						globalOpts.key,
+						newDescription,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -295,7 +308,29 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await SnapshotManagementCommands.updateTags(
+						globalOpts.key,
+						newTags,
+					);
+					if (!retVal) throw new Error();
+				},
+			);
+
+		updateGroup
+			.command("url <new-url>")
+			.description("Update the URL")
+			.action(
+				async (
+					newURL: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					const retVal = await SnapshotManagementCommands.updateURL(
+						globalOpts.key,
+						newURL,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -309,17 +344,31 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await SnapshotManagementCommands.updateFileContent(
+						globalOpts.key,
+						relPath,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
 		const deleteGroup = this.program
-			.command("delete")
-			.description("Delete snapshot")
-			.action(async (options: Record<string, any>, command: Command) => {
-				const globalOpts = command.optsWithGlobals();
-				// TODO: add code
-			});
+			.command("delete [rel-path]")
+			.description("Delete snapshot, or a file under the snapshot")
+			.action(
+				async (
+					relPath: string | undefined,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					const retVal = await SnapshotManagementCommands.deleteSnapshotOrFile(
+						globalOpts.key,
+						relPath,
+					);
+					if (!retVal) throw new Error();
+				},
+			);
 	}
 
 	private defineListGroup(): void {
@@ -370,6 +419,22 @@ export class CLI {
 	}
 
 	private defineExtractGroup(): void {
+		const copyGroup = this.program
+			.command("copy [rel-path]")
+			.description(
+				"Copy the snippet / file-tree (ASCII) / file-list / url to clipboard / file-contents (if path specified)",
+			)
+			.action(
+				async (
+					relPath: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
 		const openGroup = this.program
 			.command("open [rel-path]")
 			.description(
@@ -389,10 +454,18 @@ export class CLI {
 		const extractGroup = this.program
 			.command("extract <path>")
 			.description("Extracts a tree / files / template to the directory path")
+			.option(
+				"--partial <rel-path>",
+				"Extract the snapshot partially under path specified by <rel-path>",
+			)
 			.option("--overwrite", "Overwrite files in destination without prompting")
 			.option(
-				"--partial [rel-path]",
-				"Extract the snapshot partially under path specified by <rel-path>",
+				"--fail-if-exists",
+				"Aborts extraction if the file in destination exists",
+			)
+			.option(
+				"--skip-if-exists",
+				"Skip files which exist in destination during extraction",
 			)
 			.action(
 				async (
@@ -404,9 +477,95 @@ export class CLI {
 					// TODO: add code
 				},
 			);
+	}
 
-		const appendGroup = this.program
-			.command("append <...files>")
+	defineTransformGroup(): void {
+		const transformGroup = this.program
+			.command("transform")
+			.description("Transform external files");
+
+		const insertGroup = transformGroup
+			.command("insert <files...>")
+			.option(
+				"--before <text>",
+				"Inserts the snippet before each occurrence of <text> (in double-quotes)",
+			)
+			.option(
+				"--after <text>",
+				"Inserts the snippet after each occurrence of <text> (in double-quotes)",
+			)
+			.description(
+				"Inserts snippets before/after each occurrence of a given text pattern",
+			)
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const replaceGroup = transformGroup
+			.command("replace <files...>")
+			.option(
+				"--with-snippet <snippet-key>",
+				"Replace occurrences of the snippet (under key) with this new snippet text",
+			)
+			.option(
+				"--with-text <text>",
+				"Replace occurrences of the snippet (under key) with this new text (within double-quotes)",
+			)
+			.option(
+				"--pattern <text>",
+				"Replace occurrences of this pattern text (within double quotes) with the snippet (under key)",
+			)
+			.option(
+				"--regex <text>",
+				"Replace occurrences of this regex-pattern (within double-quotes) with the snippet (under key)",
+			)
+			.option(
+				"--comment-block <start,end>",
+				"Places the snippet text (if found) under block comments denoted by comment-start and end characters",
+			)
+			.option(
+				"--comment-line <start>",
+				"Places each line of the snippet text (if found) under comment specified by comment-start character",
+			)
+			.description("Replaces text in files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const trimGroup = transformGroup
+			.command("trim <files...>")
+			.option("--first <N>", "Delete first N lines from the target files")
+			.option("--last <N>", "Delete last N lines from the target files")
+			.description("Delete first/last N lines from the target files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const appendGroup = transformGroup
+			.command("append <files...>")
+			.option("--trim-first <N>", "Delete first N lines from the target files")
+			.option("--trim-last <N>", "Delete last N lines from the target files")
 			.description("Append the text snippet to the target files")
 			.action(
 				async (
@@ -419,28 +578,14 @@ export class CLI {
 				},
 			);
 
-		const prependGroup = this.program
-			.command("prepend <...files>")
+		const prependGroup = transformGroup
+			.command("prepend <files...>")
+			.option("--trim-first <N>", "Delete first N lines from the target files")
+			.option("--trim-last <N>", "Delete last N lines from the target files")
 			.description("Prepend the text snippet to the target files")
 			.action(
 				async (
 					files: string[],
-					options: Record<string, any>,
-					command: Command,
-				) => {
-					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
-				},
-			);
-
-		const copyGroup = this.program
-			.command("copy [rel-path]")
-			.description(
-				"Copy the snippet / file-tree (ASCII) / file-list / url to clipboard / file-contents (if path specified)",
-			)
-			.action(
-				async (
-					relPath: string,
 					options: Record<string, any>,
 					command: Command,
 				) => {

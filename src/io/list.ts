@@ -108,19 +108,6 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printBullet("Delete and re-create the snapshot");
 	}
 
-	errorInvalidFile(key: string, record: SnapshotRecord, relPath: string): void {
-		printHeader("File Does Not Exist");
-
-		printField("Error", "The requested file does not exist");
-		printField("Key", key);
-		printField("File", relPath);
-
-		console.log("\nTo resolve:");
-		printIndented(
-			"Check the snapshot structure to ensure you are requesting the correct file path:",
-		);
-		printIndented(`  bscaff list -k ${key}`);
-	}
 	// ----------------------------------------------------------------------
 
 	async listSnapshots(
@@ -249,11 +236,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printTable(columns, table, true);
 	}
 
-	listTemplateInfo(
-		key: string,
-		record: SnapshotRecord,
-		template: Template,
-	): void {
+	listTemplateInfo(key: string, record: SnapshotRecord): void {
 		printHeader("Snapshot Details [Template]", IOHeaderType.INFO);
 
 		printField("Key", key);
@@ -267,24 +250,24 @@ export class ListSnapshotsIO extends ConsoleIO {
 			printField("Desc.", record.description);
 		}
 
-		if (template.structure) {
-			const stats = SnapshotUtils.getStatsFromStructure(template.structure);
+		if (record.structure) {
+			const stats = SnapshotUtils.getStatsFromStructure(record.structure);
 			printField(
 				"Contents",
 				`${stats.fileCount} files, ${stats.dirCount} directories (${MiscUtils.formatFileSize(stats.sizeInBytes)} total)`,
 			);
 		}
 
-		if (template.parameters) {
+		if (record.parameters) {
 			printIndented("\nDetected Variables:");
-			for (let i = 0; i < template.parameters.length; ++i) {
-				printBullet(`{{ ${template.parameters[i]} }}`);
+			for (let i = 0; i < record.parameters.length; ++i) {
+				printBullet(`{{ ${record.parameters[i]} }}`);
 			}
 		}
 
-		if (template.structure) {
+		if (record.structure) {
 			printIndented("\nFile Tree:");
-			printIndented(drawFileTree(template.structure));
+			printIndented(drawFileTree(record.structure));
 		}
 
 		console.log("\nQuick Actions:");
