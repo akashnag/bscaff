@@ -17,6 +17,7 @@ import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
 import * as MiscUtils from "./misc.js";
+import * as TemplateUtils from "./template.js";
 
 export function getSnapshotDB(): string {
 	return Config.getStoragePath([Config.SNAPSHOT_DB_FILE]);
@@ -169,11 +170,30 @@ export async function computeSnapshotSize(
 	}
 }
 
-export function doesSnapshotContainFile(
+export async function doesSnapshotContainFile(
 	record: SnapshotRecord,
 	relPath: string,
-): boolean {
-	// TODO: add code
+): Promise<boolean> {
+	let structure: FileTreeNode[] | undefined | null = undefined;
+
+	if (record.type == SnapshotType.Template) {
+		const template = await TemplateUtils.readTemplateFile(record.fileName!);
+		structure = template.structure;
+	} else if (
+		record.type == SnapshotType.Files ||
+		record.type == SnapshotType.Tree
+	) {
+		structure = record.structure;
+	}
+
+	if (!structure) return false;
+
+	if (!relPath.startsWith("/")) relPath = "/" + relPath;
+	for (let i = 0; i < structure.length; ++i) {
+		if (structure[i].path === relPath) return true;
+	}
+
+	return false;
 }
 
 export function getStatsFromStructure(nodes: FileTreeNode[]): {

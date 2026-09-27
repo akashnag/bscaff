@@ -324,8 +324,43 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printBullet(`Copy snippet to clipboard   : bscaff -k ${key} copy`);
 	}
 
-	listTreeOrFilesInfo(key: string, record: SnapshotRecord): void {
-		// TODO: add code
+	async listTreeOrFilesInfo(
+		key: string,
+		record: SnapshotRecord,
+	): Promise<void> {
+		printHeader(`Snapshot Details [${record.type}]`, IOHeaderType.INFO);
+
+		printField("Key", key);
+		printField("Type", record.type.toString());
+		printField("Updated", record.modifiedAt!.toLocaleString());
+
+		if (record.tags && record.tags.length > 0) {
+			printField("Tags", "#" + record.tags.join(" #"));
+		}
+
+		const stats = SnapshotUtils.getStatsFromStructure(record.structure!);
+		printField(
+			"Size",
+			`${stats.fileCount} files, ${stats.dirCount} directories (${stats.sizeInBytes} total)`,
+		);
+
+		if (record.description) {
+			printField("Desc.", record.description);
+		}
+
+		printLinedHeader("Files");
+		printPreview(
+			MiscUtils.splitContentByLines(drawFileTree(record.structure!)),
+		);
+		printSeparatorLine();
+
+		console.log("\nQuick Actions:");
+		printBullet(
+			`Extract files                : bscaff -k ${key} extract <to/path>`,
+		);
+		printBullet(
+			`Open a file in a text-editor : bscaff -k ${key} open <relative-path>`,
+		);
 	}
 
 	listURLInfo(key: string, record: SnapshotRecord): void {
@@ -354,6 +389,38 @@ export class ListSnapshotsIO extends ConsoleIO {
 		relPath: string,
 		fileContent: string,
 	): void {
-		// TODO: add code
+		printHeader("Snapshot File Contents", IOHeaderType.INFO);
+
+		printField("Key", key);
+		printField("Type", record.type.toString());
+		printField("Updated", record.modifiedAt!.toLocaleString());
+
+		if (record.tags && record.tags.length > 0) {
+			printField("Tags", "#" + record.tags.join(" #"));
+		}
+
+		printField("File", relPath);
+
+		const lines = MiscUtils.splitContentByLines(fileContent);
+		printField("Size", `${lines.length} lines`);
+
+		if (record.description) {
+			printField("Desc.", record.description);
+		}
+
+		printLinedHeader("Preview");
+		printPreview(lines);
+		printSeparatorLine();
+
+		console.log("\nQuick Actions:");
+		printBullet(
+			`Open this file in a text-editor    : bscaff -k ${key} open ${relPath}`,
+		);
+		printBullet(
+			`Copy contents of file to clipboard : bscaff -k ${key} copy ${relPath}`,
+		);
+		printIndented(
+			`\nOr, extract this file to a path:\n  bscaff -k ${key} \\\n    extract <to/path>\\\n    --partial ${relPath}`,
+		);
 	}
 }

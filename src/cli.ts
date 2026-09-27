@@ -390,6 +390,10 @@ export class CLI {
 			.command("extract <path>")
 			.description("Extracts a tree / files / template to the directory path")
 			.option("--overwrite", "Overwrite files in destination without prompting")
+			.option(
+				"--partial [rel-path]",
+				"Extract the snapshot partially under path specified by <rel-path>",
+			)
 			.action(
 				async (
 					path: string,
@@ -430,14 +434,20 @@ export class CLI {
 			);
 
 		const copyGroup = this.program
-			.command("copy")
+			.command("copy [rel-path]")
 			.description(
-				"Copy the snippet / file-tree (ASCII) / file-list / url to clipboard",
+				"Copy the snippet / file-tree (ASCII) / file-list / url to clipboard / file-contents (if path specified)",
 			)
-			.action(async (options: Record<string, any>, command: Command) => {
-				const globalOpts = command.optsWithGlobals();
-				// TODO: add code
-			});
+			.action(
+				async (
+					relPath: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
 	}
 
 	private defineCreateGroup(): void {
