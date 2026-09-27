@@ -13,7 +13,7 @@
 
 import { Store } from "../core/store.js";
 import { ScriptMissingError } from "../types/errors.js";
-import { FileTreeNode, SnapshotType } from "../types/types.js";
+import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "./config.js";
 import * as FileUtils from "./files.js";
 import * as MiscUtils from "./misc.js";
@@ -126,10 +126,9 @@ export function copyTriggerScripts(
 }
 
 export async function computeSnapshotSize(
-	store: Store,
 	key: string,
+	record: SnapshotRecord,
 ): Promise<string> {
-	const record = store.fetch(key);
 	if (!record) return `0 B`;
 
 	if (record.type == SnapshotType.URL) {

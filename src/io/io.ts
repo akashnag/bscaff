@@ -140,8 +140,11 @@ export function printBullet(msg: string): void {
 	console.log(`${INDENTATION}${SYMBOL_BULLET} ${msg}`);
 }
 
-export function printIndented(msg: string): void {
-	console.log(`${INDENTATION}${msg}`);
+export function printIndented(msg: string, indented: boolean = true): void {
+	const lines = MiscUtils.splitContentByLines(msg);
+	for (let i = 0; i < lines.length; ++i) {
+		console.log(`${indented ? INDENTATION : ""}${lines[i]}`);
+	}
 }
 
 export function printErrorFooter(): void {
@@ -194,15 +197,74 @@ export function printTable(
 	printIndented(separator + "\n");
 }
 
-export function printSeparatorLine(width: number = 60) {
-	console.log(SYMBOL_SEPARATOR.repeat(width));
+export function printSeparatorLine(
+	indented: boolean = true,
+	width: number = 60,
+): void {
+	const text = SYMBOL_SEPARATOR.repeat(width);
+	printIndented(text, indented);
 }
 
-export function printLinedHeader(title: string, width: number = 60) {
+export function printLinedHeader(
+	title: string,
+	indented: boolean = true,
+	width: number = 60,
+): void {
 	const half = width - title.length - 2;
-	console.log(
-		`${SYMBOL_SEPARATOR.repeat(half)} ${title} ${SYMBOL_SEPARATOR.repeat(half)}`,
-	);
+	const text = `${SYMBOL_SEPARATOR.repeat(half)} ${title} ${SYMBOL_SEPARATOR.repeat(half)}`;
+	printIndented(text, indented);
+}
+
+export function printCentered(
+	text: string,
+	indented: boolean = true,
+	clip: boolean = true,
+	width: number = 60,
+): void {
+	if (text.length > width) {
+		if (clip) {
+			text = text.substring(0, width - 1) + SYMBOL_ELLIPSIS;
+		}
+
+		printIndented(text, indented);
+	} else {
+		const n = (width - text.length) / 2;
+		printIndented(`${" ".repeat(n)}${text}`, indented);
+	}
+}
+
+export function printPreview(
+	lines: string[],
+	indented: boolean = true,
+	width: number = 60,
+	lineCount: number = 10,
+) {
+	if (lines.length > lineCount) {
+		let firstHalf = "";
+		let secondHalf = "";
+
+		for (let i = 0; i < lineCount / 2; ++i) {
+			let text = lines[i];
+			if (text.length > width)
+				text = text.substring(0, width - 1) + SYMBOL_ELLIPSIS;
+			firstHalf += "\n" + text;
+		}
+
+		for (let i = 0; i < lineCount / 2; ++i) {
+			let text = lines[lines.length - i - 1];
+			if (text.length > width)
+				text = text.substring(0, width - 1) + SYMBOL_ELLIPSIS;
+			secondHalf = "\n" + text + secondHalf;
+		}
+
+		printIndented(firstHalf.substring(1), indented);
+		console.log("\n");
+		printCentered(`<${lines.length - lineCount} more lines...>`);
+		console.log("\n");
+		printIndented(secondHalf.substring(1), indented);
+	} else {
+		printIndented(lines.join("\n"), indented);
+	}
 }
 
 export abstract class ConsoleIO {

@@ -15,6 +15,7 @@ import chalk from "chalk";
 import { Store } from "../core/store.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "../utils/config.js";
+import * as MiscUtils from "../utils/misc.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
 import {
 	ConsoleIO,
@@ -24,6 +25,9 @@ import {
 	printField,
 	printHeader,
 	printIndented,
+	printLinedHeader,
+	printPreview,
+	printSeparatorLine,
 	printTable,
 	QUIET_MODE,
 	SYMBOL_BULLET,
@@ -183,5 +187,76 @@ export class ListSnapshotsIO extends ConsoleIO {
 		);
 
 		printTable(columns, table, true);
+	}
+
+	listTemplateInfo(
+		key: string,
+		record: SnapshotRecord,
+		fileContent: string,
+	): void {
+		// TODO: add code
+	}
+
+	async listSnippetInfo(
+		key: string,
+		record: SnapshotRecord,
+		fileContent: string,
+	): Promise<void> {
+		printHeader("Snapshot Details [Snippet]", IOHeaderType.INFO);
+
+		printField("Key", key);
+		printField("Updated", record.modifiedAt!.toLocaleString());
+
+		if (record.tags && record.tags.length > 0) {
+			printField("Tags", "#" + record.tags.join(" #"));
+		}
+
+		const lines = MiscUtils.splitContentByLines(fileContent);
+		printField("Size", `${lines.length} lines`);
+
+		if (record.description) {
+			printField("Desc.", record.description);
+		}
+
+		printLinedHeader("Preview");
+		printPreview(lines);
+		printSeparatorLine();
+
+		console.log("\nQuick Actions:");
+		printBullet(`Open snippet in text-editor : bscaff -k ${key} open`);
+		printBullet(`Copy snippet to clipboard   : bscaff -k ${key} copy`);
+	}
+
+	listTreeOrFilesInfo(key: string, record: SnapshotRecord): void {
+		// TODO: add code
+	}
+
+	listURLInfo(key: string, record: SnapshotRecord): void {
+		printHeader("Snapshot Details [URL]", IOHeaderType.INFO);
+
+		printField("Key", key);
+		printField("Target URL", record.urlContent!);
+		printField("Updated", record.modifiedAt!.toLocaleString());
+
+		if (record.tags && record.tags.length > 0) {
+			printField("Tags", "#" + record.tags.join(" #"));
+		}
+
+		if (record.description) {
+			printField("Desc.", record.description);
+		}
+
+		console.log("\nQuick Actions:");
+		printBullet(`Open in default browser : bscaff -k ${key} open`);
+		printBullet(`Copy URL to clipboard   : bscaff -k ${key} copy`);
+	}
+
+	displayFileFromSnapshot(
+		key: string,
+		record: SnapshotRecord,
+		relPath: string,
+		fileContent: string,
+	): void {
+		// TODO: add code
 	}
 }

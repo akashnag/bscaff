@@ -34,6 +34,11 @@ export function countLines(str: string): number {
 	return str.split(/\r?\n/).length;
 }
 
+export function splitContentByLines(str: string): string[] {
+	if (!str) return [];
+	return str.split(/\r?\n/);
+}
+
 export function indentLines(str: string, n: number = 0): string {
 	if (n <= 0) return str;
 

@@ -192,9 +192,9 @@ export async function list(
 		}
 
 		if (relPath) {
-			return displaySnapshotFile(key, record, relPath);
+			return await displaySnapshotFile(io, key, record, relPath);
 		} else {
-			return displaySnapshotInfo(key, record);
+			return await displaySnapshotInfo(io, key, record);
 		}
 	}
 
@@ -216,6 +216,42 @@ function displaySnapshotFile(
 	// TODO: add code
 }
 
-function displaySnapshotInfo(key: string, record: SnapshotRecord): boolean {
-	// TODO: add code
+async function displaySnapshotInfo(
+	io: ListSnapshotsIO,
+	key: string,
+	record: SnapshotRecord,
+): Promise<boolean> {
+	let content = null;
+
+	switch (record.type) {
+		case SnapshotType.Files:
+		case SnapshotType.Tree:
+			io.listTreeOrFilesInfo(key, record);
+			break;
+
+		case SnapshotType.Snippet:
+			content = await SnapshotUtils.readContentFromSnapshotFile(
+				key,
+				record.fileName!,
+			);
+			if (content) await io.listSnippetInfo(key, record, content);
+			break;
+
+		case SnapshotType.Template:
+			content = await SnapshotUtils.readContentFromSnapshotFile(
+				key,
+				record.fileName!,
+			);
+			if (content) io.listTemplateInfo(key, record, content);
+			break;
+
+		case SnapshotType.URL:
+			io.listURLInfo(key, record);
+			break;
+
+		default:
+			return false;
+	}
+
+	return true;
 }
