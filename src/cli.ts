@@ -323,15 +323,32 @@ export class CLI {
 	}
 
 	private defineListGroup(): void {
+		const searchGroup = this.program
+			.command("search")
+			.description("Searches for a snapshot with a key similar to one provided")
+			.option("--desc", "Approximate description to match")
+			.option(
+				"--type <tree|snippet|files|url|template>",
+				"Filter by snapshot type",
+			)
+			.option(
+				"--tags <list-of-tags>",
+				"Filter by tags (separated by commas, no spaces)",
+			)
+			.action(async (options: Record<string, any>, command: Command) => {
+				const globalOpts = command.optsWithGlobals();
+				// TODO: add code
+			});
+
 		const listGroup = this.program
 			.command("list [relative-path]")
 			.description("Lists the saved snapshots")
 			.option(
-				"--type=<tree|snippet|files|url|template>",
+				"--type <tree|snippet|files|url|template>",
 				"Filter by snapshot type",
 			)
 			.option(
-				"--tags=<list-of-tags>",
+				"--tags <list-of-tags>",
 				"Filter by tags (separated by commas, no spaces)",
 			)
 			.action(
@@ -354,14 +371,20 @@ export class CLI {
 
 	private defineExtractGroup(): void {
 		const openGroup = this.program
-			.command("open")
+			.command("open [rel-path]")
 			.description(
-				"Opens a URL in the browser / snippet in a text-editor (read-only)",
+				"Opens a URL in the browser, or a snippet / (template or tree file) in a text-editor (read-only)",
 			)
-			.action(async (options: Record<string, any>, command: Command) => {
-				const globalOpts = command.optsWithGlobals();
-				// TODO: add code
-			});
+			.action(
+				async (
+					relPath: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
 
 		const extractGroup = this.program
 			.command("extract <path>")

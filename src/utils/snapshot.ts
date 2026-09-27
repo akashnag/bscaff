@@ -169,6 +169,36 @@ export async function computeSnapshotSize(
 	}
 }
 
+export function doesSnapshotContainFile(
+	record: SnapshotRecord,
+	relPath: string,
+): boolean {
+	// TODO: add code
+}
+
+export function getStatsFromStructure(nodes: FileTreeNode[]): {
+	sizeInBytes: number;
+	fileCount: number;
+	dirCount: number;
+} {
+	let sizeInBytes = 0,
+		fileCount = 0,
+		dirCount = 0;
+
+	for (let i = 0; i < nodes.length; ++i) {
+		const currentNode = nodes[i];
+
+		if (currentNode.type == "file") {
+			++fileCount;
+			if (currentNode.sizeInBytes) sizeInBytes += currentNode.sizeInBytes;
+		} else {
+			++dirCount;
+		}
+	}
+
+	return { sizeInBytes, fileCount, dirCount };
+}
+
 // only copies files, not directories. assumes filenames are absolute paths
 export async function copyFilesToSnapshotDirectory(
 	key: string,

@@ -16,103 +16,8 @@ import { ListSnapshotsIO } from "../io/list.js";
 import { Logger } from "../io/logger.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
+import * as TemplateUtils from "../utils/template.js";
 import * as TreeUtils from "../utils/tree.js";
-
-/*
-export async function listAllSnippets(): Promise<boolean> {
-	const store = await Store.create();
-	const data = store.getList();
-	console.table(data);
-	return true;
-}
-
-export async function listSnippetFiles(key: string): Promise<boolean> {
-	const store = await Store.create();
-	const logger = new Logger();
-
-	if (!store.doesKeyExist(key)) {
-		logger.error("key not found");
-		return false;
-	}
-
-	const record = store.fetchSnippetRecord(key);
-	if (!record) {
-		logger.error("can't fetch record");
-		return false;
-	}
-
-	if (
-		record.type === SnippetType.Directory ||
-		record.type === SnippetType.MultiFile ||
-		record.type === SnippetType.Tree
-	) {
-		// record.structure.filename will be null here, so iterate over its children
-		console.log(TreeUtils.drawSnippetFileTree(record.structure));
-	} else if (record.type === SnippetType.File) {
-		if (!("filename" in record.structure)) return false;
-		console.table([
-			{
-				key: record.key,
-				type: record.type.toString(),
-				filename: record.structure.filename,
-				updated: record.modifiedAt,
-			},
-		]);
-	} else {
-		console.table(store.getList(key));
-	}
-
-	return true;
-}
-
-export async function displaySnippet(key: string): Promise<boolean> {
-	const store = await Store.create();
-	const logger = new Logger();
-
-	if (!store.doesKeyExist(key)) {
-		logger.error("key not found");
-		return false;
-	}
-
-	const record = store.fetchSnippetRecord(key);
-	if (!record) {
-		logger.error("can't fetch record");
-		return false;
-	}
-
-	if (
-		record.type != SnippetType.Text &&
-		record.type != SnippetType.File &&
-		record.type != SnippetType.URL
-	) {
-		logger.error("can only use snippets of type text/file/URL");
-		return false;
-	}
-
-	if (!("filename" in record.structure)) return false;
-
-	const snippet = await FileUtils.readTextFile(
-		SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
-	);
-
-	if (!snippet) {
-		logger.error("error reading snippet");
-		return false;
-	}
-
-	console.log(snippet);
-	return true;
-}
-*/
-
-export async function fetch(
-	key: string,
-	rel_path: string | null,
-): Promise<boolean> {
-	// TODO: add code
-
-	return true;
-}
 
 // lists down all snapshots by type
 export async function list(
@@ -208,12 +113,38 @@ function listDBStats(io: ListSnapshotsIO, store: Store): boolean {
 	return true;
 }
 
-function displaySnapshotFile(
+async function displaySnapshotFile(
+	io: ListSnapshotsIO,
 	key: string,
 	record: SnapshotRecord,
 	relPath: string,
-): boolean {
-	// TODO: add code
+): Promise<boolean> {
+	if (
+		record.type == SnapshotType.Files ||
+		record.type == SnapshotType.Template ||
+		record.type == SnapshotType.Tree
+	) {
+		if (!SnapshotUtils.doesSnapshotContainFile(record, relPath)) {
+			io.errorInvalidFile(key, record, relPath);
+			return false;
+		}
+
+		const content = await SnapshotUtils.readContentFromSnapshotFile(
+			key,
+			relPath,
+		);
+
+		if (content) {
+			io.displayFileFromSnapshot(key, record, relPath, content);
+			return true;
+		} else {
+			io.errorReadingSnapshotFile(key, relPath);
+			return false;
+		}
+	} else {
+		io.errorFileFetchingNotPermittedForSnapshotType(key, record.type, relPath);
+		return false;
+	}
 }
 
 async function displaySnapshotInfo(
@@ -238,11 +169,8 @@ async function displaySnapshotInfo(
 			break;
 
 		case SnapshotType.Template:
-			content = await SnapshotUtils.readContentFromSnapshotFile(
-				key,
-				record.fileName!,
-			);
-			if (content) io.listTemplateInfo(key, record, content);
+			const template = await TemplateUtils.readTemplateFile(record.fileName!);
+			if (template) io.listTemplateInfo(key, record, template);
 			break;
 
 		case SnapshotType.URL:

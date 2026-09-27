@@ -13,10 +13,11 @@
 
 import chalk from "chalk";
 import { Store } from "../core/store.js";
-import { SnapshotRecord, SnapshotType } from "../types/types.js";
+import { SnapshotRecord, SnapshotType, Template } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as MiscUtils from "../utils/misc.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
+import { drawFileTree } from "../utils/tree.js";
 import {
 	ConsoleIO,
 	IOHeaderType,
@@ -34,6 +35,7 @@ import {
 } from "./io.js";
 
 export class ListSnapshotsIO extends ConsoleIO {
+	// ------------------------ errors and warnings -------------------------
 	errorMissingParameter(param: string): void {
 		if (QUIET_MODE) return;
 
@@ -70,6 +72,56 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printIndented(`bscaff -k <key> --save-dir <path/to/dir>`);
 		printErrorFooter();
 	}
+
+	errorFileFetchingNotPermittedForSnapshotType(
+		key: string,
+		sType: SnapshotType,
+		relPath: string,
+	): void {
+		printHeader("Operation Not Permitted");
+
+		printField(
+			"Error",
+			"The requested operation is not permitted for this snapshot",
+		);
+		printField("Operation", "Read file under snapshot");
+		printField("Key", key);
+		printField("Type", sType.toString());
+		printField("File", relPath);
+
+		console.log("\nDetails:");
+		printIndented(
+			`Reading file under snapshot is only permitted for: ${SnapshotType.Template} | ${SnapshotType.Tree} | ${SnapshotType.Files}`,
+		);
+	}
+
+	errorReadingSnapshotFile(key: string, relPath: string): void {
+		printHeader("Failed to Read File");
+
+		printField("Error", "Failed to read snapshot file");
+		printField("Key", key);
+		printField("File", relPath);
+
+		console.log("\nTo resolve:");
+		printBullet("Try again");
+		printBullet("Ensure you have read permissions on disk to ~/.bscaff");
+		printBullet("Delete and re-create the snapshot");
+	}
+
+	errorInvalidFile(key: string, record: SnapshotRecord, relPath: string): void {
+		printHeader("File Does Not Exist");
+
+		printField("Error", "The requested file does not exist");
+		printField("Key", key);
+		printField("File", relPath);
+
+		console.log("\nTo resolve:");
+		printIndented(
+			"Check the snapshot structure to ensure you are requesting the correct file path:",
+		);
+		printIndented(`  bscaff list -k ${key}`);
+	}
+	// ----------------------------------------------------------------------
 
 	async listSnapshots(
 		store: Store,
@@ -130,7 +182,15 @@ export class ListSnapshotsIO extends ConsoleIO {
 				);
 				row["URL"] = url;
 			} else {
-				row["SIZE"] = await SnapshotUtils.computeSnapshotSize(store, item.key);
+				const record = store.fetch(item.key);
+				if (record) {
+					row["SIZE"] = await SnapshotUtils.computeSnapshotSize(
+						item.key,
+						record,
+					);
+				} else {
+					row["SIZE"] = "-";
+				}
 			}
 
 			if (item.tags) {
@@ -192,9 +252,46 @@ export class ListSnapshotsIO extends ConsoleIO {
 	listTemplateInfo(
 		key: string,
 		record: SnapshotRecord,
-		fileContent: string,
+		template: Template,
 	): void {
-		// TODO: add code
+		printHeader("Snapshot Details [Template]", IOHeaderType.INFO);
+
+		printField("Key", key);
+		printField("Updated", record.modifiedAt!.toLocaleString());
+
+		if (record.tags && record.tags.length > 0) {
+			printField("Tags", "#" + record.tags.join(" #"));
+		}
+
+		if (record.description) {
+			printField("Desc.", record.description);
+		}
+
+		if (template.structure) {
+			const stats = SnapshotUtils.getStatsFromStructure(template.structure);
+			printField(
+				"Contents",
+				`${stats.fileCount} files, ${stats.dirCount} directories (${MiscUtils.formatFileSize(stats.sizeInBytes)} total)`,
+			);
+		}
+
+		if (template.parameters) {
+			printIndented("\nDetected Variables:");
+			for (let i = 0; i < template.parameters.length; ++i) {
+				printBullet(`{{ ${template.parameters[i]} }}`);
+			}
+		}
+
+		if (template.structure) {
+			printIndented("\nFile Tree:");
+			printIndented(drawFileTree(template.structure));
+		}
+
+		console.log("\nQuick Actions:");
+		printBullet(`Extract template : bscaff -k ${key} extract <to/path>`);
+		printBullet(
+			`Inspect file     : bscaff -k ${key} open <relative-path-of-file>`,
+		);
 	}
 
 	async listSnippetInfo(

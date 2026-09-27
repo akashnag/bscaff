@@ -12,10 +12,10 @@
  */
 
 export enum SnapshotType {
-	Template = "TEMPLATE", // file saved as <Config.SINGLE_FILE_NAME>.bs_template
-	Snippet = "SNIPPET", // file saved as <Config.SINGLE_FILE_NAME>.<type|txt>
-	Tree = "TREE",
-	Files = "FILES",
+	Template = "Template", // file saved as <Config.SINGLE_FILE_NAME>.bs_template
+	Snippet = "Snippet", // file saved as <Config.SINGLE_FILE_NAME>.<type|txt>
+	Tree = "Tree",
+	Files = "Files",
 	URL = "URL", // file saved as <Config.SINGLE_FILE_NAME>.url
 }
 
