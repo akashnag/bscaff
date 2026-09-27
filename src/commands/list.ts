@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { token_sort_ratio } from "fuzzball";
 import { Store } from "../core/store.js";
 import { ListSnapshotsIO } from "../io/list.js";
 import { Logger } from "../io/logger.js";
@@ -50,7 +51,8 @@ export async function list(
 
 	if (!sType && !key && !tags && !relPath) {
 		// plain listing of all types of snippets [master]
-		return listDBStats(io, store);
+		io.showSnapshotInventory(store.getList());
+		return true;
 	}
 
 	if (sType || tags) {
@@ -85,7 +87,7 @@ export async function list(
 
 		if (data.length == 0) {
 			io.warnNoItemsFound(sType, tags);
-			return false;
+			return true; // this is not an error
 		}
 
 		await io.listSnapshots(store, sType, tags, data);
@@ -106,12 +108,59 @@ export async function list(
 	return true;
 }
 
-// list down number of snapshots by type
-function listDBStats(io: ListSnapshotsIO, store: Store): boolean {
-	const data = store.getList();
-	io.showSnapshotInventory(data);
+export async function search(
+	key: string | undefined,
+	desc: string | undefined,
+	sType: string | undefined,
+	tags: string | undefined,
+): Promise<boolean> {
+	const io = new ListSnapshotsIO();
+	const store = await Store.create();
+
+	const snippetTypeMapper: Record<string, SnapshotType> = {
+		template: SnapshotType.Template,
+		snippet: SnapshotType.Snippet,
+		tree: SnapshotType.Tree,
+		files: SnapshotType.Files,
+		url: SnapshotType.URL,
+	};
+
+	const tagList: string[] = tags ? tags.split(",") : [];
+	const snapshotsList = store.getRawListFiltered(
+		sType ? [snippetTypeMapper[sType]] : undefined,
+		tagList,
+	);
+
+	if (!snapshotsList || snapshotsList.length == 0) {
+		io.warnNoItemsFound(sType, tags);
+		return true; // this is not an error
+	}
+
+	const scores = [];
+	const filteredList = [];
+
+	for (let i = 0; i < snapshotsList.length; ++i) {
+		const record = snapshotsList[i];
+		const keyMatchScore = key ? token_sort_ratio(key, record.key) : 1;
+		const descMatchScore =
+			desc && record.description
+				? token_sort_ratio(desc, record.description)
+				: 1;
+		scores.push({ index: i, score: keyMatchScore + descMatchScore });
+	}
+
+	scores.sort((a, b) => b.score - a.score);
+	const n = Math.min(10, scores.length);
+
+	for (let i = 0; i < n; ++i) {
+		filteredList.push(snapshotsList[scores[i].index]);
+	}
+
+	await io.listSnapshots(store, sType, tags, filteredList);
 	return true;
 }
+
+// -------------------------- [private] -------------------------------
 
 async function displaySnapshotFile(
 	io: ListSnapshotsIO,

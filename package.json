@@ -30,6 +30,7 @@
 		"adm-zip": "^0.6.1",
 		"chalk": "^6.0.0",
 		"commander": "^12.0.0",
+		"fuzzball": "^2.2.6",
 		"isbinaryfile": "^5.0.7",
 		"ora": "^9.4.1",
 		"simple-git": "^3.36.0",

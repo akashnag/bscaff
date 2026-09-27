@@ -60,6 +60,7 @@ export class CLI {
 		this.defineListGroup();
 		this.defineExtractGroup();
 		this.defineCreateGroup();
+		this.defineTransformGroup();
 	}
 
 	private defineSaveGroup(): void {
@@ -248,6 +249,10 @@ export class CLI {
 	}
 
 	private defineMiscGroup(): void {
+		/*
+		Examples:
+			[Open settings for editing]		-->	bscaff settings
+		*/
 		const settingsGroup = this.program
 			.command("settings")
 			.description("Opens bscaff settings for editing")
@@ -262,6 +267,10 @@ export class CLI {
 			.command("update")
 			.description("Update snapshot metadata");
 
+		/*
+		Examples:
+			[Rename snapshot key]	-->	bscaff -k my-react-snapshot update key react-project
+		*/
 		updateGroup
 			.command("key <new-key>")
 			.description("Update the snapshot key")
@@ -280,6 +289,10 @@ export class CLI {
 				},
 			);
 
+		/*
+		Examples:
+			[Update description]	-->	bscaff -k react-project update desc "Generic react project boilerplate"
+		*/
 		updateGroup
 			.command("desc <new-description>")
 			.description("Update the snapshot description (in double quotes)")
@@ -298,6 +311,10 @@ export class CLI {
 				},
 			);
 
+		/*
+		Examples:
+			[Update tags]	-->	bscaff -k react-project update tags react,nextjs,typescript
+		*/
 		updateGroup
 			.command("tags <new-tags>")
 			.description("Update the tags (comma-separated, without spaces)")
@@ -316,6 +333,10 @@ export class CLI {
 				},
 			);
 
+		/*
+		Examples:
+			[Update URL]	-->	bscaff -k github update url https://github.com/
+		*/
 		updateGroup
 			.command("url <new-url>")
 			.description("Update the URL")
@@ -334,6 +355,11 @@ export class CLI {
 				},
 			);
 
+		/*
+		Examples:
+			[Update snippet]	-->	bscaff -k copyright-text update content
+			[Update file]		-->	bscaff -k react-project update content docs/CONTRIBUTING.md
+		*/
 		updateGroup
 			.command("content [relative-path]")
 			.description("Update the content of a snippet / file")
@@ -352,6 +378,11 @@ export class CLI {
 				},
 			);
 
+		/*
+		Examples:
+			[Delete snapshot]	-->	bscaff -k copyright-text delete
+			[Delete file]		-->	bscaff -k react-project delete docs/CONTRIBUTING.md
+		*/
 		const deleteGroup = this.program
 			.command("delete [rel-path]")
 			.description("Delete snapshot, or a file under the snapshot")
@@ -361,6 +392,7 @@ export class CLI {
 					options: Record<string, any>,
 					command: Command,
 				) => {
+					// TODO: add option --force, else prompt user before deleting
 					const globalOpts = command.optsWithGlobals();
 					const retVal = await SnapshotManagementCommands.deleteSnapshotOrFile(
 						globalOpts.key,
@@ -375,18 +407,24 @@ export class CLI {
 		const searchGroup = this.program
 			.command("search")
 			.description("Searches for a snapshot with a key similar to one provided")
-			.option("--desc", "Approximate description to match")
+			.option("--desc", "Description (approximate) to match (in double-quotes)")
 			.option(
 				"--type <tree|snippet|files|url|template>",
-				"Filter by snapshot type",
+				"Filter by snapshot type (exact)",
 			)
 			.option(
 				"--tags <list-of-tags>",
-				"Filter by tags (separated by commas, no spaces)",
+				"Filter by tags (exact, separated by commas, no spaces)",
 			)
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
-				// TODO: add code
+				const retVal = await ListSnapshotCommands.search(
+					globalOpts.key,
+					options.desc,
+					options.type,
+					options.tags,
+				);
+				if (!retVal) throw new Error();
 			});
 
 		const listGroup = this.program
@@ -479,7 +517,7 @@ export class CLI {
 			);
 	}
 
-	defineTransformGroup(): void {
+	private defineTransformGroup(): void {
 		const transformGroup = this.program
 			.command("transform")
 			.description("Transform external files");
