@@ -378,6 +378,16 @@ export function drawFileTree(nodes: FileTreeNode[]): string {
 	return lines.join("\n");
 }
 
+export function getFileListFromStructure(nodes: FileTreeNode[]): string {
+	const list = [];
+	for (let i = 0; i < nodes.length; ++i) {
+		if (nodes[i].type === "file") {
+			list.push(nodes[i].path);
+		}
+	}
+	return list.join("\n");
+}
+
 // ------------------------- [private] --------------------------
 
 function isLastSibling(nodes: FileTreeNode[], currentIndex: number): boolean {

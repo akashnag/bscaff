@@ -437,8 +437,12 @@ export class CLI {
 	private defineExtractGroup(): void {
 		const copyCommand = this.program
 			.command("copy [rel-path]")
+			.option(
+				"--as-tree",
+				"If snapshot is a template or a tree, copy the structure as an ASCII-tree instead of list of file-paths",
+			)
 			.description(
-				"Copy the snippet / file-tree (ASCII) / file-list / url to clipboard / file-contents (if path specified)",
+				"Copy the snippet / file-tree (ASCII) / file-list / URL / file-contents (if path specified) to clipboard",
 			)
 			.action(
 				async (
@@ -447,14 +451,19 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await RecallSnapshotCommands.copyToClipboard(
+						globalOpts.key,
+						options.asTree,
+						relPath,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
 		const openCommand = this.program
 			.command("open [rel-path]")
 			.description(
-				"Opens a URL in the browser, or a snippet / (template or tree file) in a text-editor (read-only)",
+				"Opens a URL in the browser; a snippet or a file (from tree, template, files) in a text-editor (read-only)",
 			)
 			.action(
 				async (
@@ -463,7 +472,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await RecallSnapshotCommands.openSnapshotReadOnly(
+						globalOpts.key,
+						relPath,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -611,18 +624,32 @@ export class CLI {
 	private defineCreateGroup(): void {
 		const createGroup = this.program
 			.command("create")
-			.description("Creates templates / scaffolding");
+			.description("Creates files and trees from content copied to clipboard");
 
 		const createTreeCommand = createGroup
 			.command("tree <to-path>")
 			.description(
 				"Creates a scaffolding tree (ASCII-art copied to clipboard) into the path specified",
 			)
-			.option(
-				"--overwrite",
-				"Overwrite files in destination (with blank ones) without prompting",
-			)
+			.option("--overwrite", "Overwrite files in destination without prompting")
 			.option("--input", "Prompts to enter content of each file in the tree")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const createFileCommand = createGroup
+			.command("file <to-path>")
+			.description(
+				"Creates a file in the path specified from content copied to clipboard",
+			)
+			.option("--overwrite", "Overwrite file in destination without prompting")
 			.action(
 				async (
 					path: string,

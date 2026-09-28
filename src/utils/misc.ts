@@ -12,7 +12,7 @@
  */
 
 import * as process from "node:process";
-import { exec, execSync, spawnSync } from "child_process";
+import { exec, execSync, spawn, spawnSync } from "child_process";
 import { promisify } from "util";
 import { Settings } from "../core/settings.js";
 import { prompt } from "../io/io.js";
@@ -82,6 +82,7 @@ export async function countLOCFromFile(
 export function createRandomFileAndOpenInEditor(
 	fileType: string = "txt",
 	content: string | null = null,
+	detach: boolean = true,
 ): string | null {
 	const fileName =
 		(+new Date()).toString() +
@@ -137,6 +138,11 @@ export async function executeCommand(command: string): Promise<boolean> {
 	}
 }
 
+export async function openURLInBrowser(url: string): Promise<boolean> {
+	const browser = Settings.get("browser");
+	return await executeCommand(`${browser} ${url}`);
+}
+
 // Executes an OS-specific script file
 export function executeScript(
 	scriptPath: string,
@@ -162,23 +168,32 @@ export function executeScript(
 }
 
 // opens file for editing in terminal-editor or if it fails then a gui-editor (unless in settings user has set preference to gui first)
-export function openFileInEditor(filePath: string): boolean {
+export function openFileInEditor(
+	filePath: string,
+	detach: boolean = false,
+): boolean {
 	const textEditor = Settings.get("textEditor");
 	const isAvailable = isCommandAvailable(textEditor!);
 
 	if (isAvailable) {
 		try {
 			// stdio: 'inherit' attaches TTY so interactive terminal editors (nano/vim) work
-			const result = spawnSync(textEditor!, [filePath], {
-				stdio: "inherit",
-			});
-			return result.status === 0 && result.error === undefined;
+			let result;
+			if (detach) {
+				result = spawn(textEditor!, [filePath]);
+				return true;
+			} else {
+				result = spawnSync(textEditor!, [filePath], {
+					stdio: "inherit",
+				});
+				return result.status === 0 && result.error === undefined;
+			}
 		} catch (err) {
 			console.error(`Failed to launch ${textEditor}:`, err);
 			return false;
 		}
 	} else {
-		return openFileInGUIEditor(filePath);
+		return openFileInGUIEditor(filePath, detach);
 	}
 }
 
@@ -311,7 +326,10 @@ function isCommandAvailable(command: string | null): boolean {
 	}
 }
 
-function openFileInGUIEditor(filePath: string): boolean {
+function openFileInGUIEditor(
+	filePath: string,
+	detach: boolean = false,
+): boolean {
 	let command: string | null;
 	let args: string[];
 
@@ -337,8 +355,15 @@ function openFileInGUIEditor(filePath: string): boolean {
 	if (!command) return false;
 
 	try {
-		const result = spawnSync(command, args, { stdio: "ignore" });
-		return result.status === 0 && result.error === undefined;
+		let result;
+
+		if (detach) {
+			result = spawnSync(command, args);
+			return true;
+		} else {
+			result = spawnSync(command, args, { stdio: "ignore" });
+			return result.status === 0 && result.error === undefined;
+		}
 	} catch (err) {
 		console.error(`Failed to open GUI editor on ${process.platform}:`, err);
 		return false;

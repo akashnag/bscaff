@@ -12,8 +12,10 @@
  */
 
 import { ClipboardManager } from "../core/clipboard.js";
+import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
 import { Logger } from "../io/logger.js";
+import { CopySnapshotIO, OpenSnapshotIO } from "../io/recall.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import { Config } from "../utils/config.js";
 import * as FileUtils from "../utils/files.js";
@@ -21,121 +23,181 @@ import * as MiscUtils from "../utils/misc.js";
 import * as SnapshotUtils from "../utils/snapshot.js";
 import * as TreeUtils from "../utils/tree.js";
 
-/*
-export async function copySnippetToMemory(key: string): Promise<boolean> {
+export async function copyToClipboard(
+	key: string,
+	asTree: boolean | undefined,
+	relPath: string | undefined,
+): Promise<boolean> {
 	const cm = new ClipboardManager();
-	const logger = new Logger();
+	const io = new CopySnapshotIO();
 
-	try {
-		const store = await Store.create();
-		if (!store.doesKeyExist(key)) {
-			logger.error("key not found");
-			return false;
-		}
-
-		const record = store.fetchSnippetRecord(key);
-		if (!record) {
-			logger.error("can't fetch record");
-			return false;
-		}
-
-		if (
-			record.type != SnippetType.Text &&
-			record.type != SnippetType.File &&
-			record.type != SnippetType.URL
-		) {
-			logger.error("can only use snippets of type text/file/URL");
-			return false;
-		}
-
-		if (!("filename" in record.structure)) return false;
-
-		const snippet = await FileUtils.readTextFile(
-			SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
-		);
-
-		if (!snippet) {
-			logger.error("error reading snippet");
-			return false;
-		}
-
-		cm.copy(snippet);
-		logger.success("snippet copied to clipboard");
-		return true;
-	} catch {
-		logger.error("unknown error encountered in <copySnippetToMemory>");
-		return false;
-	}
-}
-
-export async function openSnippet(key: string): Promise<boolean> {
 	const store = await Store.create();
-	const logger = new Logger();
-
 	if (!store.doesKeyExist(key)) {
-		logger.error("key not found");
+		io.errorKeyNotFound(key);
 		return false;
 	}
 
-	const record = store.fetchSnippetRecord(key);
+	const record = store.fetch(key);
 	if (!record) {
-		logger.error("can't fetch record");
+		io.errorFetchingSnapshot(key);
 		return false;
 	}
 
-	let retVal = false;
-	if (record.type == SnippetType.URL) {
-		if (!("filename" in record.structure)) return false;
+	switch (record.type) {
+		case SnapshotType.URL:
+			await cm.copy(record.urlContent!);
+			break;
 
-		// if URL then open URL via web browser
-		const url = await FileUtils.readTextFile(
-			SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
-		);
+		case SnapshotType.Snippet:
+			const snippetFile = SnapshotUtils.getFileUnderSnapshot(
+				key,
+				record.fileName!,
+			);
+			const snippetContent = await FileUtils.readTextFile(snippetFile);
 
-		if (!url) {
-			logger.error("error reading URL");
-			return false;
-		}
+			if (!snippetContent) {
+				io.errorFetchingSnapshot(key);
+				return false;
+			}
 
-		retVal = await MiscUtils.executeCommand(`google-chrome ${url}`);
-		if (retVal) {
-			logger.success(`URL launched: ${url}`);
-			retVal = true;
-		}
-	} else if (
-		record.type == SnippetType.File ||
-		record.type == SnippetType.Text
-	) {
-		if (!("filename" in record.structure)) return false;
+			await cm.copy(snippetContent);
+			break;
 
-		// if text/file, open it in a text editor
-		const filePath = SnapshotUtils.getFileUnderSnippet(
-			key,
-			record.structure.filename!,
-		);
-		const snippet = await FileUtils.readTextFile(filePath);
+		case SnapshotType.Template:
+		case SnapshotType.Files:
+		case SnapshotType.Tree:
+			if (relPath) {
+				if (asTree) {
+					io.warnOptionIgnored("--as-tree");
+				}
 
-		if (!snippet) {
-			logger.error("error reading snippet");
-			return false;
-		}
+				const hasFile = await SnapshotUtils.doesSnapshotContainFile(
+					record,
+					relPath,
+				);
+				if (!hasFile) {
+					io.errorInvalidFile(key, record, relPath);
+					return false;
+				}
 
-		const fileType = FileUtils.getFileType(filePath);
-		const tempFile = MiscUtils.createRandomFileAndOpenInEditor(
-			fileType,
-			snippet,
-		);
-		if (!tempFile) {
-			logger.error("error launching text editor");
-		} else {
-			retVal = true;
-		}
-	} else {
-		logger.error("can only open snippets of type text/file/url");
+				const file = SnapshotUtils.getFileUnderSnapshot(key, relPath);
+				if (!FileUtils.doesFileExist(file)) {
+					io.errorInvalidFile(key, record, relPath);
+					return false;
+				}
+
+				const content = await FileUtils.readTextFile(file);
+				if (!content) {
+					io.errorReadingSnapshotFile(key, record.type, relPath);
+					return false;
+				}
+
+				await cm.copy(content);
+			} else {
+				if (!asTree || record.type == SnapshotType.Files) {
+					const fileList = TreeUtils.getFileListFromStructure(
+						record.structure!,
+					);
+					await cm.copy(fileList);
+					break;
+				}
+
+				const tree = TreeUtils.drawFileTree(record.structure!);
+				await cm.copy(tree);
+			}
+
+			break;
 	}
 
-	return retVal;
+	io.successSnapshotCopied(key, record.type);
+	return true;
 }
+
+export async function openSnapshotReadOnly(
+	key: string,
+	relPath: string | undefined,
+): Promise<boolean> {
+	const io = new OpenSnapshotIO();
+
+	const store = await Store.create();
+	if (!store.doesKeyExist(key)) {
+		io.errorKeyNotFound(key);
+		return false;
+	}
+
+	const record = store.fetch(key);
+	if (!record) {
+		io.errorFetchingSnapshot(key);
+		return false;
+	}
+
+	switch (record.type) {
+		case SnapshotType.URL:
+			if (!(await MiscUtils.openURLInBrowser(record.urlContent!))) {
+				io.errorOpeningURL(Settings.get("browser"), record.urlContent);
+				return false;
+			}
+			break;
+
+		case SnapshotType.Snippet:
+			const snippetFile = SnapshotUtils.getFileUnderSnapshot(
+				key,
+				record.fileName!,
+			);
+			const snippetContent = await FileUtils.readTextFile(snippetFile);
+
+			if (!snippetContent) {
+				io.errorFetchingSnapshot(key);
+				return false;
+			}
+
+			// open editor in detached mode
+			MiscUtils.createRandomFileAndOpenInEditor(
+				FileUtils.getFileType(snippetFile),
+				snippetContent,
+			);
+			break;
+
+		case SnapshotType.Template:
+		case SnapshotType.Files:
+		case SnapshotType.Tree:
+			if (!relPath) {
+				io.errorMissingParameter("rel-path");
+				return false;
+			}
+
+			const hasFile = await SnapshotUtils.doesSnapshotContainFile(
+				record,
+				relPath,
+			);
+			if (!hasFile) {
+				io.errorInvalidFile(key, record, relPath);
+				return false;
+			}
+
+			const file = SnapshotUtils.getFileUnderSnapshot(key, relPath);
+			if (!FileUtils.doesFileExist(file)) {
+				io.errorInvalidFile(key, record, relPath);
+				return false;
+			}
+
+			const content = await FileUtils.readTextFile(file);
+			if (!content) {
+				io.errorReadingSnapshotFile(key, record.type, relPath);
+				return false;
+			}
+
+			MiscUtils.createRandomFileAndOpenInEditor(
+				FileUtils.getFileType(file),
+				content,
+			);
+			break;
+	}
+
+	return true;
+}
+
+/*
 
 export async function appendOrPrependToFile(
 	key: string,
@@ -300,9 +362,11 @@ export async function extractSnippet(
 		return false;
 	}
 }
+*/
 
 // ---------------------- [private] --------------------------------
 
+/*
 async function extractMultiFileTemplate(
 	key: string,
 	record: SnippetRecord,

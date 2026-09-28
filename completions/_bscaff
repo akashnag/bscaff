@@ -9,11 +9,12 @@ _bscaff() {
         'delete:Delete snapshot, or a file under the snapshot'
         'search:Searches for a snapshot with a key similar to one provided'
         'list:Lists the saved snapshots'
-        'copy:Copy the snippet / file-tree (ASCII) / file-list / url to clipboard / file-contents (if path specified)'
-        'open:Opens a URL in the browser, or a snippet / (template or tree file) in a text-editor (read-only)'
+        'copy:Copy the snippet / file-tree (ASCII) / file-list / URL / file-contents (if path specified) to clipboard'
+        'open:Opens a URL in the browser; a snippet or a file (from tree, template, files) in a text-editor (read-only)'
         'extract:Extracts a tree / files / template to the directory path'
-        'create:Creates templates / scaffolding'
+        'create:Creates files and trees from content copied to clipboard'
         'transform:Transform external files'
+        'template:Save/create/execute templates'
     )
 
     _arguments -C \
@@ -42,21 +43,24 @@ _bscaff() {
                     _values 'flags' '--desc[Description (approximate) to match (in double-quotes)]' '--type[Filter by snapshot type (exact)]' '--tags[Filter by tags (exact, separated by commas, no spaces)]'
                     ;;
                 list)
-                    _values 'flags' '--type[Filter by snapshot type]' '--tags[Filter by tags (separated by commas, no spaces)]'
+                    _values 'flags' '--type[Filter by snapshot type (exact)]' '--tags[Filter by tags (separated by commas, no spaces)]'
                     ;;
                 copy)
-                    _values 'flags' 
+                    _values 'flags' '--as-tree[If snapshot is a template or a tree, copy the structure as an ASCII-tree instead of list of file-paths]'
                     ;;
                 open)
                     _values 'flags' 
                     ;;
                 extract)
-                    _values 'flags' '--partial[Extract the snapshot partially under path specified by <rel-path>]' '--overwrite[Overwrite files in destination without prompting]' '--fail-if-exists[Aborts extraction if the file in destination exists]' '--skip-if-exists[Skip files which exist in destination during extraction]'
+                    _values 'flags' '--partial[Extract the snapshot partially under path specified by <rel-path>]' '--if-exists[Behaviour if destination file exists]'
                     ;;
                 create)
                     _values 'flags' 
                     ;;
                 transform)
+                    _values 'flags' 
+                    ;;
+                template)
                     _values 'flags' 
                     ;;
             esac

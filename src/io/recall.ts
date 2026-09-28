@@ -11,4 +11,18 @@
  * GNU General Public License for more details.
  */
 
+import { SnapshotType } from "../types/types.js";
 import * as IOUtils from "./io.js";
+import { ConsoleIO } from "./io.js";
+
+export class CopySnapshotIO extends ConsoleIO {
+	successSnapshotCopied(key: string, sType: SnapshotType): void {
+		// TODO: add code
+	}
+}
+
+export class OpenSnapshotIO extends ConsoleIO {
+	errorOpeningURL(browser: string | null, url: string | undefined): void {
+		// TODO: add code
+	}
+}

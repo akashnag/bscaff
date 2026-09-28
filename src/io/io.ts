@@ -15,7 +15,7 @@ import { stdin as input, stdout as output } from "node:process";
 import * as readline from "node:readline/promises";
 import chalk from "chalk";
 import { ClipboardManager } from "../core/clipboard.js";
-import { FileTreeNode, SnapshotRecord } from "../types/types.js";
+import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/files.js";
 import * as MiscUtils from "../utils/misc.js";
 
@@ -452,6 +452,18 @@ export abstract class ConsoleIO {
 	}
 
 	errorFetchingSnapshot(key: string): void {
+		// TODO: add code
+	}
+
+	warnOptionIgnored(param: string): void {
+		// TODO: add code
+	}
+
+	errorReadingSnapshotFile(
+		key: string,
+		sType: SnapshotType,
+		relPath: string,
+	): void {
 		// TODO: add code
 	}
 }
