@@ -56,21 +56,7 @@ export async function list(
 	}
 
 	if (sType || tags) {
-		if (sType) {
-			sType = sType.toLowerCase();
-			if (
-				["template", "snippet", "tree", "files", "url"].indexOf(sType) == -1
-			) {
-				io.errorInvalidValue("type", [
-					"template",
-					"snippet",
-					"tree",
-					"files",
-					"url",
-				]);
-				return false;
-			}
-		}
+		// validation of sType is handled by Commander
 
 		const snippetTypeMapper: Record<string, SnapshotType> = {
 			template: SnapshotType.Template,
@@ -116,6 +102,8 @@ export async function search(
 ): Promise<boolean> {
 	const io = new ListSnapshotsIO();
 	const store = await Store.create();
+
+	// validation of sType is handled by Commander
 
 	const snippetTypeMapper: Record<string, SnapshotType> = {
 		template: SnapshotType.Template,

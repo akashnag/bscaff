@@ -63,6 +63,15 @@ export function getFileNameFromPath(filePath: string): string {
 	else return path.posix.basename(filePath);
 }
 
+export function getContainingDirectoryOfFile(filePath: string): string {
+	const platform = MiscUtils.getPlatform();
+	if (platform === "win32") {
+		return path.win32.basename(path.win32.dirname(filePath));
+	} else {
+		return path.posix.basename(path.posix.dirname(filePath));
+	}
+}
+
 export function getPathAndFileName(filePath: string): {
 	path: string;
 	filename: string;

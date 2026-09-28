@@ -281,35 +281,9 @@ export class SaveURLIO extends ConsoleIO {
 // --------------------------------------------------------
 
 // --------------------------------------------------------
-// save template <path>
+// save files <files...>
 // --------------------------------------------------------
-export class SaveTemplateIO extends ConsoleIO {
-	errorInvalidTemplateFormat(filePath: string): void {
-		if (QUIET_MODE) return;
-
-		printHeader("Invalid Template Format");
-		printField("Error", `The template file format was invalid`);
-
-		console.log("\nTo resolve:");
-		printIndented(
-			`Specify a valid bscaff template file (version <= ${Config.TEMPLATE_FILE_VERSION})`,
-		);
-	}
-
-	errorTemplateFileMissing(repoPath: string, isGit: boolean): void {
-		// TODO: add code
-	}
-
-	errorExpectedZipFile(filePath: string): void {
-		// TODO: add code
-	}
-
-	errorExtractingZip(filePath: string): void {
-		// TODO: add code
-	}
-
-	invalidTemplateZipFile(filePath: string): void {
-		// TODO: add code
-	}
+export class SaveFilesIO extends ConsoleIO {
+	// no code required
 }
 // --------------------------------------------------------

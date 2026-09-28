@@ -11,12 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import pkg from "../package.json" with { type: "json" };
 import * as ListSnapshotCommands from "./commands/list.js";
 import * as SnapshotManagementCommands from "./commands/misc.js";
 import * as RecallSnapshotCommands from "./commands/recall.js";
 import * as SaveSnapshotCommands from "./commands/save.js";
+import * as TemplateCommands from "./commands/template.js";
 import { ConsoleIO } from "./io/io.js";
 import { Logger } from "./io/logger.js";
 import { Config } from "./utils/config.js";
@@ -61,6 +62,7 @@ export class CLI {
 		this.defineExtractGroup();
 		this.defineCreateGroup();
 		this.defineTransformGroup();
+		this.defineTemplateGroup();
 	}
 
 	private defineSaveGroup(): void {
@@ -81,7 +83,7 @@ export class CLI {
 			[Save directory tree]							-->	bscaff -k react-snapshot --desc --tags=react,app "My awesome react app" save tree ~/projects/my-react-app
 			[Save git repo]									-->	bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
 		*/
-		saveGroup
+		const saveTreeCommand = saveGroup
 			.command("tree [dir-path_or_repo-url]")
 			.description(
 				"Save a snapshot of a directory tree specified by path/git-repo URL",
@@ -133,7 +135,7 @@ export class CLI {
 			[Save snippet from file]						--> bscaff -k react-create-component save snippet ./components/my-component.tsx
 			[Save snippet from memory]						--> bscaff -k react-create-component save snippet --type=tsx
 		*/
-		saveGroup
+		const saveSnippetCommand = saveGroup
 			.command("snippet [path/to/file]")
 			.description("Save a text/code snippet from a file / clipboard")
 			.option("--memory", "Copy from clipboard")
@@ -177,7 +179,7 @@ export class CLI {
 			[Save files]									--> bscaff -k my-go-package save files ./*.go
 			[Save files]									--> bscaff -k my-go-package save files format.go main.go test.go
 		*/
-		saveGroup
+		const saveFilesCommand = saveGroup
 			.command("files <files...>")
 			.description("Save one or more files")
 			.action(
@@ -202,7 +204,7 @@ export class CLI {
 		Examples:
 			[Save link]										--> bscaff -k go-docs save url https://go.dev/doc/
 		*/
-		saveGroup
+		const saveURLCommand = saveGroup
 			.command("url [url]")
 			.description("Save a web URL/link (from clipboard if URL omitted)")
 			.action(
@@ -218,34 +220,6 @@ export class CLI {
 					if (!retVal) throw new Error();
 				},
 			);
-
-		/*
-		Examples:
-			[Save template from zip]			--> bscaff -k my-template save template ./bscaff-react-template.zip
-			[Save template from git repo]		--> bscaff -k my-template save template https://github.com/bscaff/bscaff-react-template.git --git
-		*/
-		saveGroup
-			.command("template <path-to-zip-OR-git-repo>")
-			.option("--git", "Clone template directly from git repo")
-			.description("Save a bscaff template")
-			.action(
-				async (
-					path: string,
-					options: Record<string, any>,
-					command: Command,
-				) => {
-					const globalOpts = command.optsWithGlobals();
-					const parentOpts = command.parent?.opts();
-					const retVal = await SaveSnapshotCommands.saveTemplate(
-						globalOpts.key,
-						parentOpts?.desc,
-						parentOpts?.tags,
-						options.git,
-						path,
-					);
-					if (!retVal) throw new Error();
-				},
-			);
 	}
 
 	private defineMiscGroup(): void {
@@ -253,7 +227,7 @@ export class CLI {
 		Examples:
 			[Open settings for editing]		-->	bscaff settings
 		*/
-		const settingsGroup = this.program
+		const settingsCommand = this.program
 			.command("settings")
 			.description("Opens bscaff settings for editing")
 			.action(async (options: Record<string, any>, command: Command) => {
@@ -271,7 +245,7 @@ export class CLI {
 		Examples:
 			[Rename snapshot key]	-->	bscaff -k my-react-snapshot update key react-project
 		*/
-		updateGroup
+		const updateKeyCommand = updateGroup
 			.command("key <new-key>")
 			.description("Update the snapshot key")
 			.action(
@@ -293,7 +267,7 @@ export class CLI {
 		Examples:
 			[Update description]	-->	bscaff -k react-project update desc "Generic react project boilerplate"
 		*/
-		updateGroup
+		const updateDescriptionCommand = updateGroup
 			.command("desc <new-description>")
 			.description("Update the snapshot description (in double quotes)")
 			.action(
@@ -315,7 +289,7 @@ export class CLI {
 		Examples:
 			[Update tags]	-->	bscaff -k react-project update tags react,nextjs,typescript
 		*/
-		updateGroup
+		const updateTagsCommand = updateGroup
 			.command("tags <new-tags>")
 			.description("Update the tags (comma-separated, without spaces)")
 			.action(
@@ -337,7 +311,7 @@ export class CLI {
 		Examples:
 			[Update URL]	-->	bscaff -k github update url https://github.com/
 		*/
-		updateGroup
+		const updateURLCommand = updateGroup
 			.command("url <new-url>")
 			.description("Update the URL")
 			.action(
@@ -360,7 +334,7 @@ export class CLI {
 			[Update snippet]	-->	bscaff -k copyright-text update content
 			[Update file]		-->	bscaff -k react-project update content docs/CONTRIBUTING.md
 		*/
-		updateGroup
+		const updateFileContentCommand = updateGroup
 			.command("content [relative-path]")
 			.description("Update the content of a snippet / file")
 			.action(
@@ -383,7 +357,7 @@ export class CLI {
 			[Delete snapshot]	-->	bscaff -k copyright-text delete
 			[Delete file]		-->	bscaff -k react-project delete docs/CONTRIBUTING.md
 		*/
-		const deleteGroup = this.program
+		const deleteCommand = this.program
 			.command("delete [rel-path]")
 			.description("Delete snapshot, or a file under the snapshot")
 			.action(
@@ -404,13 +378,15 @@ export class CLI {
 	}
 
 	private defineListGroup(): void {
-		const searchGroup = this.program
+		const searchCommand = this.program
 			.command("search")
 			.description("Searches for a snapshot with a key similar to one provided")
 			.option("--desc", "Description (approximate) to match (in double-quotes)")
-			.option(
-				"--type <tree|snippet|files|url|template>",
-				"Filter by snapshot type (exact)",
+			.addOption(
+				new Option(
+					"--type <snapshot-type>",
+					"Filter by snapshot type (exact)",
+				).choices(["tree", "snippet", "files", "url", "template"]),
 			)
 			.option(
 				"--tags <list-of-tags>",
@@ -427,12 +403,14 @@ export class CLI {
 				if (!retVal) throw new Error();
 			});
 
-		const listGroup = this.program
+		const listCommand = this.program
 			.command("list [relative-path]")
 			.description("Lists the saved snapshots")
-			.option(
-				"--type <tree|snippet|files|url|template>",
-				"Filter by snapshot type",
+			.addOption(
+				new Option(
+					"--type <snapshot-type>",
+					"Filter by snapshot type (exact)",
+				).choices(["tree", "snippet", "files", "url", "template"]),
 			)
 			.option(
 				"--tags <list-of-tags>",
@@ -457,7 +435,7 @@ export class CLI {
 	}
 
 	private defineExtractGroup(): void {
-		const copyGroup = this.program
+		const copyCommand = this.program
 			.command("copy [rel-path]")
 			.description(
 				"Copy the snippet / file-tree (ASCII) / file-list / url to clipboard / file-contents (if path specified)",
@@ -473,7 +451,7 @@ export class CLI {
 				},
 			);
 
-		const openGroup = this.program
+		const openCommand = this.program
 			.command("open [rel-path]")
 			.description(
 				"Opens a URL in the browser, or a snippet / (template or tree file) in a text-editor (read-only)",
@@ -489,21 +467,18 @@ export class CLI {
 				},
 			);
 
-		const extractGroup = this.program
+		const extractCommand = this.program
 			.command("extract <path>")
 			.description("Extracts a tree / files / template to the directory path")
 			.option(
 				"--partial <rel-path>",
 				"Extract the snapshot partially under path specified by <rel-path>",
 			)
-			.option("--overwrite", "Overwrite files in destination without prompting")
-			.option(
-				"--fail-if-exists",
-				"Aborts extraction if the file in destination exists",
-			)
-			.option(
-				"--skip-if-exists",
-				"Skip files which exist in destination during extraction",
+			.addOption(
+				new Option(
+					"-e, --if-exists <behaviour>",
+					"Behaviour if destination file exists",
+				).choices(["overwrite", "fail", "skip", "prompt"]),
 			)
 			.action(
 				async (
@@ -522,7 +497,7 @@ export class CLI {
 			.command("transform")
 			.description("Transform external files");
 
-		const insertGroup = transformGroup
+		const insertCommand = transformGroup
 			.command("insert <files...>")
 			.option(
 				"--before <text>",
@@ -546,7 +521,7 @@ export class CLI {
 				},
 			);
 
-		const replaceGroup = transformGroup
+		const replaceCommand = transformGroup
 			.command("replace <files...>")
 			.option(
 				"--with-snippet <snippet-key>",
@@ -584,7 +559,7 @@ export class CLI {
 				},
 			);
 
-		const trimGroup = transformGroup
+		const trimCommand = transformGroup
 			.command("trim <files...>")
 			.option("--first <N>", "Delete first N lines from the target files")
 			.option("--last <N>", "Delete last N lines from the target files")
@@ -600,7 +575,7 @@ export class CLI {
 				},
 			);
 
-		const appendGroup = transformGroup
+		const appendCommand = transformGroup
 			.command("append <files...>")
 			.option("--trim-first <N>", "Delete first N lines from the target files")
 			.option("--trim-last <N>", "Delete last N lines from the target files")
@@ -616,7 +591,7 @@ export class CLI {
 				},
 			);
 
-		const prependGroup = transformGroup
+		const prependCommand = transformGroup
 			.command("prepend <files...>")
 			.option("--trim-first <N>", "Delete first N lines from the target files")
 			.option("--trim-last <N>", "Delete last N lines from the target files")
@@ -638,7 +613,7 @@ export class CLI {
 			.command("create")
 			.description("Creates templates / scaffolding");
 
-		createGroup
+		const createTreeCommand = createGroup
 			.command("tree <to-path>")
 			.description(
 				"Creates a scaffolding tree (ASCII-art copied to clipboard) into the path specified",
@@ -658,11 +633,50 @@ export class CLI {
 					// TODO: add code
 				},
 			);
+	}
 
-		createGroup
-			.command("template <from-path>")
+	private defineTemplateGroup(): void {
+		const templateGroup = this.program
+			.command("template")
+			.description("Save/create/execute templates");
+
+		/*
+		Examples:
+			[Save template from zip]			--> bscaff -k my-template template save ./bscaff-react-template.zip
+			[Save template from git repo]		--> bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --git
+		*/
+		const saveTemplateCommand = templateGroup
+			.command("save <path-to-template>")
+			.addOption(
+				new Option(
+					"-s, --source <source>",
+					"Type of the path specified",
+				).choices(["zip", "git", "dir"]),
+			)
+			.description("Save a bscaff template")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					const parentOpts = command.parent?.opts();
+					const retVal = await TemplateCommands.saveTemplate(
+						globalOpts.key,
+						parentOpts?.desc,
+						parentOpts?.tags,
+						options.source,
+						path,
+					);
+					if (!retVal) throw new Error();
+				},
+			);
+
+		const createTemplateCommand = templateGroup
+			.command("create <path-to-directory>")
 			.description(
-				"Creates a template from the directory and files contained at the path specified",
+				"Create a new bscaff template from a directory (and saves it)",
 			)
 			.option(
 				"--pre-trigger <path/to/script>",
@@ -672,7 +686,32 @@ export class CLI {
 				"--post-trigger <path/to/script>",
 				"Saves a pre-trigger script to the template, and executes it when template extracted",
 			)
-			.option("--exclude-content", "Exclude file contents from the template")
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const updateTemplateCommand = templateGroup
+			.command("update")
+			.description(
+				"Update a saved template from its upstream git repo (if exists)",
+			)
+			.action(async (options: Record<string, any>, command: Command) => {
+				const globalOpts = command.optsWithGlobals();
+				// TODO: add code
+			});
+
+		const updateTemplateProjectCommand = templateGroup
+			.command("update-project <path-to-project>")
+			.description(
+				"Updates a project originally created/extracted from a template",
+			)
 			.action(
 				async (
 					path: string,
