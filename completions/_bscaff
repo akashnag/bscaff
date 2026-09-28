@@ -1,0 +1,67 @@
+#compdef bscaff
+
+_bscaff() {
+    local -a commands
+    commands=(
+        'save:Save snapshots'
+        'settings:Opens bscaff settings for editing'
+        'update:Update snapshot metadata'
+        'delete:Delete snapshot, or a file under the snapshot'
+        'search:Searches for a snapshot with a key similar to one provided'
+        'list:Lists the saved snapshots'
+        'copy:Copy the snippet / file-tree (ASCII) / file-list / url to clipboard / file-contents (if path specified)'
+        'open:Opens a URL in the browser, or a snippet / (template or tree file) in a text-editor (read-only)'
+        'extract:Extracts a tree / files / template to the directory path'
+        'create:Creates templates / scaffolding'
+        'transform:Transform external files'
+    )
+
+    _arguments -C \
+        '1: :->_cmds' \
+        '*::arg:->args'
+
+    case $state in
+        _cmds)
+            _describe -t commands 'bscaff command' commands
+            ;;
+        args)
+            case $line[1] in
+                save)
+                    _values 'flags' '--desc[Brief description of the snapshot (in double-quotes)]' '--tags[List of tags (comma-separated, no spaces) associated with this snapshot]'
+                    ;;
+                settings)
+                    _values 'flags' 
+                    ;;
+                update)
+                    _values 'flags' 
+                    ;;
+                delete)
+                    _values 'flags' 
+                    ;;
+                search)
+                    _values 'flags' '--desc[Description (approximate) to match (in double-quotes)]' '--type[Filter by snapshot type (exact)]' '--tags[Filter by tags (exact, separated by commas, no spaces)]'
+                    ;;
+                list)
+                    _values 'flags' '--type[Filter by snapshot type]' '--tags[Filter by tags (separated by commas, no spaces)]'
+                    ;;
+                copy)
+                    _values 'flags' 
+                    ;;
+                open)
+                    _values 'flags' 
+                    ;;
+                extract)
+                    _values 'flags' '--partial[Extract the snapshot partially under path specified by <rel-path>]' '--overwrite[Overwrite files in destination without prompting]' '--fail-if-exists[Aborts extraction if the file in destination exists]' '--skip-if-exists[Skip files which exist in destination during extraction]'
+                    ;;
+                create)
+                    _values 'flags' 
+                    ;;
+                transform)
+                    _values 'flags' 
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_bscaff "$@"

@@ -16,7 +16,8 @@
 		"biome:format": "biome format --write .",
 		"dev": "tsc --watch & node --watch bin/index.js",
 		"test": "vitest",
-		"test:run": "vitest run"
+		"test:run": "vitest run",
+		"build:completions": "npm run build && tsx scripts/generate-completions.ts"
 	},
 	"keywords": [
 		"cli",
