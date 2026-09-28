@@ -14,10 +14,10 @@
 import * as process from "node:process";
 import { exec, execSync, spawn, spawnSync } from "child_process";
 import { promisify } from "util";
+import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { prompt } from "../io/io.js";
-import { Config } from "./config.js";
-import * as FileUtils from "./files.js";
+import * as FileUtils from "./file-utils.js";
 
 const execPromisified = promisify(exec);
 

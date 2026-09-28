@@ -13,14 +13,15 @@
 
 import { token_sort_ratio } from "fuzzball";
 import { Store } from "../core/store.js";
-import { ListSnapshotsIO } from "../io/list.js";
-import { Logger } from "../io/logger.js";
+import { ListSnapshotsIO } from "../io/list-io.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
-import * as SnapshotUtils from "../utils/snapshot.js";
-import * as TemplateUtils from "../utils/template.js";
-import * as TreeUtils from "../utils/tree.js";
+import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import * as TemplateUtils from "../utils/template-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 
-// lists down all snapshots by type
+// --------------------------------------------------------
+// bscaff [-k <key>] list [relative-path] [--type <type>] [--tags <tag1,tag2,...tagN>]
+// --------------------------------------------------------
 export async function list(
 	key: string | undefined,
 	sType: string | undefined,
@@ -94,6 +95,9 @@ export async function list(
 	return true;
 }
 
+// --------------------------------------------------------
+// bscaff [-k <approx-key>] search [--desc <approx-desc>] [--type <type>] [--tags <tag1,tag2,...tagN>]
+// --------------------------------------------------------
 export async function search(
 	key: string | undefined,
 	desc: string | undefined,

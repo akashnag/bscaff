@@ -14,13 +14,12 @@
 import { ClipboardManager } from "../core/clipboard.js";
 import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
-import { Logger } from "../io/logger.js";
-import { EditSnapshotsIO } from "../io/misc.js";
+import { EditSnapshotsIO } from "../io/misc-io.js";
 import { SnapshotType } from "../types/types.js";
-import * as FileUtils from "../utils/files.js";
-import * as MiscUtils from "../utils/misc.js";
-import * as SnapshotUtils from "../utils/snapshot.js";
-import * as TreeUtils from "../utils/tree.js";
+import * as FileUtils from "../utils/file-utils.js";
+import * as MiscUtils from "../utils/misc-utils.js";
+import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 /*
 export async function deleteSnippet(key: string): Promise<boolean> {
 	const store = await Store.create();
@@ -107,10 +106,16 @@ export async function createTreeDirect(
 }
 */
 
+// --------------------------------------------------------
+// settings
+// --------------------------------------------------------
 export async function openSettingsForEditing(): Promise<boolean> {
 	return MiscUtils.openFileInEditor(Settings.settingsFile);
 }
 
+// --------------------------------------------------------
+// update key <new-key>
+// --------------------------------------------------------
 export async function updateSnapshotKey(
 	key: string | undefined,
 	newKey: string,
@@ -145,6 +150,9 @@ export async function updateSnapshotKey(
 	return true;
 }
 
+// --------------------------------------------------------
+// update desc <new-description>
+// --------------------------------------------------------
 export async function updateDescription(
 	key: string | undefined,
 	desc: string,
@@ -174,6 +182,9 @@ export async function updateDescription(
 	return true;
 }
 
+// --------------------------------------------------------
+// update tags <tag1,tag2,...tagN>
+// --------------------------------------------------------
 export async function updateTags(
 	key: string | undefined,
 	tags: string,
@@ -204,6 +215,9 @@ export async function updateTags(
 	return true;
 }
 
+// --------------------------------------------------------
+// update url <new-url>
+// --------------------------------------------------------
 export async function updateURL(
 	key: string | undefined,
 	url: string,
@@ -233,6 +247,9 @@ export async function updateURL(
 	return true;
 }
 
+// --------------------------------------------------------
+// update content [relative-file-path]
+// --------------------------------------------------------
 export async function updateFileContent(
 	key: string | undefined,
 	relPath: string | undefined,
@@ -302,6 +319,9 @@ export async function updateFileContent(
 	return true;
 }
 
+// --------------------------------------------------------
+// delete [relative-file-path]
+// --------------------------------------------------------
 export async function deleteSnapshotOrFile(
 	key: string | undefined,
 	relPath: string | undefined,
@@ -336,22 +356,28 @@ export async function deleteSnapshotOrFile(
 	}
 
 	if (record.type == SnapshotType.Snippet || record.type == SnapshotType.URL) {
-		io.errorFileDeletionUnsupported(key, record.type);
+		io.errorFileOrDirectoryDeletionUnsupported(key, record.type);
 		return false;
 	}
 
 	const hasFile = await SnapshotUtils.doesSnapshotContainFile(record, relPath);
-	if (!hasFile) {
+	const hasDirectory = await SnapshotUtils.doesSnapshotContainDirectory(
+		record,
+		relPath,
+	);
+	if (!hasFile && !hasDirectory) {
 		io.errorInvalidFile(key, record, relPath);
 		return false;
 	}
 
-	const retVal = SnapshotUtils.deleteFileUnderSnapshot(store, key, relPath);
+	const retVal = hasFile
+		? SnapshotUtils.deleteFileUnderSnapshot(store, key, relPath)
+		: SnapshotUtils.deleteDirectoryUnderSnapshot(store, key, relPath);
 	if (!retVal) {
-		io.errorDeletingFile(key, relPath);
+		io.errorDeletingFileOrDirectory(key, relPath, hasFile);
 		return false;
 	}
 
-	io.successFileDeleted(key, relPath);
+	io.successFileOrDirectoryDeleted(key, relPath, hasFile);
 	return true;
 }

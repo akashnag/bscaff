@@ -1,6 +1,6 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import * as MiscUtils from "../utils/misc.js";
+import * as MiscUtils from "../utils/misc-utils.js";
 
 const execAsync = promisify(exec);
 

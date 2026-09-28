@@ -12,12 +12,13 @@
  */
 
 import { ClipboardManager } from "../core/clipboard.js";
-import { getche, prompt } from "../io/io.js";
-import { Logger } from "../io/logger.js";
+import { Config } from "../core/config.js";
+import { Settings } from "../core/settings.js";
+import { CreateTreeIO } from "../io/create-io.js";
+import { ConsoleIO, getche, prompt } from "../io/io.js";
 import { FileTreeNode, Template } from "../types/types.js";
-import { Config } from "./config.js";
-import * as FileUtils from "./files.js";
-import * as MiscUtils from "./misc.js";
+import * as FileUtils from "./file-utils.js";
+import * as MiscUtils from "./misc-utils.js";
 
 // converts an ASCII-art file-tree to FileTreeNode[]
 export function extractStructureFromASCIITree(tree: string): {
@@ -25,6 +26,9 @@ export function extractStructureFromASCIITree(tree: string): {
 	parameters: string[] | null;
 	stats: { fileCount: number; dirCount: number } | undefined;
 } {
+	if (!isValidASCIITree(tree))
+		return { structure: null, parameters: null, stats: undefined };
+
 	const chars = {
 		branch: "├",
 		node: "─",
@@ -178,6 +182,119 @@ export function extractStructureFromASCIITree(tree: string): {
 	};
 }
 
+export function isValidASCIITree(tree: string): boolean {
+	if (!tree || typeof tree !== "string") return false;
+
+	const chars = {
+		branch: "├",
+		node: "─",
+		comment: "#",
+		lastNode: "└",
+		trunk: "│",
+	};
+
+	const illegalChars = [
+		"<",
+		">",
+		":",
+		'"',
+		"|",
+		"?",
+		"*",
+		"\0",
+		...Array.from({ length: 32 }, (_, i) => String.fromCharCode(i)),
+	];
+
+	const lines = tree.split("\n").filter((line) => line.trim().length > 0);
+	if (lines.length === 0) return false;
+
+	let treeLineCount = 0;
+	let maxSeenLevel = -1;
+	let nodeCount = 0;
+
+	for (let i = 0; i < lines.length; i++) {
+		let line = lines[i];
+
+		// Strip comments
+		const commentIdx = line.indexOf(chars.comment);
+		if (commentIdx >= 0) {
+			line = line.substring(0, commentIdx);
+		}
+
+		const trimmed = line.trim();
+		if (trimmed.length === 0 || trimmed.endsWith(chars.trunk)) continue;
+
+		let level = 0;
+		let name = "";
+		let hasBranchChar = false;
+
+		const isRoot =
+			trimmed[0] !== chars.branch &&
+			trimmed[0] !== chars.node &&
+			trimmed[0] !== chars.lastNode &&
+			trimmed[0] !== chars.trunk;
+
+		if (isRoot) {
+			// First line can be a root directory (e.g., "my-project/")
+			name = trimmed.endsWith("/") ? trimmed.slice(0, -1).trim() : trimmed;
+			level = 0;
+		} else {
+			hasBranchChar = true;
+			let counter = 0;
+
+			for (let j = 0; j < line.length; ++j) {
+				const char = line[j];
+				if (
+					char === chars.branch ||
+					char === chars.lastNode ||
+					char === chars.trunk
+				) {
+					counter = 1;
+				} else if (char === " " || char === chars.node) {
+					++counter;
+					if (counter === 3) {
+						counter = 0;
+						++level;
+					}
+				} else {
+					name = line.substring(j).trim();
+					break;
+				}
+			}
+		}
+
+		// Clean trailing folder slashes
+		if (name.endsWith("/")) {
+			name = name.slice(0, -1).trim();
+		}
+
+		// Node name must exist and be free of illegal filename characters
+		if (name.length === 0) return false;
+		if (illegalChars.some((char) => name.includes(char))) return false;
+
+		// Tree structure continuity check: level cannot jump deeper by more than +1
+		if (nodeCount > 0 && level > maxSeenLevel + 1) {
+			return false;
+		}
+
+		if (hasBranchChar) {
+			treeLineCount++;
+		}
+
+		maxSeenLevel = Math.max(maxSeenLevel, level);
+		nodeCount++;
+	}
+
+	// Must have at least 1 valid node
+	if (nodeCount === 0) return false;
+
+	// Single line tree is valid if it's a root folder name
+	if (lines.length === 1) return true;
+
+	// Multi-line tree must contain actual branch markers
+	return treeLineCount > 0;
+}
+
 // converts a directory path to FileTreeNode[]
 export async function extractStructureFromDirectory(
 	dirPath: string,
@@ -261,88 +378,6 @@ export async function extractStructureFromDirectory(
 	};
 }
 
-// creates the file structure on disk (include content if available)
-export async function createTree(
-	path: string | null,
-	structure: FileTreeNode[],
-	parameters?: Record<string, string>,
-	overwrite: boolean = false,
-): Promise<boolean> {
-	if (!path) return false;
-
-	for (let i = 0; i < structure.length; ++i) {
-		const subPath = parameters
-			? MiscUtils.replacePlaceholdersInText(structure[i].path, parameters)
-			: structure[i].path;
-		const fullPath = FileUtils.formPath([path, subPath]);
-
-		if (structure[i].type == "file") {
-			const dir = FileUtils.getPathAndFileName(fullPath).path;
-			if (!FileUtils.doesDirectoryExist(dir)) {
-				FileUtils.createDirectory(dir, true);
-			}
-
-			if (structure[i].content) {
-				if (!overwrite && FileUtils.doesFileExist(fullPath)) {
-					const shouldOverwrite = await getche(
-						`File at '${fullPath}' already exists, overwrite (Y/N)? `,
-					);
-					if (!shouldOverwrite || shouldOverwrite.trim().toLowerCase() !== "y")
-						continue;
-				}
-				FileUtils.writeTextFile(fullPath, structure[i].content!);
-			}
-		} else {
-			FileUtils.createDirectory(fullPath, true);
-		}
-	}
-
-	return true;
-}
-
-// given a tree-directory structure already exists, prompts the user for content to be put into the files to be copied from clipboard once user is ready
-export async function addTreeContentInteractive(
-	path: string,
-	structure: FileTreeNode[],
-	parameters: Record<string, string>,
-): Promise<boolean> {
-	const cm = new ClipboardManager();
-	const logger = new Logger();
-
-	for (let i = 0; i < structure.length; ++i) {
-		if (structure[i].type !== "file") continue;
-
-		const subPath = MiscUtils.replacePlaceholdersInText(
-			structure[i].path,
-			parameters,
-		);
-
-		const fullPath = FileUtils.formPath([path, subPath]);
-
-		if (FileUtils.doesFileExist(fullPath)) {
-			const shouldOverwrite = await getche(
-				`File at '${fullPath}' already exists, overwrite (Y/N)? `,
-			);
-			if (shouldOverwrite.toLowerCase() !== "y") continue;
-		}
-
-		const choice = await getche(
-			`File: '${fullPath}'\n\tWhen ready press C else press Enter to skip: `,
-		);
-		if (choice && choice.trim().toLowerCase() == "c") {
-			const content = await cm.paste();
-			if (content) {
-				FileUtils.writeTextFile(fullPath, content);
-				logger.info("written");
-			}
-		} else {
-			logger.info("skipped");
-		}
-	}
-
-	return true;
-}
-
 export function drawFileTree(nodes: FileTreeNode[]): string {
 	if (nodes.length === 0) return "";
 
@@ -386,6 +421,94 @@ export function getFileListFromStructure(nodes: FileTreeNode[]): string {
 		}
 	}
 	return list.join("\n");
+}
+
+// creates the file structure on disk (include content if available)
+export async function createTree(
+	path: string | null,
+	structure: FileTreeNode[],
+	parameters: Record<string, string> | undefined = undefined,
+	overwriteBehaviour: "overwrite" | "fail" | "skip" | "prompt" = "prompt",
+	promptForFileContent: boolean = false,
+	ignorePromptWhereContentExistsInStructure: boolean = false,
+	ioHandler: CreateTreeIO | undefined = undefined,
+): Promise<boolean> {
+	if (!path) return false;
+	if (promptForFileContent && !ioHandler) return false;
+	if (overwriteBehaviour === "prompt" && !ioHandler) return false;
+
+	const cm = new ClipboardManager();
+	const exclusions = Settings.get("excludeFromContentInputPrompt")?.split(";");
+	const excludeDirs = Settings.get("excludeDirectories");
+
+	for (let i = 0; i < structure.length; ++i) {
+		const subPath = parameters
+			? MiscUtils.replacePlaceholdersInText(structure[i].path, parameters)
+			: structure[i].path;
+		const fullPath = FileUtils.formPath([path, subPath]);
+
+		if (structure[i].type == "file") {
+			if (exclusions) {
+				let valid = true;
+				for (let k = 0; k < exclusions?.length; ++k) {
+					if (fullPath.endsWith(exclusions[k])) {
+						valid = false;
+						break;
+					}
+				}
+				if (!valid) continue;
+			}
+
+			const dir = FileUtils.getPathAndFileName(fullPath).path;
+			if (!FileUtils.doesDirectoryExist(dir)) {
+				FileUtils.createDirectory(dir, true);
+			}
+
+			if (FileUtils.doesFileExist(fullPath)) {
+				switch (overwriteBehaviour) {
+					case "skip":
+						if (ioHandler) ioHandler.infoFileSkipped(path, fullPath);
+						break;
+
+					case "fail":
+						if (ioHandler) ioHandler.infoFileOverwriteAborted(fullPath);
+						return false;
+
+					case "prompt":
+						if (!ioHandler!.promptOverwriteFile(fullPath)) {
+							ioHandler!.infoFileSkipped(path, fullPath);
+							continue;
+						}
+				}
+			}
+
+			if (promptForFileContent) {
+				let content = null;
+				if (ignorePromptWhereContentExistsInStructure && structure[i].content) {
+					content = structure[i].content;
+				} else {
+					content = ioHandler!.promptForFileContent(fullPath, cm);
+				}
+
+				if (content) {
+					FileUtils.writeTextFile(fullPath, content);
+				} else {
+					ioHandler!.infoFileSkipped(path, fullPath);
+				}
+			} else {
+				// create blank file
+				FileUtils.writeTextFile(fullPath, "");
+			}
+		} else {
+			if (excludeDirs && excludeDirs.includes(structure[i].name)) continue;
+
+			if (!FileUtils.doesDirectoryExist(fullPath)) {
+				FileUtils.createDirectory(fullPath, true);
+			}
+		}
+	}
+
+	return true;
 }
 
 // ------------------------- [private] --------------------------

@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { Config } from "../utils/config.js";
+import { Config } from "../core/config.js";
 import {
 	ConsoleIO,
 	printField,

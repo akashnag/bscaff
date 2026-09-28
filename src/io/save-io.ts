@@ -14,11 +14,11 @@
 import chalk from "chalk";
 import ora, { Ora } from "ora";
 import { ClipboardManager } from "../core/clipboard.js";
+import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { FileTreeNode } from "../types/types.js";
-import { Config } from "../utils/config.js";
-import * as MiscUtils from "../utils/misc.js";
-import * as TreeUtils from "../utils/tree.js";
+import * as MiscUtils from "../utils/misc-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 import {
 	ConsoleIO,
 	getche,

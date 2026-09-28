@@ -53,7 +53,9 @@ export interface Template {
 }
 
 export interface BScaffSettings {
-	textEditor: string | null;
-	browser: string | null;
+	textEditor: string;
+	browser: string;
 	excludeFromContentModification: string;
+	excludeFromContentInputPrompt: string;
+	excludeDirectories: string[];
 }

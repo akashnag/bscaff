@@ -11,13 +11,13 @@
  * GNU General Public License for more details.
  */
 
+import { Config } from "../core/config.js";
 import { Store } from "../core/store.js";
 import { ScriptMissingError } from "../types/errors.js";
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
-import { Config } from "./config.js";
-import * as FileUtils from "./files.js";
-import * as MiscUtils from "./misc.js";
-import * as TemplateUtils from "./template.js";
+import * as FileUtils from "./file-utils.js";
+import * as MiscUtils from "./misc-utils.js";
+import * as TemplateUtils from "./template-utils.js";
 
 export function getSnapshotDB(): string {
 	return Config.getStoragePath([Config.SNAPSHOT_DB_FILE]);
@@ -88,6 +88,21 @@ export function deleteFileUnderSnapshot(
 	}
 
 	return false;
+}
+
+export function doesSnapshotContainDirectory(
+	record: SnapshotRecord,
+	relPath: string,
+): boolean {
+	// TODO: add code
+}
+
+export function deleteDirectoryUnderSnapshot(
+	store: Store,
+	key: string,
+	relPath: string,
+): boolean {
+	// TODO: add code
 }
 
 export function writeContentToSnapshotFile(

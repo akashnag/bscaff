@@ -16,8 +16,8 @@ import * as readline from "node:readline/promises";
 import chalk from "chalk";
 import { ClipboardManager } from "../core/clipboard.js";
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
-import * as FileUtils from "../utils/files.js";
-import * as MiscUtils from "../utils/misc.js";
+import * as FileUtils from "../utils/file-utils.js";
+import * as MiscUtils from "../utils/misc-utils.js";
 
 const SYMBOL_INFO: string = "ℹ";
 const SYMBOL_ERROR: string = "✖";
@@ -267,7 +267,7 @@ export function printPreview(
 	}
 }
 
-export abstract class ConsoleIO {
+export class ConsoleIO {
 	static setSilentMode() {
 		QUIET_MODE = true;
 	}
@@ -397,12 +397,16 @@ export abstract class ConsoleIO {
 		cm: ClipboardManager,
 		structure: FileTreeNode[],
 		updateStructureWithContent: boolean = false,
+		ignoreWhereContentExistsInStructure: boolean = false,
 	): Promise<{ sizeInBytes: number; fileContents: Record<string, string> }> {
 		let totalSize = 0;
 		const fileContents: Record<string, string> = {};
 
 		for (let i = 0; i < structure.length; ++i) {
 			if (structure[i].type == "file") {
+				if (ignoreWhereContentExistsInStructure && structure[i].content)
+					continue;
+
 				console.log(structure[i].path);
 				const choice = await getche(
 					"\t" +

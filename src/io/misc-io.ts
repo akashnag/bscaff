@@ -82,15 +82,26 @@ export class EditSnapshotsIO extends ConsoleIO {
 		// TODO: add code
 	}
 
-	errorFileDeletionUnsupported(key: string, sType: SnapshotType): void {
+	errorFileOrDirectoryDeletionUnsupported(
+		key: string,
+		sType: SnapshotType,
+	): void {
 		// TODO: add code
 	}
 
-	errorDeletingFile(key: string, relPath: string): void {
+	errorDeletingFileOrDirectory(
+		key: string,
+		relPath: string,
+		isFile: boolean,
+	): void {
 		// TODO: add code
 	}
 
-	successFileDeleted(key: string, relPath: string): void {
+	successFileOrDirectoryDeleted(
+		key: string,
+		relPath: string,
+		isFile: boolean,
+	): void {
 		// TODO: add code
 	}
 }

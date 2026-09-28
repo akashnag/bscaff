@@ -15,7 +15,7 @@ import * as fs from "fs";
 import { isBinaryFile } from "isbinaryfile";
 import * as path from "path";
 import process from "process";
-import * as MiscUtils from "./misc.js";
+import * as MiscUtils from "./misc-utils.js";
 
 export function formPath(items: string[]): string {
 	return path.join(...items);

@@ -12,9 +12,9 @@
  */
 
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
-import { Config } from "../utils/config.js";
-import * as FileUtils from "../utils/files.js";
-import * as SnapshotUtils from "../utils/snapshot.js";
+import * as FileUtils from "../utils/file-utils.js";
+import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import { Config } from "./config.js";
 
 export class Store {
 	private list: SnapshotRecord[];

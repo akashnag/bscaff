@@ -13,9 +13,9 @@
 
 import simpleGit, { type SimpleGit } from "simple-git";
 import { ClipboardManager } from "../core/clipboard.js";
+import { Config } from "../core/config.js";
 import { Store } from "../core/store.js";
 import { ConsoleIO } from "../io/io.js";
-import { Logger } from "../io/logger.js";
 import {
 	SaveASCIITreeIO,
 	SaveDirectoryIO,
@@ -23,15 +23,14 @@ import {
 	SaveGitRepoIO,
 	SaveSnippetIO,
 	SaveURLIO,
-} from "../io/save.js";
+} from "../io/save-io.js";
 import { ScriptMissingError } from "../types/errors.js";
 import { FileTreeNode, SnapshotType, Template } from "../types/types.js";
-import { Config } from "../utils/config.js";
-import * as FileUtils from "../utils/files.js";
-import * as MiscUtils from "../utils/misc.js";
-import * as SnapshotUtils from "../utils/snapshot.js";
-import * as TemplateUtils from "../utils/template.js";
-import * as TreeUtils from "../utils/tree.js";
+import * as FileUtils from "../utils/file-utils.js";
+import * as MiscUtils from "../utils/misc-utils.js";
+import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import * as TemplateUtils from "../utils/template-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 
 /*
 export async function saveLiveInput(

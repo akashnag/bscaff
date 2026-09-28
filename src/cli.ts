@@ -13,15 +13,16 @@
 
 import { Command, Option } from "commander";
 import pkg from "../package.json" with { type: "json" };
-import * as ListSnapshotCommands from "./commands/list.js";
-import * as SnapshotManagementCommands from "./commands/misc.js";
-import * as RecallSnapshotCommands from "./commands/recall.js";
-import * as SaveSnapshotCommands from "./commands/save.js";
-import * as TemplateCommands from "./commands/template.js";
+import * as CreateCommands from "./commands/create-commands.js";
+import * as RecallSnapshotCommands from "./commands/extract-commands.js";
+import * as ListSnapshotCommands from "./commands/list-commands.js";
+import * as SnapshotManagementCommands from "./commands/misc-commands.js";
+import * as SaveSnapshotCommands from "./commands/save-commands.js";
+import * as TemplateCommands from "./commands/template-commands.js";
+import { Config } from "./core/config.js";
 import { ConsoleIO } from "./io/io.js";
 import { Logger } from "./io/logger.js";
-import { Config } from "./utils/config.js";
-import * as MiscUtils from "./utils/misc.js";
+import * as MiscUtils from "./utils/misc-utils.js";
 
 export class CLI {
 	// shared Commander object
@@ -631,8 +632,16 @@ export class CLI {
 			.description(
 				"Creates a scaffolding tree (ASCII-art copied to clipboard) into the path specified",
 			)
-			.option("--overwrite", "Overwrite files in destination without prompting")
-			.option("--input", "Prompts to enter content of each file in the tree")
+			.addOption(
+				new Option(
+					"-e, --if-exists <behaviour>",
+					"Behaviour if destination file exists",
+				).choices(["overwrite", "fail", "skip", "prompt"]),
+			)
+			.option(
+				"--prompt-for-content",
+				"Prompts to enter content of each text-file in the tree",
+			)
 			.action(
 				async (
 					path: string,
@@ -640,7 +649,12 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await CreateCommands.createTreeOnDiskFromClipboard(
+						path,
+						options.ifExists,
+						options.promptForContent,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
@@ -649,7 +663,10 @@ export class CLI {
 			.description(
 				"Creates a file in the path specified from content copied to clipboard",
 			)
-			.option("--overwrite", "Overwrite file in destination without prompting")
+			.option(
+				"-o, --overwrite",
+				"Overwrite file in destination without prompting",
+			)
 			.action(
 				async (
 					path: string,
@@ -657,7 +674,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await CreateCommands.createFileOnDiskFromClipboard(
+						path,
+						options.overwrite,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 	}

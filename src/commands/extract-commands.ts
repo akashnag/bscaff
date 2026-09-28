@@ -12,17 +12,19 @@
  */
 
 import { ClipboardManager } from "../core/clipboard.js";
+import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
-import { Logger } from "../io/logger.js";
-import { CopySnapshotIO, OpenSnapshotIO } from "../io/recall.js";
+import { CopySnapshotIO, OpenSnapshotIO } from "../io/extract-io.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
-import { Config } from "../utils/config.js";
-import * as FileUtils from "../utils/files.js";
-import * as MiscUtils from "../utils/misc.js";
-import * as SnapshotUtils from "../utils/snapshot.js";
-import * as TreeUtils from "../utils/tree.js";
+import * as FileUtils from "../utils/file-utils.js";
+import * as MiscUtils from "../utils/misc-utils.js";
+import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 
+// --------------------------------------------------------
+// copy [path] [--as-tree]
+// --------------------------------------------------------
 export async function copyToClipboard(
 	key: string,
 	asTree: boolean | undefined,
@@ -112,7 +114,11 @@ export async function copyToClipboard(
 	io.successSnapshotCopied(key, record.type);
 	return true;
 }
+// --------------------------------------------------------
 
+// --------------------------------------------------------
+// open [path]
+// --------------------------------------------------------
 export async function openSnapshotReadOnly(
 	key: string,
 	relPath: string | undefined,
@@ -196,6 +202,7 @@ export async function openSnapshotReadOnly(
 
 	return true;
 }
+// --------------------------------------------------------
 
 /*
 

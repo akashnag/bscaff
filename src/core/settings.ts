@@ -12,15 +12,17 @@
  */
 
 import type { BScaffSettings } from "../types/types.js";
-import { Config } from "../utils/config.js";
-import * as FileUtils from "../utils/files.js";
-import * as MiscUtils from "../utils/misc.js";
+import * as FileUtils from "../utils/file-utils.js";
+import * as MiscUtils from "../utils/misc-utils.js";
+import { Config } from "./config.js";
 
 export class Settings {
 	static readonly DEFAULT_SETTINGS: BScaffSettings = {
 		textEditor: MiscUtils.getPlatform() == "win32" ? "notepad" : "nano",
 		browser: "google-chrome",
 		excludeFromContentModification: "*.html;*.j2",
+		excludeFromContentInputPrompt: "*.png;*.jpg;*.",
+		excludeDirectories: [".git", ".vscode", "node_modules"],
 	};
 
 	static settings: BScaffSettings;
@@ -51,16 +53,25 @@ export class Settings {
 	}
 
 	static update(key: string, value: string): boolean {
-		if (!Object.hasOwn(Settings.DEFAULT_SETTINGS, key)) return false;
-		Settings.settings[key as keyof BScaffSettings] = value;
-		return FileUtils.writeTextFile(
-			Settings.settingsFile,
-			JSON.stringify(Settings.settings, null, 2),
-		);
+		// Check if the string key actually exists on Settings
+		if (!(key in this.settings)) {
+			return false;
+		}
+
+		const settingKey = key as keyof Settings;
+
+		// Reject keys that are arrays/non-strings (e.g. excludeDirectories)
+		if (Array.isArray(this.settings[settingKey])) {
+			return false;
+		}
+
+		// Safely update string properties
+		(this.settings[settingKey] as string) = value;
+		return true;
 	}
 
-	static get(key: string): string | null {
+	static get<K extends keyof BScaffSettings>(key: K): BScaffSettings[K] | null {
 		if (!Object.hasOwn(Settings.DEFAULT_SETTINGS, key)) return null;
-		return Settings.settings[key as keyof BScaffSettings];
+		return this.settings[key];
 	}
 }

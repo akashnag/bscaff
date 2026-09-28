@@ -14,15 +14,15 @@
 import AdmZip from "adm-zip";
 import * as fs from "fs/promises";
 import YAML from "yaml";
+import { Config } from "../core/config.js";
 import { FileTreeNode, Template } from "../types/types.js";
-import { Config } from "./config.js";
-import * as FileUtils from "./files.js";
-import * as MiscUtils from "./misc.js";
+import * as FileUtils from "./file-utils.js";
+import * as MiscUtils from "./misc-utils.js";
 import {
 	drawFileTree,
 	extractStructureFromASCIITree,
 	extractStructureFromDirectory,
-} from "./tree.js";
+} from "./tree-utils.js";
 
 export async function readTemplateFile(
 	filePath: string,
