@@ -14,6 +14,7 @@
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 import { Config } from "./config.js";
 
 export class Store {
@@ -101,6 +102,10 @@ export class Store {
 			for (let i = 0; i < info.structure.length; ++i) {
 				info.structure[i].content = undefined;
 			}
+		}
+
+		if (info.structure) {
+			info.structure = TreeUtils.sortTreeStructure(info.structure);
 		}
 
 		this.list.push(info);

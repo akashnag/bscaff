@@ -45,7 +45,7 @@ export interface SnapshotRecord {
 	modifiedAt?: Date;
 
 	structure?: FileTreeNode[]; // only for tree, template and files
-	parameters?: string[];
+	parameters?: string[]; // only for tree, and files (for template it is embedded inside Template)
 }
 
 export interface Template {

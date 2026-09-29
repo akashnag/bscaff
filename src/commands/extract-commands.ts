@@ -15,7 +15,11 @@ import { ClipboardManager } from "../core/clipboard.js";
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
-import { CopySnapshotIO, OpenSnapshotIO } from "../io/extract-io.js";
+import {
+	CopySnapshotIO,
+	ExtractSnapshotIO,
+	OpenSnapshotIO,
+} from "../io/extract-io.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
@@ -26,12 +30,17 @@ import * as TreeUtils from "../utils/tree-utils.js";
 // copy [path] [--as-tree]
 // --------------------------------------------------------
 export async function copyToClipboard(
-	key: string,
+	key: string | undefined,
 	asTree: boolean | undefined,
 	relPath: string | undefined,
 ): Promise<boolean> {
 	const cm = new ClipboardManager();
 	const io = new CopySnapshotIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
 
 	const store = await Store.create();
 	if (!store.doesKeyExist(key)) {
@@ -120,10 +129,15 @@ export async function copyToClipboard(
 // open [path]
 // --------------------------------------------------------
 export async function openSnapshotReadOnly(
-	key: string,
+	key: string | undefined,
 	relPath: string | undefined,
 ): Promise<boolean> {
 	const io = new OpenSnapshotIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
 
 	const store = await Store.create();
 	if (!store.doesKeyExist(key)) {
@@ -203,6 +217,268 @@ export async function openSnapshotReadOnly(
 	return true;
 }
 // --------------------------------------------------------
+
+// --------------------------------------------------------
+// extract <to-path> [--dry-run] [--partial <rel-path>] [--if-exists <behaviour>]
+// --------------------------------------------------------
+export async function extract(
+	key: string | undefined,
+	dryRun: boolean | undefined,
+	overwriteBehaviour: string | undefined,
+	partialRelativePath: string | undefined,
+	toPath: string,
+): Promise<boolean> {
+	const io = new ExtractSnapshotIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	const store = await Store.create();
+	if (!store.doesKeyExist(key)) {
+		io.errorKeyNotFound(key);
+		return false;
+	}
+
+	const record = store.fetch(key);
+	if (!record) {
+		io.errorFetchingSnapshot(key);
+		return false;
+	}
+
+	toPath = FileUtils.resolvePath(toPath);
+	if (partialRelativePath && !partialRelativePath.startsWith("/")) {
+		partialRelativePath = "/" + partialRelativePath;
+	}
+
+	if (
+		![SnapshotType.Files, SnapshotType.Template, SnapshotType.Tree].includes(
+			record.type,
+		)
+	) {
+		io.errorExtractionUnsupported(record.type);
+		return false;
+	}
+
+	if (!record.structure && record.type !== SnapshotType.Template) {
+		io.errorCorruptedData("structure");
+		return false;
+	}
+
+	if (!record.parameters) {
+		io.errorCorruptedData("parameters");
+		return false;
+	}
+
+	if (!overwriteBehaviour) overwriteBehaviour = "prompt";
+	if (!dryRun) dryRun = false;
+
+	const parameterValues = io.promptForParameters(record.parameters);
+
+	switch (record.type) {
+		case SnapshotType.Files:
+			return extractFiles(
+				key,
+				record,
+				dryRun,
+				overwriteBehaviour,
+				partialRelativePath,
+				toPath,
+				parameterValues,
+			);
+
+		case SnapshotType.Tree:
+			return extractTree(
+				key,
+				record,
+				dryRun,
+				overwriteBehaviour,
+				partialRelativePath,
+				toPath,
+				parameterValues,
+			);
+
+		case SnapshotType.Template:
+			return extractTemplate(
+				key,
+				record,
+				dryRun,
+				overwriteBehaviour,
+				partialRelativePath,
+				toPath,
+				parameterValues,
+			);
+
+		default:
+			io.errorExtractionUnsupported(record.type);
+			return false;
+	}
+}
+
+async function extractFiles(
+	key: string,
+	record: SnapshotRecord,
+	dryRun: boolean,
+	overwriteBehaviour: string,
+	partialRelativePath: string | undefined,
+	toPath: string,
+	parameterValues: Record<string, string>,
+): Promise<boolean> {
+	if (!record.structure) return false;
+	if (record.type !== SnapshotType.Files) return false;
+
+	const io = new ExtractSnapshotIO();
+
+	for (let i = 0; i < record.structure.length; ++i) {
+		if (record.structure[i].type !== "file") continue;
+		if (partialRelativePath && record.structure[i].path !== partialRelativePath)
+			continue;
+
+		const relPath = MiscUtils.replacePlaceholdersInText(
+			record.structure[i].path,
+			parameterValues,
+		);
+		const targetPath = FileUtils.formPath([toPath, relPath]);
+		const sourcePath = SnapshotUtils.getFileUnderSnapshot(
+			key,
+			record.structure[i].path,
+		);
+
+		if (!extractFile(io, dryRun, overwriteBehaviour, sourcePath, targetPath))
+			return false;
+	}
+
+	return true;
+}
+
+async function extractTree(
+	key: string,
+	record: SnapshotRecord,
+	dryRun: boolean,
+	overwriteBehaviour: string,
+	partialRelativePath: string | undefined,
+	toPath: string,
+	parameterValues: Record<string, string>,
+): Promise<boolean> {
+	if (!record.structure) return false;
+	if (record.type !== SnapshotType.Tree) return false;
+
+	const io = new ExtractSnapshotIO();
+	for (let i = 0; i < record.structure.length; ++i) {
+		const node = record.structure[i];
+
+		if (
+			partialRelativePath &&
+			!isPathChild(partialRelativePath, node.path, node.type)
+		) {
+			continue;
+		}
+
+		const relPath = MiscUtils.replacePlaceholdersInText(
+			node.path,
+			parameterValues,
+		);
+		const targetPath = FileUtils.formPath([toPath, relPath]);
+		const sourcePath = SnapshotUtils.getFileUnderSnapshot(key, node.path);
+
+		if (node.type === "dir") {
+			if (!FileUtils.doesDirectoryExist(targetPath)) {
+				io.infoDirectoryCreate(targetPath);
+				if (!dryRun) FileUtils.createDirectory(targetPath);
+			} else {
+				io.infoDirectoryCreateSkip(targetPath);
+			}
+		} else {
+			if (!extractFile(io, dryRun, overwriteBehaviour, sourcePath, targetPath))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+async function extractTemplate(
+	key: string,
+	record: SnapshotRecord,
+	dryRun: boolean,
+	overwriteBehaviour: string,
+	partialRelativePath: string | undefined,
+	toPath: string,
+	parameterValues: Record<string, string>,
+): Promise<boolean> {
+	if (record.type !== SnapshotType.Template) return false;
+
+	// TODO: add code
+}
+// --------------------- [private] ----------------------
+
+function isPathChild(
+	partialPath: string,
+	fullPath: string,
+	pathType: "file" | "dir",
+): boolean {
+	if (!partialPath.endsWith("/")) partialPath += "/";
+	if (pathType === "dir" && !fullPath.endsWith("/")) fullPath += "/";
+
+	if (!partialPath.startsWith("/")) partialPath = "/" + partialPath;
+	if (!fullPath.startsWith("/")) fullPath = "/" + fullPath;
+
+	/*
+	Examples:
+		partialPath = /dir1/dir2/
+		fullPath:
+					/dir1/dir2/dir3/file1.ext	--> TRUE
+					/dir1/dir3/					--> FALSE
+					/dir1/dir2/dir3/			--> TRUE
+					/dir1/dir2/					--> TRUE
+	*/
+	return fullPath.startsWith(partialPath);
+}
+
+function extractFile(
+	io: ExtractSnapshotIO,
+	dryRun: boolean,
+	overwriteBehaviour: string,
+	sourcePath: string,
+	targetPath: string,
+): boolean {
+	const exists = FileUtils.doesFileExist(targetPath);
+
+	let overwrite = false;
+
+	if (!exists) {
+		io.infoFileCreate(targetPath);
+	} else {
+		switch (overwriteBehaviour) {
+			case "prompt":
+				overwrite = io.promptForFileOverwrite(targetPath);
+				if (overwrite) io.infoFileCreateSkipPostPrompt();
+				else io.infoFileCreateOverwritePostPrompt();
+				break;
+
+			case "skip":
+				io.infoFileCreateSkip(targetPath);
+				return true;
+
+			case "fail":
+				io.infoFileCreateFail(targetPath);
+				return false;
+
+			case "overwrite":
+				io.infoFileCreateOverwrite(targetPath);
+				overwrite = true;
+				break;
+		}
+	}
+
+	if (!dryRun && (!exists || overwrite)) {
+		if (exists) FileUtils.deleteFile(targetPath);
+		FileUtils.copyFile(sourcePath, targetPath);
+	}
+
+	return true;
+}
 
 /*
 

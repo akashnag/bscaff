@@ -180,7 +180,11 @@ export function openFileInEditor(
 			// stdio: 'inherit' attaches TTY so interactive terminal editors (nano/vim) work
 			let result;
 			if (detach) {
-				result = spawn(textEditor!, [filePath]);
+				const child = spawn(textEditor!, [filePath], {
+					detached: true,
+					stdio: "ignore",
+				});
+				child.unref();
 				return true;
 			} else {
 				result = spawnSync(textEditor!, [filePath], {
@@ -197,91 +201,8 @@ export function openFileInEditor(
 	}
 }
 
-// Extracts all parameters enclosed within {{ and }} from a string
-export function getParametersFromText(text: string): string[] {
-	// Regex matching {{ followed by non-}} characters, capturing the inner content
-	const regex = /\{\{([^}]+)\}\}/g;
-	const matches: string[] = [];
-
-	let match: RegExpExecArray | null;
-	while ((match = regex.exec(text)) !== null) {
-		// match[1] refers to the first capture group (inside {{ }})
-		matches.push(match[1].trim());
-	}
-
-	return matches;
-}
-
 export function getSizeOfTextContent(text: string): number {
 	return new TextEncoder().encode(text).length;
-}
-
-export async function getParametersFromFileContent(
-	filePath: string,
-): Promise<string[]> {
-	const fileType = FileUtils.getFileType(filePath, true);
-	const exclusions = Settings.get("excludeFromContentModification")?.split(";");
-
-	if (exclusions) {
-		for (let i = 0; i < exclusions.length; ++i) {
-			if (
-				exclusions[i].substring(1).toLocaleLowerCase() ==
-				fileType.toLocaleLowerCase()
-			)
-				return [];
-		}
-	}
-
-	const content = await FileUtils.readTextFile(filePath);
-	if (!content) return [];
-
-	return getParametersFromText(content);
-}
-
-export function replacePlaceholdersInText(
-	template: string,
-	params: Record<string, string>,
-): string {
-	return template.replace(/\{\{\s*(.*?)\s*\}\}/g, (match, key) => {
-		return key in params ? params[key] : match;
-	});
-}
-
-export async function replacePlaceholdersInFile(
-	pathType: "directory" | "file",
-	filePath: string,
-	params: Record<string, string>,
-): Promise<string> {
-	const exclusions = Settings.get("excludeFromContentModification")!.split(";");
-
-	// rename file
-	const parts = FileUtils.getPathAndFileName(filePath);
-	parts.filename = replacePlaceholdersInText(parts.filename, params);
-	const newFilePath = FileUtils.formPath([parts.path, parts.filename]);
-	if (filePath != newFilePath) {
-		if (pathType == "file") FileUtils.renameFile(filePath, newFilePath);
-		else FileUtils.renameDirectory(filePath, newFilePath);
-	}
-
-	if (pathType == "directory") return newFilePath;
-
-	// check if content-modification is allowed
-	for (let i = 0; i < exclusions.length; ++i) {
-		if (!exclusions[i].startsWith("*.")) continue;
-		if (
-			filePath.toLowerCase().endsWith(exclusions[i].substring(1).toLowerCase())
-		)
-			return newFilePath;
-	}
-
-	// perform content modification
-	let text: string | null = await FileUtils.readTextFile(newFilePath);
-	if (text) {
-		text = replacePlaceholdersInText(text, params);
-		FileUtils.writeTextFile(newFilePath, text);
-	}
-
-	return newFilePath;
 }
 
 export function formatFileSize(
@@ -300,16 +221,6 @@ export function formatFileSize(
 	const unitIndex = Math.min(i, sizes.length - 1);
 
 	return `${parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(dm))} ${sizes[unitIndex]}`;
-}
-
-export async function getParameterValuesFromUser(
-	parameters: string[],
-): Promise<Record<string, string>> {
-	const paramValues: Record<string, string> = {};
-	for (const param of parameters) {
-		paramValues[param] = await prompt(`Enter value for parameter '${param}': `);
-	}
-	return paramValues;
 }
 
 // ------------------------- [private] -------------------------
@@ -345,8 +256,8 @@ function openFileInGUIEditor(
 			break;
 
 		default: // Linux / BSD
-			command = isCommandAvailable(Settings.get("guiEditor"))
-				? Settings.get("guiEditor")
+			command = isCommandAvailable(Settings.get("textEditor"))
+				? Settings.get("textEditor")
 				: "xdg-open";
 			args = [filePath];
 			break;
@@ -358,10 +269,11 @@ function openFileInGUIEditor(
 		let result;
 
 		if (detach) {
-			result = spawnSync(command, args);
+			const child = spawn(command, args, { detached: true, stdio: "ignore" });
+			child.unref();
 			return true;
 		} else {
-			result = spawnSync(command, args, { stdio: "ignore" });
+			result = spawnSync(command, args, { stdio: "inherit" });
 			return result.status === 0 && result.error === undefined;
 		}
 	} catch (err) {

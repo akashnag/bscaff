@@ -15,6 +15,8 @@ import AdmZip from "adm-zip";
 import * as fs from "fs/promises";
 import YAML from "yaml";
 import { Config } from "../core/config.js";
+import { TemplateParseError } from "../types/errors.js";
+import { TemplateQuestion } from "../types/template-types.js";
 import { FileTreeNode, Template } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
@@ -23,19 +25,6 @@ import {
 	extractStructureFromASCIITree,
 	extractStructureFromDirectory,
 } from "./tree-utils.js";
-
-export async function readTemplateFile(
-	filePath: string,
-): Promise<Template | null> {
-	return await readYamlFile<Template>(filePath);
-}
-
-export async function writeTemplateFile(
-	filePath: string,
-	templateData: Template,
-): Promise<boolean> {
-	return writeYamlFile<Template>(filePath, templateData);
-}
 
 // ------------------- [Zip operations] ---------------------
 
@@ -103,24 +92,64 @@ export function doesZipHaveFileUnderRootDirectory(
 	}
 }
 
-// ------------------- [YAML operations] ---------------------
+// ------------------- [Template operations] ---------------------
 
-async function readYamlFile<T>(pathToFile: string): Promise<T | null> {
+export async function readTemplateFile(
+	filePath: string,
+): Promise<Template | null> {
+	const fileContent = await FileUtils.readTextFile(filePath);
+	if (!fileContent) return null;
+
+	let rawDoc: unknown;
 	try {
-		const fileContent = await FileUtils.readTextFile(pathToFile);
-		if (!fileContent) return null;
-		const doc = YAML.parse(fileContent);
-		return doc as T;
-	} catch {
-		return null;
+		rawDoc = YAML.parse(fileContent);
+	} catch (err) {
+		throw new TemplateParseError(
+			`Failed to parse YAML syntax in ${filePath}: ${(err as Error).message}`,
+			err,
+		);
 	}
+
+	if (typeof rawDoc !== "object" || rawDoc === null) {
+		throw new TemplateParseError(
+			`Invalid template file structure in ${filePath}. Root must be an object.`,
+		);
+	}
+
+	return normalizeAndValidateTemplate(rawDoc as Record<string, unknown>);
 }
 
-async function writeYamlFile<T>(pathToFile: string, data: T): Promise<boolean> {
-	try {
-		const yamlString = YAML.stringify(data);
-		return FileUtils.writeTextFile(pathToFile, yamlString);
-	} catch {
-		return false;
+/**
+ * Normalizes shorthands (e.g., key: "default value") into full Question objects.
+ */
+function normalizeAndValidateTemplate(raw: Record<string, unknown>): Template {
+	const template: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(raw)) {
+		if (key.startsWith("_")) {
+			(template as Record<string, unknown>)[key] = value;
+		} else {
+			// Normalize shorthand prompt definitions
+			if (
+				typeof value === "object" &&
+				value !== null &&
+				!Array.isArray(value)
+			) {
+				template[key] = value as TemplateQuestion;
+			} else {
+				// Expand shorthand string/boolean/number defaults into Question objects
+				template[key] = {
+					default: value as TemplateQuestion["default"],
+					type:
+						typeof value === "number"
+							? "int"
+							: typeof value === "boolean"
+								? "bool"
+								: "str",
+				};
+			}
+		}
 	}
+
+	return template as Template;
 }

@@ -14,7 +14,7 @@
 import { Command, Option } from "commander";
 import pkg from "../package.json" with { type: "json" };
 import * as CreateCommands from "./commands/create-commands.js";
-import * as RecallSnapshotCommands from "./commands/extract-commands.js";
+import * as ExtractSnapshotCommands from "./commands/extract-commands.js";
 import * as ListSnapshotCommands from "./commands/list-commands.js";
 import * as SnapshotManagementCommands from "./commands/misc-commands.js";
 import * as SaveSnapshotCommands from "./commands/save-commands.js";
@@ -452,7 +452,7 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await RecallSnapshotCommands.copyToClipboard(
+					const retVal = await ExtractSnapshotCommands.copyToClipboard(
 						globalOpts.key,
 						options.asTree,
 						relPath,
@@ -473,7 +473,7 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await RecallSnapshotCommands.openSnapshotReadOnly(
+					const retVal = await ExtractSnapshotCommands.openSnapshotReadOnly(
 						globalOpts.key,
 						relPath,
 					);
@@ -488,6 +488,10 @@ export class CLI {
 				"--partial <rel-path>",
 				"Extract the snapshot partially under path specified by <rel-path>",
 			)
+			.option(
+				"--dry-run",
+				"Do a dry-run without actually performing the extraction",
+			)
 			.addOption(
 				new Option(
 					"-e, --if-exists <behaviour>",
@@ -501,7 +505,14 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const retVal = await ExtractSnapshotCommands.extract(
+						globalOpts.key,
+						options.dryRun,
+						options.ifExists,
+						options.partial,
+						path,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 	}

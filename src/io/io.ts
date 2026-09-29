@@ -470,4 +470,12 @@ export class ConsoleIO {
 	): void {
 		// TODO: add code
 	}
+
+	errorCorruptedData(dataItem: string): void {
+		// TODO: add code
+	}
+
+	promptForParameters(parameters: string[]): Record<string, string> {
+		// TODO: add code
+	}
 }

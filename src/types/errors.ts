@@ -21,3 +21,13 @@ export class ScriptMissingError extends Error {
 		this.path = path;
 	}
 }
+
+export class TemplateParseError extends Error {
+	constructor(
+		message: string,
+		public readonly cause?: unknown,
+	) {
+		super(message);
+		this.name = "TemplateParseError";
+	}
+}

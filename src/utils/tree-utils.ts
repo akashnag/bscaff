@@ -511,6 +511,10 @@ export async function createTree(
 	return true;
 }
 
+export function sortTreeStructure(nodes: FileTreeNode[]): FileTreeNode[] {
+	// TODO: add code
+}
+
 // ------------------------- [private] --------------------------
 
 function isLastSibling(nodes: FileTreeNode[], currentIndex: number): boolean {
