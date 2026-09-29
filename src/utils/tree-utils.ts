@@ -425,11 +425,11 @@ export function getFileListFromStructure(nodes: FileTreeNode[]): string {
 	return list.join("\n");
 }
 
-// creates the file structure on disk (include content if available)
+// creates the file structure on disk (include content if available) - does not copy saved files
 export async function createTree(
 	path: string | null,
 	structure: FileTreeNode[],
-	parameters: Record<string, string> | undefined = undefined,
+	parameters: Record<string, any> | undefined = undefined,
 	overwriteBehaviour: "overwrite" | "fail" | "skip" | "prompt" = "prompt",
 	promptForFileContent: boolean = false,
 	ignorePromptWhereContentExistsInStructure: boolean = false,
@@ -442,32 +442,22 @@ export async function createTree(
 	const cm = new ClipboardManager();
 	const engine = ParamUtils.createTemplateEngine();
 
-	// TODO: handle exclusions and inclusions in a generic way so that this function can be reused for templates
-	const exclusions = Settings.get("excludeFromContentInputPrompt")?.split(";");
-	const excludeDirs = Settings.get("excludeDirectories");
-
 	for (let i = 0; i < structure.length; ++i) {
 		const subPath = parameters
-			? ParamUtils.replacePlaceholdersInText(
+			? ParamUtils.replacePlaceholdersInFileName(
 					structure[i].path,
 					parameters,
+					{
+						exclude: Settings.get("exclude") ?? [],
+						include: Settings.get("include") ?? [],
+						templatesSuffix: Settings.get("templatesSuffix") ?? "",
+					},
 					engine,
 				)
 			: structure[i].path;
 		const fullPath = FileUtils.formPath([path, subPath]);
 
 		if (structure[i].type == "file") {
-			if (exclusions) {
-				let valid = true;
-				for (let k = 0; k < exclusions?.length; ++k) {
-					if (fullPath.endsWith(exclusions[k])) {
-						valid = false;
-						break;
-					}
-				}
-				if (!valid) continue;
-			}
-
 			const dir = FileUtils.getPathAndFileName(fullPath).path;
 			if (!FileUtils.doesDirectoryExist(dir)) {
 				FileUtils.createDirectory(dir, true);
@@ -497,6 +487,18 @@ export async function createTree(
 					content = structure[i].content;
 				} else {
 					content = ioHandler!.promptForFileContent(fullPath, cm);
+					if (parameters) {
+						content = await ParamUtils.replacePlaceholdersInFileContent(
+							fullPath,
+							parameters,
+							{
+								exclude: Settings.get("exclude") ?? [],
+								include: Settings.get("include") ?? [],
+								templatesSuffix: Settings.get("templatesSuffix") ?? "",
+							},
+							engine,
+						);
+					}
 				}
 
 				if (content) {
@@ -509,19 +511,32 @@ export async function createTree(
 				FileUtils.writeTextFile(fullPath, "");
 			}
 		} else {
-			if (excludeDirs && excludeDirs.includes(structure[i].name)) continue;
-
 			if (!FileUtils.doesDirectoryExist(fullPath)) {
 				FileUtils.createDirectory(fullPath, true);
 			}
 		}
 	}
 
+	// TODO: verify if Settings.exclude and include are considered while copying files (i.e. excludes must not be copied)
+
 	return true;
 }
 
 export function sortTreeStructure(nodes: FileTreeNode[]): FileTreeNode[] {
-	// TODO: add code
+	return [...nodes].sort((a, b) => {
+		// Sort by hierarchy level ascending (root/higher order first)
+		if (a.level !== b.level) {
+			return a.level - b.level;
+		}
+
+		// Sort directories before files at the same level
+		if (a.type !== b.type) {
+			return a.type === "dir" ? -1 : 1;
+		}
+
+		// Optional: Sort alphabetically by name for deterministic ordering
+		return a.name.localeCompare(b.name);
+	});
 }
 
 // ------------------------- [private] --------------------------

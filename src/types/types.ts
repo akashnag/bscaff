@@ -51,7 +51,7 @@ export interface SnapshotRecord {
 export interface BScaffSettings {
 	textEditor: string;
 	browser: string;
-	excludeFromContentModification: string;
-	excludeFromContentInputPrompt: string;
-	excludeDirectories: string[];
+	templatesSuffix: string;
+	include: string[];
+	exclude: string[];
 }

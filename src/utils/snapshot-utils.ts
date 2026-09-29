@@ -12,6 +12,7 @@
  */
 
 import { Config } from "../core/config.js";
+import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
 import { ScriptMissingError } from "../types/errors.js";
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
@@ -278,6 +279,12 @@ export async function copyFilesToSnapshotDirectory(
 	stats: { sizeInBytes: number; fileCount: number; dirCount: number };
 }> {
 	const localDir = getSnapshotDirectory(key);
+	const engine = ParamUtils.createTemplateEngine();
+	const templatingOptions = {
+		exclude: Settings.get("exclude") ?? [],
+		include: Settings.get("include") ?? [],
+		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+	};
 
 	const structure: FileTreeNode[] = [];
 	const parameters: Set<string> = new Set<string>();
@@ -298,7 +305,11 @@ export async function copyFilesToSnapshotDirectory(
 			stats.sizeInBytes + size;
 			++stats.fileCount;
 			params.push(
-				...(await ParamUtils.getParametersFromFileContent(localFile)),
+				...(await ParamUtils.getParametersFromFileContent(
+					localFile,
+					templatingOptions,
+					engine,
+				)),
 			);
 
 			params.forEach((param) => {

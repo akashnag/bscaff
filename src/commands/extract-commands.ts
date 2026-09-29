@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import * as nunjucks from "nunjucks";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
@@ -331,15 +332,21 @@ async function extractFiles(
 
 	const io = new ExtractSnapshotIO();
 	const engine = ParamUtils.createTemplateEngine();
+	const templatingOptions = {
+		exclude: Settings.get("exclude") ?? [],
+		include: Settings.get("include") ?? [],
+		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+	};
 
 	for (let i = 0; i < record.structure.length; ++i) {
 		if (record.structure[i].type !== "file") continue;
 		if (partialRelativePath && record.structure[i].path !== partialRelativePath)
 			continue;
 
-		const relPath = ParamUtils.replacePlaceholdersInText(
+		const relPath = ParamUtils.replacePlaceholdersInFileName(
 			record.structure[i].path,
 			parameterValues,
+			templatingOptions,
 			engine,
 		);
 		const targetPath = FileUtils.formPath([toPath, relPath]);
@@ -355,6 +362,9 @@ async function extractFiles(
 				overwriteBehaviour,
 				sourcePath,
 				targetPath,
+				parameterValues,
+				templatingOptions,
+				engine,
 			))
 		)
 			return false;
@@ -377,6 +387,11 @@ async function extractTree(
 
 	const io = new ExtractSnapshotIO();
 	const engine = ParamUtils.createTemplateEngine();
+	const templatingOptions = {
+		exclude: Settings.get("exclude") ?? [],
+		include: Settings.get("include") ?? [],
+		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+	};
 
 	for (let i = 0; i < record.structure.length; ++i) {
 		const node = record.structure[i];
@@ -388,9 +403,10 @@ async function extractTree(
 			continue;
 		}
 
-		const relPath = ParamUtils.replacePlaceholdersInText(
+		const relPath = ParamUtils.replacePlaceholdersInFileName(
 			node.path,
 			parameterValues,
+			templatingOptions,
 			engine,
 		);
 		const targetPath = FileUtils.formPath([toPath, relPath]);
@@ -411,6 +427,9 @@ async function extractTree(
 					overwriteBehaviour,
 					sourcePath,
 					targetPath,
+					parameterValues,
+					templatingOptions,
+					engine,
 				))
 			)
 				return false;
@@ -464,6 +483,13 @@ async function extractFile(
 	overwriteBehaviour: string,
 	sourcePath: string,
 	targetPath: string,
+	parameterValues?: Record<string, any>,
+	options?: {
+		exclude?: string[];
+		include?: string[];
+		templatesSuffix?: string;
+	},
+	engine?: nunjucks.Environment,
 ): Promise<boolean> {
 	const exists = FileUtils.doesFileExist(targetPath);
 
@@ -494,9 +520,27 @@ async function extractFile(
 		}
 	}
 
+	// NOTE: targetPath must be already parameter-replaced (considering include, exclude and templatesSuffix) before calling this function
 	if (!dryRun && (!exists || overwrite)) {
 		if (exists) FileUtils.deleteFile(targetPath);
-		FileUtils.copyFile(sourcePath, targetPath);
+
+		if (parameterValues && options && engine) {
+			const content = await ParamUtils.replacePlaceholdersInFileContent(
+				sourcePath,
+				parameterValues,
+				options,
+				engine,
+			);
+
+			if (!content) {
+				io.errorGeneric("extractFile::1");
+				return false;
+			}
+
+			FileUtils.writeTextFile(targetPath, content);
+		} else {
+			FileUtils.copyFile(sourcePath, targetPath);
+		}
 	}
 
 	return true;

@@ -37,7 +37,7 @@ export function createTemplateEngine(
 }
 
 export function getParametersFromText(
-	templateContent: string,
+	text: string,
 	engine?: nunjucks.Environment,
 ): string[] {
 	const variables = new Set<string>();
@@ -49,7 +49,7 @@ export function getParametersFromText(
 		// 1. Create a Parser instance bound to your custom Environment's lexer
 		// This ensures custom envops (tags/delimiters) are respected during tokenization!
 		const parser = new (nunjucks as any).parser.Parser(
-			(nunjucks as any).lexer.lex(templateContent, (engine as any).opts?.tags),
+			(nunjucks as any).lexer.lex(text, (engine as any).opts?.tags),
 		);
 
 		// 2. Parse into AST
@@ -100,15 +100,11 @@ export function getParametersFromText(
 
 export async function getParametersFromFileContent(
 	filePath: string,
-	template?: Template,
+	options: { exclude?: string[]; include?: string[]; templatesSuffix?: string },
 	engine?: nunjucks.Environment,
 ): Promise<string[]> {
 	// Check template suffix (if suffix is non-empty, file must end with it)
-	if (
-		template &&
-		template._templates_suffix &&
-		!filePath.endsWith(template._templates_suffix)
-	) {
+	if (options.templatesSuffix && !filePath.endsWith(options.templatesSuffix)) {
 		return [];
 	}
 
@@ -120,16 +116,14 @@ export async function getParametersFromFileContent(
 	// Inclusions override exclusions. If included, process it.
 	// If explicitly excluded (and not included), skip it.
 	const isIncluded =
-		template &&
-		template._include &&
-		template._include.length > 0 &&
-		matchesAny(template._include);
+		options.include &&
+		options.include.length > 0 &&
+		matchesAny(options.include);
 
 	const isExcluded =
-		template &&
-		template._exclude &&
-		template._exclude.length > 0 &&
-		matchesAny(template._exclude);
+		options.exclude &&
+		options.exclude.length > 0 &&
+		matchesAny(options.exclude);
 
 	if (isExcluded && !isIncluded) {
 		return [];
@@ -140,13 +134,74 @@ export async function getParametersFromFileContent(
 	return content ? getParametersFromText(content, engine) : [];
 }
 
-export function replacePlaceholdersInText(
-	template: string,
-	paramValues: Record<string, unknown>,
+export function replacePlaceholdersInFileName(
+	fileName: string,
+	paramValues: Record<string, any>,
+	options: { exclude?: string[]; include?: string[]; templatesSuffix?: string },
 	engine?: nunjucks.Environment,
 ): string {
-	if (!engine) engine = createTemplateEngine();
-	return engine.renderString(template, paramValues);
+	const matchesAny = (patterns: string[]): boolean =>
+		patterns.some((pattern) => globToRegex(pattern).test(fileName));
+
+	const isIncluded =
+		options.include &&
+		options.include.length > 0 &&
+		matchesAny(options.include);
+
+	const isExcluded =
+		options.exclude &&
+		options.exclude.length > 0 &&
+		matchesAny(options.exclude);
+
+	if (isExcluded && !isIncluded) {
+		return fileName;
+	}
+
+	let modFileName = replacePlaceholdersInText(fileName, paramValues, engine);
+
+	if (
+		options.templatesSuffix &&
+		modFileName.endsWith(options.templatesSuffix)
+	) {
+		modFileName = modFileName.substring(
+			0,
+			modFileName.length - options.templatesSuffix.length,
+		);
+	}
+	return modFileName;
+}
+
+export async function replacePlaceholdersInFileContent(
+	filePath: string,
+	paramValues: Record<string, any>,
+	options: { exclude?: string[]; include?: string[]; templatesSuffix?: string },
+	engine?: nunjucks.Environment,
+): Promise<string | null> {
+	const matchesAny = (patterns: string[]): boolean =>
+		patterns.some((pattern) => globToRegex(pattern).test(filePath));
+
+	const content = await FileUtils.readTextFile(filePath);
+	if (!content) return null;
+
+	const isIncluded =
+		options.include &&
+		options.include.length > 0 &&
+		matchesAny(options.include);
+
+	const isExcluded =
+		options.exclude &&
+		options.exclude.length > 0 &&
+		matchesAny(options.exclude);
+
+	if (isExcluded && !isIncluded) {
+		return content;
+	}
+
+	if (options.templatesSuffix && !filePath.endsWith(options.templatesSuffix)) {
+		return content;
+	}
+
+	return replacePlaceholdersInText(content, paramValues, engine);
 }
 
 // ----------------------- [private] ---------------------------
@@ -193,4 +248,13 @@ function globToRegex(glob: string, flags: string = "i"): RegExp {
 	}
 
 	return new RegExp(`^${regexStr}$`, flags);
+}
+
+function replacePlaceholdersInText(
+	text: string,
+	paramValues: Record<string, any>,
+	engine?: nunjucks.Environment,
+): string {
+	if (!engine) engine = createTemplateEngine();
+	return engine.renderString(text, paramValues);
 }

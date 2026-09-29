@@ -20,9 +20,9 @@ export class Settings {
 	static readonly DEFAULT_SETTINGS: BScaffSettings = {
 		textEditor: MiscUtils.getPlatform() == "win32" ? "notepad" : "nano",
 		browser: "google-chrome",
-		excludeFromContentModification: "*.html;*.j2",
-		excludeFromContentInputPrompt: "*.png;*.jpg;*.",
-		excludeDirectories: [".git", ".vscode", "node_modules"],
+		exclude: [".git", ".vscode", "node_modules"],
+		include: [],
+		templatesSuffix: ".jinja",
 	};
 
 	static settings: BScaffSettings;
