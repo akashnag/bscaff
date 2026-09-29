@@ -23,6 +23,7 @@ import {
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
+import * as ParamUtils from "../utils/param-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
 
@@ -323,21 +324,23 @@ async function extractFiles(
 	overwriteBehaviour: string,
 	partialRelativePath: string | undefined,
 	toPath: string,
-	parameterValues: Record<string, string>,
+	parameterValues: Record<string, any>,
 ): Promise<boolean> {
 	if (!record.structure) return false;
 	if (record.type !== SnapshotType.Files) return false;
 
 	const io = new ExtractSnapshotIO();
+	const engine = ParamUtils.createTemplateEngine();
 
 	for (let i = 0; i < record.structure.length; ++i) {
 		if (record.structure[i].type !== "file") continue;
 		if (partialRelativePath && record.structure[i].path !== partialRelativePath)
 			continue;
 
-		const relPath = MiscUtils.replacePlaceholdersInText(
+		const relPath = ParamUtils.replacePlaceholdersInText(
 			record.structure[i].path,
 			parameterValues,
+			engine,
 		);
 		const targetPath = FileUtils.formPath([toPath, relPath]);
 		const sourcePath = SnapshotUtils.getFileUnderSnapshot(
@@ -345,7 +348,15 @@ async function extractFiles(
 			record.structure[i].path,
 		);
 
-		if (!extractFile(io, dryRun, overwriteBehaviour, sourcePath, targetPath))
+		if (
+			!(await extractFile(
+				io,
+				dryRun,
+				overwriteBehaviour,
+				sourcePath,
+				targetPath,
+			))
+		)
 			return false;
 	}
 
@@ -359,12 +370,14 @@ async function extractTree(
 	overwriteBehaviour: string,
 	partialRelativePath: string | undefined,
 	toPath: string,
-	parameterValues: Record<string, string>,
+	parameterValues: Record<string, any>,
 ): Promise<boolean> {
 	if (!record.structure) return false;
 	if (record.type !== SnapshotType.Tree) return false;
 
 	const io = new ExtractSnapshotIO();
+	const engine = ParamUtils.createTemplateEngine();
+
 	for (let i = 0; i < record.structure.length; ++i) {
 		const node = record.structure[i];
 
@@ -375,9 +388,10 @@ async function extractTree(
 			continue;
 		}
 
-		const relPath = MiscUtils.replacePlaceholdersInText(
+		const relPath = ParamUtils.replacePlaceholdersInText(
 			node.path,
 			parameterValues,
+			engine,
 		);
 		const targetPath = FileUtils.formPath([toPath, relPath]);
 		const sourcePath = SnapshotUtils.getFileUnderSnapshot(key, node.path);
@@ -390,7 +404,15 @@ async function extractTree(
 				io.infoDirectoryCreateSkip(targetPath);
 			}
 		} else {
-			if (!extractFile(io, dryRun, overwriteBehaviour, sourcePath, targetPath))
+			if (
+				!(await extractFile(
+					io,
+					dryRun,
+					overwriteBehaviour,
+					sourcePath,
+					targetPath,
+				))
+			)
 				return false;
 		}
 	}
@@ -405,7 +427,7 @@ async function extractTemplate(
 	overwriteBehaviour: string,
 	partialRelativePath: string | undefined,
 	toPath: string,
-	parameterValues: Record<string, string>,
+	parameterValues: Record<string, any>,
 ): Promise<boolean> {
 	if (record.type !== SnapshotType.Template) return false;
 
@@ -436,13 +458,13 @@ function isPathChild(
 	return fullPath.startsWith(partialPath);
 }
 
-function extractFile(
+async function extractFile(
 	io: ExtractSnapshotIO,
 	dryRun: boolean,
 	overwriteBehaviour: string,
 	sourcePath: string,
 	targetPath: string,
-): boolean {
+): Promise<boolean> {
 	const exists = FileUtils.doesFileExist(targetPath);
 
 	let overwrite = false;
@@ -452,7 +474,7 @@ function extractFile(
 	} else {
 		switch (overwriteBehaviour) {
 			case "prompt":
-				overwrite = io.promptForFileOverwrite(targetPath);
+				overwrite = await io.promptForFileOverwrite(targetPath);
 				if (overwrite) io.infoFileCreateSkipPostPrompt();
 				else io.infoFileCreateOverwritePostPrompt();
 				break;
@@ -480,330 +502,8 @@ function extractFile(
 	return true;
 }
 
-/*
-
-export async function appendOrPrependToFile(
-	key: string,
-	mode: "append" | "prepend",
-	paths: string[],
-): Promise<boolean> {
-	const store = await Store.create();
-	const logger = new Logger();
-
-	if (!store.doesKeyExist(key)) {
-		logger.error("key not found");
-		return false;
-	}
-
-	const record = store.fetchSnippetRecord(key);
-	if (!record) {
-		logger.error("can't fetch record");
-		return false;
-	}
-
-	if (
-		record.type != SnippetType.Text &&
-		record.type != SnippetType.File &&
-		record.type != SnippetType.URL
-	) {
-		logger.error("can only use snippets of type text/file/URL");
-		return false;
-	}
-
-	if (!("filename" in record.structure)) return false;
-
-	const snippet = await FileUtils.readTextFile(
-		SnapshotUtils.getFileUnderSnippet(key, record.structure.filename!),
-	);
-
-	if (!snippet) {
-		logger.error("error reading snippet");
-		return false;
-	}
-
-	// paths contains possibly relative filenames, filePaths contain absolute filenames
-	const filePaths = FileUtils.resolvePaths(paths);
-
-	let c: number = 0;
-	for (let i: number = 0; i < paths.length; ++i) {
-		const filePath = filePaths[i];
-		if (!FileUtils.doesFileExist(filePath)) {
-			logger.error(`file not found, skipping: ${paths[i]}`);
-		} else {
-			let retVal = false;
-			if (mode == "append")
-				retVal = FileUtils.appendToTextFile(filePath, snippet);
-			else retVal = FileUtils.prependToTextFile(filePath, snippet);
-
-			if (!retVal) {
-				logger.error(`error writing to file: ${paths[i]}`);
-			} else {
-				++c;
-			}
-		}
-	}
-
-	logger.success(`${c} files updated`);
-	return true;
-}
-
-export async function extractSnippet(
-	key: string,
-	path: string | null = null,
-	overwrite: boolean = false,
-): Promise<boolean> {
-	const logger = new Logger();
-
-	if (!path) {
-		logger.error("missing path");
-		return false;
-	}
-
-	path = FileUtils.resolvePath(path);
-
-	const store = await Store.create();
-
-	if (!store.doesKeyExist(key)) {
-		logger.error("key not found");
-		return false;
-	}
-
-	const record = store.fetchSnippetRecord(key);
-	if (!record) {
-		logger.error("can't fetch record");
-		return false;
-	}
-
-	let paramValues: Record<string, string> = {};
-	if (record.parameters) {
-		paramValues = await MiscUtils.getParameterValuesFromUser(record.parameters);
-	}
-
-	// resolve paths
-	path = FileUtils.resolvePath(path);
-
-	if (record.type == SnippetType.File) {
-		if (!("filename" in record.structure)) return false;
-		const localFilePath: string = SnapshotUtils.getFileUnderSnippet(
-			key,
-			record.structure.filename!,
-		);
-		let shouldOverwrite: boolean = false;
-		const fileExists: boolean = FileUtils.doesFileExist(path);
-
-		if (fileExists && !overwrite) {
-			shouldOverwrite =
-				(await MiscUtils.getche(`Overwrite (Y/N)? `)).toLowerCase() == "y";
-		}
-
-		if (!fileExists || overwrite || shouldOverwrite) {
-			if (
-				(!fileExists || FileUtils.deleteFile(path)) &&
-				FileUtils.copyFile(localFilePath, path)
-			) {
-				logger.success(`file extracted to: ${path}`);
-				return true;
-			} else {
-				logger.error("could not extract file to destination");
-				return false;
-			}
-		} else {
-			logger.info("skipping");
-		}
-
-		return true;
-	} else if (record.type === SnippetType.MultiFile) {
-		if (!("filename" in record.structure)) return false;
-		return await extractMultiFileTemplate(
-			key,
-			record,
-			path,
-			overwrite,
-			paramValues,
-		);
-	} else if (record.type === SnippetType.Directory) {
-		if (!("filename" in record.structure)) return false;
-		return await extractDirectoryTemplate(
-			key,
-			record,
-			path,
-			overwrite,
-			paramValues,
-		);
-	} else if (record.type == SnippetType.Tree) {
-		if (!Array.isArray(record.structure)) return false;
-		return await TreeUtils.createTree(
-			path,
-			record.structure,
-			paramValues,
-			overwrite,
-		);
-	} else {
-		logger.error(
-			"can only use snippets of type file/multi-file/directory/github-template",
-		);
-		return false;
-	}
-}
-*/
-
 // ---------------------- [private] --------------------------------
-
 /*
-async function extractMultiFileTemplate(
-	key: string,
-	record: SnippetRecord,
-	path: string,
-	overwrite: boolean,
-	paramValues: Record<string, string>,
-): Promise<boolean> {
-	const logger = new Logger();
-	if (!("children" in record.structure)) return false;
-
-	const filesToExtract: { filename: string; path: string }[] = [];
-	for (let i = 0; i < record.structure.children!.length; ++i) {
-		filesToExtract.push({
-			filename: record.structure.children![i].filename!,
-			path: SnapshotUtils.getFileUnderSnippet(
-				key,
-				record.structure.children![i].filename!,
-			),
-		});
-	}
-
-	for (let i = 0; i < filesToExtract.length; ++i) {
-		const destPath: string = FileUtils.formPath([
-			path,
-			filesToExtract[i].filename,
-		]);
-		const fileExists: boolean = FileUtils.doesFileExist(destPath);
-		let shouldOverwrite: boolean = false;
-
-		if (fileExists && !overwrite) {
-			shouldOverwrite =
-				(
-					await MiscUtils.getche(
-						`Overwrite '${filesToExtract[i].filename}' (Y/N)? `,
-					)
-				).toLowerCase() == "y";
-		}
-
-		if (!fileExists || overwrite || shouldOverwrite) {
-			if (
-				(!fileExists || FileUtils.deleteFile(destPath)) &&
-				FileUtils.copyFile(filesToExtract[i].path, destPath)
-			) {
-				await MiscUtils.replacePlaceholdersInFile(
-					"file",
-					destPath,
-					paramValues,
-				);
-				logger.success(`file extracted to: ${path}`);
-				return true;
-			} else {
-				logger.error("could not extract file to destination");
-				return false;
-			}
-		} else {
-			logger.info("skipping");
-		}
-	}
-
-	return true;
-}
-
-async function extractDirectoryTemplate(
-	key: string,
-	record: SnippetRecord,
-	path: string,
-	overwrite: boolean,
-	paramValues: Record<string, string>,
-): Promise<boolean> {
-	if (!("filename" in record.structure)) return false;
-	const logger = new Logger();
-
-	// get root directory
-	const rootDirName: string = record.structure.filename!;
-	const concretizedRootDirName = MiscUtils.replacePlaceholdersInText(
-		rootDirName,
-		paramValues,
-	);
-	const sourceRootDirPath: string = FileUtils.formPath([
-		SnapshotUtils.getSnapshotDirectory(key),
-		rootDirName,
-	]);
-	const destRootDirPath: string = FileUtils.formPath([path, rootDirName]);
-
-	if (FileUtils.doesDirectoryExist(destRootDirPath) && !overwrite) {
-		const shouldOverwrite =
-			(
-				await MiscUtils.getche(
-					`Overwrite '${concretizedRootDirName}' and any of its contents (Y/N)? `,
-				)
-			).toLowerCase() == "y";
-		if (!shouldOverwrite) return true;
-	} else {
-		// create directory parent
-		FileUtils.createDirectory(path);
-	}
-
-	// execute pre-extraction hooks
-	executeTriggers(
-		"pre",
-		key,
-		path,
-		record.triggers,
-		MiscUtils.replacePlaceholdersInText(destRootDirPath, paramValues), // the would-be final directory (after replacing params)
-	);
-
-	// copy the directory as-is (without replacing params)
-	FileUtils.copyDirectory(sourceRootDirPath, destRootDirPath);
-
-	// Recursively process files and folders to replace placeholders
-	async function processPath(currentPath: string): Promise<void> {
-		// Read entries before processing
-		const entries = FileUtils.readDirectoryContents(currentPath);
-
-		for (const entry of entries) {
-			const entryPath = FileUtils.formPath([currentPath, entry]);
-
-			if (FileUtils.doesDirectoryExist(entry)) {
-				// Recurse into subdirectories first (bottom-up traversal)
-				processPath(entryPath);
-				// Rename the directory using your library function
-				await MiscUtils.replacePlaceholdersInFile(
-					"directory",
-					entryPath,
-					paramValues,
-				);
-			} else if (FileUtils.doesFileExist(entry)) {
-				// Rename file AND replace contents
-				await MiscUtils.replacePlaceholdersInFile(
-					"file",
-					entryPath,
-					paramValues,
-				);
-			}
-		}
-	}
-
-	// Process all nested items inside the target root directory
-	await processPath(destRootDirPath);
-
-	// Finally, rename the root directory itself if needed
-	const renamedDestDir = await MiscUtils.replacePlaceholdersInFile(
-		"directory",
-		destRootDirPath,
-		paramValues,
-	);
-
-	// execute post-extraction hooks
-	executeTriggers("post", key, renamedDestDir, record.triggers);
-
-	logger.success("directory extracted");
-	return true;
-}
-
 function executeTriggers(
 	mode: "pre" | "post",
 	key: string,

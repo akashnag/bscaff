@@ -14,7 +14,7 @@
 import chalk from "chalk";
 import { Config } from "../core/config.js";
 import { Store } from "../core/store.js";
-import { SnapshotRecord, SnapshotType, Template } from "../types/types.js";
+import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
 import { drawFileTree } from "../utils/tree-utils.js";

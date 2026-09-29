@@ -16,9 +16,10 @@ import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { CreateTreeIO } from "../io/create-io.js";
 import { ConsoleIO, getche, prompt } from "../io/io.js";
-import { FileTreeNode, Template } from "../types/types.js";
+import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
+import * as ParamUtils from "./param-utils.js";
 
 // converts an ASCII-art file-tree to FileTreeNode[]
 export function extractStructureFromASCIITree(tree: string): {
@@ -126,7 +127,7 @@ export function extractStructureFromASCIITree(tree: string): {
 			isExplicitDir,
 		});
 
-		const params = MiscUtils.getParametersFromText(name);
+		const params = ParamUtils.getParametersFromText(name);
 		params.forEach((param: string) => {
 			parameters.add(param);
 		});
@@ -328,7 +329,7 @@ export async function extractStructureFromDirectory(
 			// Calculate relative path starting with a leading slash
 			const relativePath = "/" + FileUtils.formRelativePath(dirPath, fullPath);
 
-			const params: string[] = MiscUtils.getParametersFromText(entry.name);
+			const params: string[] = ParamUtils.getParametersFromText(entry.name);
 
 			if (entry.isDirectory()) {
 				++stats.dirCount;
@@ -351,7 +352,8 @@ export async function extractStructureFromDirectory(
 
 				if (readContent) {
 					content = await FileUtils.readTextFile(fullPath);
-					if (content) params.push(...MiscUtils.getParametersFromText(content));
+					if (content)
+						params.push(...ParamUtils.getParametersFromText(content));
 				}
 
 				nodes.push({
@@ -438,12 +440,19 @@ export async function createTree(
 	if (overwriteBehaviour === "prompt" && !ioHandler) return false;
 
 	const cm = new ClipboardManager();
+	const engine = ParamUtils.createTemplateEngine();
+
+	// TODO: handle exclusions and inclusions in a generic way so that this function can be reused for templates
 	const exclusions = Settings.get("excludeFromContentInputPrompt")?.split(";");
 	const excludeDirs = Settings.get("excludeDirectories");
 
 	for (let i = 0; i < structure.length; ++i) {
 		const subPath = parameters
-			? MiscUtils.replacePlaceholdersInText(structure[i].path, parameters)
+			? ParamUtils.replacePlaceholdersInText(
+					structure[i].path,
+					parameters,
+					engine,
+				)
 			: structure[i].path;
 		const fullPath = FileUtils.formPath([path, subPath]);
 

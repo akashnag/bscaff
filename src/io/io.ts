@@ -13,8 +13,11 @@
 
 import { stdin as input, stdout as output } from "node:process";
 import * as readline from "node:readline/promises";
+import * as inquirer from "@inquirer/prompts";
 import chalk from "chalk";
+import nunjucks from "nunjucks";
 import { ClipboardManager } from "../core/clipboard.js";
+import { TemplateQuestion } from "../types/template-types.js";
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
@@ -475,7 +478,176 @@ export class ConsoleIO {
 		// TODO: add code
 	}
 
-	promptForParameters(parameters: string[]): Record<string, string> {
-		// TODO: add code
+	async promptForParameters(
+		parameters: string[] | Record<string, TemplateQuestion>,
+		engine?: nunjucks.Environment,
+	): Promise<Record<string, any>> {
+		const answers: Record<string, any> = {};
+		const nunjucksEngine =
+			engine || new nunjucks.Environment(null, { autoescape: false });
+
+		// --- Branch 1: Simple string array of parameter names ---
+		if (Array.isArray(parameters)) {
+			for (const paramName of parameters) {
+				answers[paramName] = await inquirer.input({
+					message: `Enter value for '${paramName}':`,
+				});
+			}
+			return answers;
+		}
+
+		// --- Branch 2: Detailed Record<string, TemplateQuestion> ---
+		for (const [key, question] of Object.entries(parameters)) {
+			// 1. Evaluate conditional prompt execution (`when`)
+			if (question.when !== undefined) {
+				let shouldPrompt = false;
+
+				if (typeof question.when === "boolean") {
+					shouldPrompt = question.when;
+				} else if (typeof question.when === "string") {
+					// Evaluate Jinja/Nunjucks conditional expression against accumulated answers
+					try {
+						const renderedWhen = nunjucksEngine.renderString(
+							`{% if ${question.when} %}true{% else %}false{% endif %}`,
+							answers,
+						);
+						shouldPrompt = renderedWhen.trim() === "true";
+					} catch {
+						shouldPrompt = true; // Fallback to prompt on rendering error
+					}
+				}
+
+				if (!shouldPrompt) {
+					continue; // Skip this question
+				}
+			}
+
+			// 2. Resolve dynamic default value
+			let resolvedDefault = question.default;
+			if (typeof resolvedDefault === "string") {
+				try {
+					const rendered = nunjucksEngine.renderString(
+						resolvedDefault,
+						answers,
+					);
+					// Retain original template string if evaluation doesn't change anything
+					resolvedDefault = rendered;
+				} catch {
+					// Keep raw string default on render failure
+				}
+			}
+
+			const message = question.help || `Enter value for ${key}:`;
+			const qType = question.type || "str";
+
+			// 3. Choice Selection (select prompt)
+			if (question.choices) {
+				let choiceItems: Array<{ name: string; value: any }> = [];
+
+				if (Array.isArray(question.choices)) {
+					choiceItems = question.choices.map((choice) => ({
+						name: String(choice),
+						value: choice,
+					}));
+				} else {
+					choiceItems = Object.entries(question.choices).map(
+						([label, val]) => ({
+							name: label,
+							value: val,
+						}),
+					);
+				}
+
+				answers[key] = await inquirer.select({
+					message,
+					choices: choiceItems,
+					default: resolvedDefault as any,
+				});
+				continue;
+			}
+
+			// 4. Boolean (confirm prompt)
+			if (qType === "bool") {
+				answers[key] = await inquirer.confirm({
+					message,
+					default:
+						typeof resolvedDefault === "boolean" ? resolvedDefault : true,
+				});
+				continue;
+			}
+
+			// 5. Multiline Text (editor prompt)
+			if (question.multiline) {
+				answers[key] = await inquirer.editor({
+					message,
+					default: typeof resolvedDefault === "string" ? resolvedDefault : "",
+				});
+				continue;
+			}
+
+			// 6. Passwords / Secrets (password prompt)
+			if (question.secret) {
+				answers[key] = await inquirer.password({
+					message,
+					mask: "*",
+				});
+				continue;
+			}
+
+			// 7. General Input (Text / Int / Float / JSON / YAML)
+			const rawAnswer = await inquirer.input({
+				message,
+				default:
+					resolvedDefault !== undefined
+						? typeof resolvedDefault === "object"
+							? JSON.stringify(resolvedDefault)
+							: String(resolvedDefault)
+						: undefined,
+				validate: (inputVal: string) => {
+					// Regex validation pattern
+					if (question.validator) {
+						const regex = new RegExp(question.validator);
+						if (!regex.test(inputVal)) {
+							return (
+								question.validator_error ||
+								`Value must match pattern: ${question.validator}`
+							);
+						}
+					}
+
+					// Numeric type validation
+					if (qType === "int" && isNaN(parseInt(inputVal, 10))) {
+						return "Please enter a valid integer.";
+					}
+					if (qType === "float" && isNaN(parseFloat(inputVal))) {
+						return "Please enter a valid number.";
+					}
+
+					return true;
+				},
+			});
+
+			// 8. Coerce string answer to specified data type
+			switch (qType) {
+				case "int":
+					answers[key] = parseInt(rawAnswer, 10);
+					break;
+				case "float":
+					answers[key] = parseFloat(rawAnswer);
+					break;
+				case "json":
+				case "yaml":
+					try {
+						answers[key] = JSON.parse(rawAnswer);
+					} catch {
+						answers[key] = rawAnswer;
+					}
+					break;
+				default:
+					answers[key] = rawAnswer;
+			}
+		}
+
+		return answers;
 	}
 }

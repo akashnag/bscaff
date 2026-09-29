@@ -25,7 +25,7 @@ import {
 	SaveURLIO,
 } from "../io/save-io.js";
 import { ScriptMissingError } from "../types/errors.js";
-import { FileTreeNode, SnapshotType, Template } from "../types/types.js";
+import { FileTreeNode, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";

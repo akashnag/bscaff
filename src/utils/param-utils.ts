@@ -13,7 +13,7 @@
 
 import * as nunjucks from "nunjucks";
 import { Settings } from "../core/settings.js";
-import { TemplateEnvOps } from "../types/template-types.js";
+import { Template, TemplateEnvOps } from "../types/template-types.js";
 import * as FileUtils from "./file-utils.js";
 
 export function createTemplateEngine(
@@ -36,61 +36,14 @@ export function createTemplateEngine(
 	return env;
 }
 
-export async function getParametersFromFileContent(
-	filePath: string,
-): Promise<string[]> {
-	const fileType = FileUtils.getFileType(filePath, true);
-	const exclusions = Settings.get("excludeFromContentModification")?.split(";");
-
-	if (exclusions) {
-		for (let i = 0; i < exclusions.length; ++i) {
-			if (
-				exclusions[i].substring(1).toLocaleLowerCase() ==
-				fileType.toLocaleLowerCase()
-			)
-				return [];
-		}
-	}
-
-	const content = await FileUtils.readTextFile(filePath);
-	if (!content) return [];
-
-	return getParametersFromText(content);
-}
-
-export function replacePlaceholdersInText(
-	template: string,
-	params: Record<string, string>,
-): string {
-	return template.replace(/\{\{\s*(.*?)\s*\}\}/g, (match, key) => {
-		return key in params ? params[key] : match;
-	});
-}
-
-// Extracts all parameters enclosed within {{ and }} from a string
-export function getParametersFromText(text: string): string[] {
-	// Regex matching {{ followed by non-}} characters, capturing the inner content
-	const regex = /\{\{([^}]+)\}\}/g;
-	const matches: string[] = [];
-
-	let match: RegExpExecArray | null;
-	while ((match = regex.exec(text)) !== null) {
-		// match[1] refers to the first capture group (inside {{ }})
-		matches.push(match[1].trim());
-	}
-
-	return matches;
-}
-
-/**
- * Extracts all variable names from a template string using the environment's custom delimiters.
- */
-export function extractTemplateVariables(
+export function getParametersFromText(
 	templateContent: string,
-	engine: nunjucks.Environment,
+	engine?: nunjucks.Environment,
 ): string[] {
 	const variables = new Set<string>();
 	const nodes = (nunjucks as any).nodes;
+
+	if (!engine) engine = createTemplateEngine();
 
 	try {
 		// 1. Create a Parser instance bound to your custom Environment's lexer
@@ -143,4 +96,101 @@ export function extractTemplateVariables(
 	}
 
 	return Array.from(variables);
+}
+
+export async function getParametersFromFileContent(
+	filePath: string,
+	template?: Template,
+	engine?: nunjucks.Environment,
+): Promise<string[]> {
+	// Check template suffix (if suffix is non-empty, file must end with it)
+	if (
+		template &&
+		template._templates_suffix &&
+		!filePath.endsWith(template._templates_suffix)
+	) {
+		return [];
+	}
+
+	// Helper to test if filePath matches any pattern in a list
+	const matchesAny = (patterns: string[]): boolean =>
+		patterns.some((pattern) => globToRegex(pattern).test(filePath));
+
+	// Evaluate inclusions vs exclusions:
+	// Inclusions override exclusions. If included, process it.
+	// If explicitly excluded (and not included), skip it.
+	const isIncluded =
+		template &&
+		template._include &&
+		template._include.length > 0 &&
+		matchesAny(template._include);
+
+	const isExcluded =
+		template &&
+		template._exclude &&
+		template._exclude.length > 0 &&
+		matchesAny(template._exclude);
+
+	if (isExcluded && !isIncluded) {
+		return [];
+	}
+
+	// Read and extract parameters
+	const content = await FileUtils.readTextFile(filePath);
+	return content ? getParametersFromText(content, engine) : [];
+}
+
+export function replacePlaceholdersInText(
+	template: string,
+	paramValues: Record<string, unknown>,
+	engine?: nunjucks.Environment,
+): string {
+	if (!engine) engine = createTemplateEngine();
+	return engine.renderString(template, paramValues);
+}
+
+// ----------------------- [private] ---------------------------
+
+function globToRegex(glob: string, flags: string = "i"): RegExp {
+	let regexStr = "";
+	let i = 0;
+	const len = glob.length;
+
+	while (i < len) {
+		const char = glob[i];
+
+		if (char === "*") {
+			if (glob[i + 1] === "*") {
+				// Handle `**` (matches across directories)
+				if (glob[i + 2] === "/") {
+					regexStr += "(?:.*/|)";
+					i += 3;
+				} else {
+					regexStr += ".*";
+					i += 2;
+				}
+			} else {
+				// Single `*` (matches anything except directory separators)
+				regexStr += "[^/]*";
+				i++;
+			}
+		} else if (char === "?") {
+			// `?` matches any single character except directory separators
+			regexStr += "[^/]";
+			i++;
+		} else if (["/", "\\"].includes(char)) {
+			// Normalize path separators
+			regexStr += "[/\\\\]";
+			i++;
+		} else if ("[].+^${}()|/\\".includes(char)) {
+			// Escape special regex characters
+			regexStr += "\\" + char;
+			i++;
+		} else {
+			regexStr += char;
+			i++;
+		}
+	}
+
+	return new RegExp(`^${regexStr}$`, flags);
 }

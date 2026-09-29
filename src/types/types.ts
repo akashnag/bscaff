@@ -48,10 +48,6 @@ export interface SnapshotRecord {
 	parameters?: string[]; // only for tree, and files (for template it is embedded inside Template)
 }
 
-export interface Template {
-	// TODO: add code
-}
-
 export interface BScaffSettings {
 	textEditor: string;
 	browser: string;

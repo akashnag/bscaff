@@ -16,8 +16,8 @@ import * as fs from "fs/promises";
 import YAML from "yaml";
 import { Config } from "../core/config.js";
 import { TemplateParseError } from "../types/errors.js";
-import { TemplateQuestion } from "../types/template-types.js";
-import { FileTreeNode, Template } from "../types/types.js";
+import { Template, TemplateQuestion } from "../types/template-types.js";
+import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
 import {
@@ -119,9 +119,6 @@ export async function readTemplateFile(
 	return normalizeAndValidateTemplate(rawDoc as Record<string, unknown>);
 }
 
-/**
- * Normalizes shorthands (e.g., key: "default value") into full Question objects.
- */
 function normalizeAndValidateTemplate(raw: Record<string, unknown>): Template {
 	const template: Record<string, unknown> = {};
 

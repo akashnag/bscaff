@@ -67,9 +67,6 @@ export interface Template {
 	/** Files to generate during initial setup, but never overwrite during updates */
 	_skip_if_exists?: string[];
 
-	/** File extensions whose content should be preserved during updates */
-	_preservable_extensions?: string[];
-
 	/** Whether empty directories should be replicated in the output */
 	_copy_empty_dirs?: boolean;
 

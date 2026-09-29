@@ -17,7 +17,7 @@ import { ScriptMissingError } from "../types/errors.js";
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
-import * as TemplateUtils from "./template-utils.js";
+import * as ParamUtils from "./param-utils.js";
 
 export function getSnapshotDB(): string {
 	return Config.getStoragePath([Config.SNAPSHOT_DB_FILE]);
@@ -293,11 +293,13 @@ export async function copyFilesToSnapshotDirectory(
 
 		if (FileUtils.copyFile(files[i], localFile)) {
 			const size = FileUtils.getFileSizeInBytes(localFile) ?? 0;
-			const params = MiscUtils.getParametersFromText(fileName);
+			const params = ParamUtils.getParametersFromText(fileName);
 
 			stats.sizeInBytes + size;
 			++stats.fileCount;
-			params.push(...(await MiscUtils.getParametersFromFileContent(localFile)));
+			params.push(
+				...(await ParamUtils.getParametersFromFileContent(localFile)),
+			);
 
 			params.forEach((param) => {
 				parameters.add(param);

@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import * as inquirer from "@inquirer/prompts";
 import { SnapshotType } from "../types/types.js";
 import * as IOUtils from "./io.js";
 import { ConsoleIO } from "./io.js";
@@ -36,8 +37,11 @@ export class ExtractSnapshotIO extends ConsoleIO {
 		// TODO: add code
 	}
 
-	promptForFileOverwrite(fPath: string): boolean {
-		// TODO: add code
+	async promptForFileOverwrite(fPath: string): Promise<boolean> {
+		return await inquirer.confirm({
+			message: "File already exists. Overwrite?",
+			default: false, // Default option if the user just hits Enter
+		});
 	}
 
 	infoFileCreateSkipPostPrompt(): void {
