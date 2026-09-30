@@ -223,6 +223,10 @@ export function formatFileSize(
 	return `${parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(dm))} ${sizes[unitIndex]}`;
 }
 
+export function deepClone<T>(obj: T): T {
+	return structuredClone(obj);
+}
+
 // ------------------------- [private] -------------------------
 
 function isCommandAvailable(command: string | null): boolean {

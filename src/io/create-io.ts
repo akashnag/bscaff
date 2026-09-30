@@ -46,14 +46,6 @@ export class CreateTreeIO extends ConsoleIO {
 	infoFileOverwriteAborted(filePath: string): void {
 		// TODO: add code
 	}
-
-	promptForFileContent(filePath: string, cm: ClipboardManager): string | null {
-		// TODO: add code
-	}
-
-	promptOverwriteFile(filePath: string): boolean {
-		// TODO: add code
-	}
 }
 
 export class CreateFileIO extends CreateTreeIO {

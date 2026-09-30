@@ -293,6 +293,7 @@ export async function deleteSnapshotOrFile(
 		return false;
 	}
 
+	store.update();
 	io.successFileOrDirectoryDeleted(key, relPath, hasFile);
 	return true;
 }

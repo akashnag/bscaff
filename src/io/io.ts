@@ -51,6 +51,21 @@ export async function prompt(question: string): Promise<string> {
 	return (await rl.question(question)).trim();
 }
 
+export async function quickConfirm(
+	question: string,
+	choiceMapper: Record<string, any>,
+	defaultValue: any,
+	toLowerCase: boolean = true,
+): Promise<any> {
+	let choice = await getche(question);
+	if (toLowerCase) choice = choice.toLowerCase();
+	if (choice in choiceMapper) {
+		return choiceMapper[choice];
+	} else {
+		return defaultValue;
+	}
+}
+
 export function getche(question?: string): Promise<string> {
 	return new Promise((resolve) => {
 		if (question) {
@@ -649,5 +664,25 @@ export class ConsoleIO {
 		}
 
 		return answers;
+	}
+
+	async promptForFileOverwrite(fPath: string): Promise<boolean> {
+		return await quickConfirm(
+			"File already exists. Overwrite (Y/N)?",
+			{ y: true, n: false },
+			false,
+		);
+	}
+
+	async promptForFileContent(
+		filePath: string,
+		cm: ClipboardManager,
+	): Promise<string | null> {
+		const choice = await quickConfirm(
+			"Press R when ready with file-content copied to clipboard, else Enter/Return to skip:",
+			{ r: true },
+			false,
+		);
+		return choice ? await cm.paste() : null;
 	}
 }

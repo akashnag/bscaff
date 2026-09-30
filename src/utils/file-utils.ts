@@ -17,6 +17,35 @@ import * as path from "path";
 import process from "process";
 import * as MiscUtils from "./misc-utils.js";
 
+export function isPathChild(
+	partialPath: string,
+	fullPath: string,
+	fullPathType: "file" | "dir",
+): boolean {
+	if (!partialPath.endsWith("/")) partialPath += "/";
+	if (fullPathType === "dir" && !fullPath.endsWith("/")) fullPath += "/";
+
+	if (!partialPath.startsWith("/")) partialPath = "/" + partialPath;
+	if (!fullPath.startsWith("/")) fullPath = "/" + fullPath;
+
+	/*
+	Examples:
+		partialPath = /dir1/dir2/
+		fullPath:
+					/dir1/dir2/dir3/file1.ext	--> TRUE
+					/dir1/dir3/					--> FALSE
+					/dir1/dir2/dir3/			--> TRUE
+					/dir1/dir2/					--> TRUE
+	*/
+	return fullPath.startsWith(partialPath);
+}
+
+export function areRelativePathsSame(path1: string, path2: string) {
+	if (!path1.startsWith("/")) path1 = "/" + path1;
+	if (!path2.startsWith("/")) path2 = "/" + path2;
+	return path1 === path2;
+}
+
 export function formPath(items: string[]): string {
 	return path.join(...items);
 }

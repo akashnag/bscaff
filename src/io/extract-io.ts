@@ -37,13 +37,6 @@ export class ExtractSnapshotIO extends ConsoleIO {
 		// TODO: add code
 	}
 
-	async promptForFileOverwrite(fPath: string): Promise<boolean> {
-		return await inquirer.confirm({
-			message: "File already exists. Overwrite?",
-			default: false, // Default option if the user just hits Enter
-		});
-	}
-
 	infoFileCreateSkipPostPrompt(): void {
 		// TODO: add code
 	}

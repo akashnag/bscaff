@@ -426,6 +426,7 @@ export function getFileListFromStructure(nodes: FileTreeNode[]): string {
 }
 
 // creates the file structure on disk (include content if available) - does not copy saved files
+// (WARNING: not to be used for templates)
 export async function createTree(
 	path: string | null,
 	structure: FileTreeNode[],
@@ -474,7 +475,7 @@ export async function createTree(
 						return false;
 
 					case "prompt":
-						if (!ioHandler!.promptOverwriteFile(fullPath)) {
+						if (!(await ioHandler!.promptForFileOverwrite(fullPath))) {
 							ioHandler!.infoFileSkipped(path, fullPath);
 							continue;
 						}
@@ -486,7 +487,7 @@ export async function createTree(
 				if (ignorePromptWhereContentExistsInStructure && structure[i].content) {
 					content = structure[i].content;
 				} else {
-					content = ioHandler!.promptForFileContent(fullPath, cm);
+					content = await ioHandler!.promptForFileContent(fullPath, cm);
 					if (parameters) {
 						content = await ParamUtils.replacePlaceholdersInFileContent(
 							fullPath,

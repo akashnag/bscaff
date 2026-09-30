@@ -62,7 +62,7 @@ export class CLI {
 		this.defineListGroup();
 		this.defineExtractGroup();
 		this.defineCreateGroup();
-		this.defineTransformGroup();
+		//this.defineTransformGroup();
 		this.defineTemplateGroup();
 	}
 
@@ -756,6 +756,7 @@ export class CLI {
 				},
 			);
 
+		/*
 		const updateTemplateCommand = templateGroup
 			.command("update")
 			.description(
@@ -781,5 +782,6 @@ export class CLI {
 					// TODO: add code
 				},
 			);
+		*/
 	}
 }

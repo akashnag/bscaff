@@ -44,6 +44,11 @@ export interface SnapshotRecord {
 	createdAt?: Date;
 	modifiedAt?: Date;
 
+	gitRepoSource?: {
+		url: string;
+		version: string | undefined;
+	};
+
 	structure?: FileTreeNode[]; // only for tree, template and files
 	parameters?: string[]; // only for tree, and files (for template it is embedded inside Template)
 }

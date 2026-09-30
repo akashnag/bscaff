@@ -86,7 +86,7 @@ export async function createFileOnDiskFromClipboard(
 	}
 
 	if (hasFile && !overwrite) {
-		overwrite = io.promptOverwriteFile(toPath);
+		overwrite = await io.promptForFileOverwrite(toPath);
 	}
 
 	if (!overwrite) {

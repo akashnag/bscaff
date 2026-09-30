@@ -16,7 +16,7 @@ import { Config } from "../core/config.js";
 import { Store } from "../core/store.js";
 import { SaveGitRepoIO } from "../io/save-io.js";
 import { SaveTemplateIO } from "../io/template-io.js";
-import { SnapshotType } from "../types/types.js";
+import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
@@ -55,6 +55,7 @@ export async function saveTemplate(
 	SnapshotUtils.createSnapshotDirectory(key);
 	const snapshotDir = SnapshotUtils.getSnapshotDirectory(key);
 	let localDir: string | undefined = undefined;
+	let gitRepoSource = undefined;
 
 	if (source === "git") {
 		// filePath is a Git URL
@@ -72,13 +73,31 @@ export async function saveTemplate(
 
 		try {
 			gitIO.cloneStart(localDir);
-			await git.clone(filePath, localDir);
+
+			// fetch latest tag
+			gitRepoSource = {
+				url: filePath,
+				version: await getLatestRemoteTag(git, filePath),
+			};
+
+			// clone the latest tag if exists
+			if (gitRepoSource.version) {
+				await git.clone(filePath, localDir, [
+					"--branch",
+					gitRepoSource.version,
+					"--single-branch",
+				]);
+			} else {
+				await git.clone(filePath, localDir);
+			}
+
 			gitIO.cloneComplete();
 
 			const templateConfigFile = FileUtils.formPath([
 				localDir,
 				Config.TEMPLATE_CONFIG_FILE,
 			]);
+
 			if (!FileUtils.doesFileExist(templateConfigFile)) {
 				io.errorTemplateFileMissing(filePath, true);
 				FileUtils.deleteDirectory(snapshotDir);
@@ -193,7 +212,7 @@ export async function saveTemplate(
 		return false;
 	}
 
-	store.save({
+	const info: SnapshotRecord = {
 		key: key,
 		description: description,
 		type: SnapshotType.Template,
@@ -201,7 +220,13 @@ export async function saveTemplate(
 		fileName: relativeTemplateFilePath,
 		structure: structure,
 		parameters: parameters ?? undefined,
-	});
+	};
+
+	if (source === "git") {
+		info.gitRepoSource = gitRepoSource;
+	}
+
+	store.save(info);
 
 	store.update();
 	io.successSnapshotTaken(
@@ -217,3 +242,71 @@ export async function saveTemplate(
 	return true;
 }
 // --------------------------------------------------------
+
+export async function extractTemplate(
+	key: string,
+	record: SnapshotRecord,
+	dryRun: boolean,
+	overwriteBehaviour: string,
+	partialRelativePath: string | undefined,
+	toPath: string,
+	parameterValues: Record<string, any>,
+): Promise<boolean> {
+	if (record.type !== SnapshotType.Template) return false;
+
+	// TODO: add code
+}
+
+// ---------------- [private] --------------------
+
+async function getLatestRemoteTag(
+	git: SimpleGit,
+	repoURL: string,
+): Promise<string | undefined> {
+	const rawOutput = await git.listRemote([
+		"--tags",
+		"--sort=-v:refname",
+		repoURL,
+	]);
+
+	// Extract all tag names, stripping out "refs/tags/" and dereference indicators ("^{}")
+	const tags = rawOutput
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean)
+		.map((line) => line.split(/\s+/)[1]) // Get the ref path (e.g. "refs/tags/v1.2.3")
+		.filter((ref) => ref && !ref.endsWith("^{}")) // Exclude annotated tag commit pointers
+		.map((ref) => ref.replace("refs/tags/", ""));
+
+	// The first element in the array is the latest version tag
+	return tags && tags.length > 0 ? tags[0] : undefined;
+}
+
+// -------------------------- [private] ------------------------
+
+/*
+function executeTriggers(
+	mode: "pre" | "post",
+	key: string,
+	workingDir: string,
+	triggers: { preScript: string | null; postScript: string | null } | undefined,
+	destDir: string | undefined = undefined,
+) {
+	if (!triggers) return;
+
+	const snippetDir = SnapshotUtils.getSnapshotDirectory(key);
+
+	if (mode == "pre" && triggers.preScript) {
+		const preScriptPath = FileUtils.formPath([snippetDir, triggers.preScript]);
+		MiscUtils.executeScript(preScriptPath, workingDir, destDir);
+	}
+
+	if (mode == "post" && triggers.postScript) {
+		const postScriptPath = FileUtils.formPath([
+			snippetDir,
+			triggers.postScript,
+		]);
+		MiscUtils.executeScript(postScriptPath, workingDir);
+	}
+}
+*/

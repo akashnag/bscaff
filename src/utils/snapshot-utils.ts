@@ -59,6 +59,7 @@ export function deleteFileUnderSnapshot(
 	key: string,
 	relPath: string,
 ): boolean {
+	// WARNING: store.update() must be called at caller-end
 	const record = store.fetch(key);
 	if (!record) return false;
 
@@ -73,10 +74,11 @@ export function deleteFileUnderSnapshot(
 	const struct = record.structure;
 	if (!struct) return false;
 
-	if (!relPath.startsWith("/")) relPath = "/" + relPath;
-
 	for (let i = 0; i < struct.length; ++i) {
-		if (struct[i].path === relPath && struct[i].type === "file") {
+		if (
+			FileUtils.areRelativePathsSame(struct[i].path, relPath) &&
+			struct[i].type === "file"
+		) {
 			const filePath = getFileUnderSnapshot(key, relPath);
 			struct.splice(i, 1);
 			if (store.updateStructure(key, struct)) {
@@ -95,7 +97,24 @@ export function doesSnapshotContainDirectory(
 	record: SnapshotRecord,
 	relPath: string,
 ): boolean {
-	// TODO: add code
+	const dirExists = FileUtils.doesDirectoryExist(
+		getFileUnderSnapshot(record.key, relPath),
+	);
+	if (record.structure) {
+		let hasDir = false;
+		for (let i = 0; i < record.structure.length; ++i) {
+			const node = record.structure[i];
+			if (node.type === "dir") {
+				if (FileUtils.areRelativePathsSame(relPath, node.path)) {
+					hasDir = true;
+					break;
+				}
+			}
+		}
+		return dirExists && hasDir;
+	} else {
+		return false;
+	}
 }
 
 export function deleteDirectoryUnderSnapshot(
@@ -103,7 +122,50 @@ export function deleteDirectoryUnderSnapshot(
 	key: string,
 	relPath: string,
 ): boolean {
-	// TODO: add code
+	const record = store.fetch(key);
+	if (!record) return false;
+
+	if (
+		record.type != SnapshotType.Files &&
+		record.type != SnapshotType.Tree &&
+		record.type != SnapshotType.Template
+	) {
+		return false;
+	}
+
+	const struct = record.structure;
+	if (!struct) return false;
+
+	for (let i = 0; i < struct.length; ++i) {
+		if (
+			struct[i].type === "dir" &&
+			FileUtils.areRelativePathsSame(relPath, struct[i].path)
+		) {
+			const dirPath = getFileUnderSnapshot(key, relPath);
+			if (FileUtils.deleteDirectory(dirPath)) {
+				const newStruct: FileTreeNode[] = [];
+
+				for (let k = 0; k < struct.length; ++k) {
+					if (
+						!FileUtils.isPathChild(
+							struct[i].path,
+							struct[k].path,
+							struct[k].type,
+						)
+					) {
+						newStruct.push(MiscUtils.deepClone(struct[k]));
+					}
+				}
+
+				store.updateStructure(key, newStruct);
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+
+	return true; // directory does not exist, so it's as good as being deleted
 }
 
 export function writeContentToSnapshotFile(
@@ -270,6 +332,7 @@ export function getStatsFromStructure(nodes: FileTreeNode[]): {
 }
 
 // only copies files, not directories. assumes filenames are absolute paths
+// (WARNING: not to be used for templates)
 export async function copyFilesToSnapshotDirectory(
 	key: string,
 	files: string[],

@@ -27,6 +27,7 @@ import * as MiscUtils from "../utils/misc-utils.js";
 import * as ParamUtils from "../utils/param-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
+import * as TemplateCommands from "./template-commands.js";
 
 // --------------------------------------------------------
 // copy [path] [--as-tree]
@@ -280,7 +281,7 @@ export async function extract(
 
 	switch (record.type) {
 		case SnapshotType.Files:
-			return extractFiles(
+			return await extractFiles(
 				key,
 				record,
 				dryRun,
@@ -291,7 +292,7 @@ export async function extract(
 			);
 
 		case SnapshotType.Tree:
-			return extractTree(
+			return await extractTree(
 				key,
 				record,
 				dryRun,
@@ -302,7 +303,7 @@ export async function extract(
 			);
 
 		case SnapshotType.Template:
-			return extractTemplate(
+			return await TemplateCommands.extractTemplate(
 				key,
 				record,
 				dryRun,
@@ -318,166 +319,7 @@ export async function extract(
 	}
 }
 
-async function extractFiles(
-	key: string,
-	record: SnapshotRecord,
-	dryRun: boolean,
-	overwriteBehaviour: string,
-	partialRelativePath: string | undefined,
-	toPath: string,
-	parameterValues: Record<string, any>,
-): Promise<boolean> {
-	if (!record.structure) return false;
-	if (record.type !== SnapshotType.Files) return false;
-
-	const io = new ExtractSnapshotIO();
-	const engine = ParamUtils.createTemplateEngine();
-	const templatingOptions = {
-		exclude: Settings.get("exclude") ?? [],
-		include: Settings.get("include") ?? [],
-		templatesSuffix: Settings.get("templatesSuffix") ?? "",
-	};
-
-	for (let i = 0; i < record.structure.length; ++i) {
-		if (record.structure[i].type !== "file") continue;
-		if (partialRelativePath && record.structure[i].path !== partialRelativePath)
-			continue;
-
-		const relPath = ParamUtils.replacePlaceholdersInFileName(
-			record.structure[i].path,
-			parameterValues,
-			templatingOptions,
-			engine,
-		);
-		const targetPath = FileUtils.formPath([toPath, relPath]);
-		const sourcePath = SnapshotUtils.getFileUnderSnapshot(
-			key,
-			record.structure[i].path,
-		);
-
-		if (
-			!(await extractFile(
-				io,
-				dryRun,
-				overwriteBehaviour,
-				sourcePath,
-				targetPath,
-				parameterValues,
-				templatingOptions,
-				engine,
-			))
-		)
-			return false;
-	}
-
-	return true;
-}
-
-async function extractTree(
-	key: string,
-	record: SnapshotRecord,
-	dryRun: boolean,
-	overwriteBehaviour: string,
-	partialRelativePath: string | undefined,
-	toPath: string,
-	parameterValues: Record<string, any>,
-): Promise<boolean> {
-	if (!record.structure) return false;
-	if (record.type !== SnapshotType.Tree) return false;
-
-	const io = new ExtractSnapshotIO();
-	const engine = ParamUtils.createTemplateEngine();
-	const templatingOptions = {
-		exclude: Settings.get("exclude") ?? [],
-		include: Settings.get("include") ?? [],
-		templatesSuffix: Settings.get("templatesSuffix") ?? "",
-	};
-
-	for (let i = 0; i < record.structure.length; ++i) {
-		const node = record.structure[i];
-
-		if (
-			partialRelativePath &&
-			!isPathChild(partialRelativePath, node.path, node.type)
-		) {
-			continue;
-		}
-
-		const relPath = ParamUtils.replacePlaceholdersInFileName(
-			node.path,
-			parameterValues,
-			templatingOptions,
-			engine,
-		);
-		const targetPath = FileUtils.formPath([toPath, relPath]);
-		const sourcePath = SnapshotUtils.getFileUnderSnapshot(key, node.path);
-
-		if (node.type === "dir") {
-			if (!FileUtils.doesDirectoryExist(targetPath)) {
-				io.infoDirectoryCreate(targetPath);
-				if (!dryRun) FileUtils.createDirectory(targetPath);
-			} else {
-				io.infoDirectoryCreateSkip(targetPath);
-			}
-		} else {
-			if (
-				!(await extractFile(
-					io,
-					dryRun,
-					overwriteBehaviour,
-					sourcePath,
-					targetPath,
-					parameterValues,
-					templatingOptions,
-					engine,
-				))
-			)
-				return false;
-		}
-	}
-
-	return true;
-}
-
-async function extractTemplate(
-	key: string,
-	record: SnapshotRecord,
-	dryRun: boolean,
-	overwriteBehaviour: string,
-	partialRelativePath: string | undefined,
-	toPath: string,
-	parameterValues: Record<string, any>,
-): Promise<boolean> {
-	if (record.type !== SnapshotType.Template) return false;
-
-	// TODO: add code
-}
-// --------------------- [private] ----------------------
-
-function isPathChild(
-	partialPath: string,
-	fullPath: string,
-	pathType: "file" | "dir",
-): boolean {
-	if (!partialPath.endsWith("/")) partialPath += "/";
-	if (pathType === "dir" && !fullPath.endsWith("/")) fullPath += "/";
-
-	if (!partialPath.startsWith("/")) partialPath = "/" + partialPath;
-	if (!fullPath.startsWith("/")) fullPath = "/" + fullPath;
-
-	/*
-	Examples:
-		partialPath = /dir1/dir2/
-		fullPath:
-					/dir1/dir2/dir3/file1.ext	--> TRUE
-					/dir1/dir3/					--> FALSE
-					/dir1/dir2/dir3/			--> TRUE
-					/dir1/dir2/					--> TRUE
-	*/
-	return fullPath.startsWith(partialPath);
-}
-
-async function extractFile(
+export async function extractFile(
 	io: ExtractSnapshotIO,
 	dryRun: boolean,
 	overwriteBehaviour: string,
@@ -546,30 +388,127 @@ async function extractFile(
 	return true;
 }
 
-// ---------------------- [private] --------------------------------
-/*
-function executeTriggers(
-	mode: "pre" | "post",
+// --------------------- [private] ----------------------
+
+// (WARNING: not to be used for templates)
+async function extractFiles(
 	key: string,
-	workingDir: string,
-	triggers: { preScript: string | null; postScript: string | null } | undefined,
-	destDir: string | undefined = undefined,
-) {
-	if (!triggers) return;
+	record: SnapshotRecord,
+	dryRun: boolean,
+	overwriteBehaviour: string,
+	partialRelativePath: string | undefined,
+	toPath: string,
+	parameterValues: Record<string, any>,
+): Promise<boolean> {
+	if (!record.structure) return false;
+	if (record.type !== SnapshotType.Files) return false;
 
-	const snippetDir = SnapshotUtils.getSnapshotDirectory(key);
+	const io = new ExtractSnapshotIO();
+	const engine = ParamUtils.createTemplateEngine();
+	const templatingOptions = {
+		exclude: Settings.get("exclude") ?? [],
+		include: Settings.get("include") ?? [],
+		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+	};
 
-	if (mode == "pre" && triggers.preScript) {
-		const preScriptPath = FileUtils.formPath([snippetDir, triggers.preScript]);
-		MiscUtils.executeScript(preScriptPath, workingDir, destDir);
+	for (let i = 0; i < record.structure.length; ++i) {
+		if (record.structure[i].type !== "file") continue;
+		if (partialRelativePath && record.structure[i].path !== partialRelativePath)
+			continue;
+
+		const relPath = ParamUtils.replacePlaceholdersInFileName(
+			record.structure[i].path,
+			parameterValues,
+			templatingOptions,
+			engine,
+		);
+		const targetPath = FileUtils.formPath([toPath, relPath]);
+		const sourcePath = SnapshotUtils.getFileUnderSnapshot(
+			key,
+			record.structure[i].path,
+		);
+
+		if (
+			!(await extractFile(
+				io,
+				dryRun,
+				overwriteBehaviour,
+				sourcePath,
+				targetPath,
+				parameterValues,
+				templatingOptions,
+				engine,
+			))
+		)
+			return false;
 	}
 
-	if (mode == "post" && triggers.postScript) {
-		const postScriptPath = FileUtils.formPath([
-			snippetDir,
-			triggers.postScript,
-		]);
-		MiscUtils.executeScript(postScriptPath, workingDir);
-	}
+	return true;
 }
-*/
+
+// (WARNING: not to be used for templates)
+async function extractTree(
+	key: string,
+	record: SnapshotRecord,
+	dryRun: boolean,
+	overwriteBehaviour: string,
+	partialRelativePath: string | undefined,
+	toPath: string,
+	parameterValues: Record<string, any>,
+): Promise<boolean> {
+	if (!record.structure) return false;
+	if (record.type !== SnapshotType.Tree) return false;
+
+	const io = new ExtractSnapshotIO();
+	const engine = ParamUtils.createTemplateEngine();
+	const templatingOptions = {
+		exclude: Settings.get("exclude") ?? [],
+		include: Settings.get("include") ?? [],
+		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+	};
+
+	for (let i = 0; i < record.structure.length; ++i) {
+		const node = record.structure[i];
+
+		if (
+			partialRelativePath &&
+			!FileUtils.isPathChild(partialRelativePath, node.path, node.type)
+		) {
+			continue;
+		}
+
+		const relPath = ParamUtils.replacePlaceholdersInFileName(
+			node.path,
+			parameterValues,
+			templatingOptions,
+			engine,
+		);
+		const targetPath = FileUtils.formPath([toPath, relPath]);
+		const sourcePath = SnapshotUtils.getFileUnderSnapshot(key, node.path);
+
+		if (node.type === "dir") {
+			if (!FileUtils.doesDirectoryExist(targetPath)) {
+				io.infoDirectoryCreate(targetPath);
+				if (!dryRun) FileUtils.createDirectory(targetPath);
+			} else {
+				io.infoDirectoryCreateSkip(targetPath);
+			}
+		} else {
+			if (
+				!(await extractFile(
+					io,
+					dryRun,
+					overwriteBehaviour,
+					sourcePath,
+					targetPath,
+					parameterValues,
+					templatingOptions,
+					engine,
+				))
+			)
+				return false;
+		}
+	}
+
+	return true;
+}
