@@ -139,6 +139,10 @@ export class SaveGitRepoIO extends SaveDirectoryIO {
 			"Tree [Git]",
 		);
 	}
+
+	errorFetchingGitRepo(url: string): void {
+		// TODO: add code
+	}
 }
 
 export class SaveASCIITreeIO extends SaveDirectoryIO {

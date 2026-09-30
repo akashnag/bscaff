@@ -243,8 +243,9 @@ export async function saveTemplate(
 }
 // --------------------------------------------------------
 
+// called from extract-commands::extract()
 export async function extractTemplate(
-	key: string,
+	key: string | undefined,
 	record: SnapshotRecord,
 	dryRun: boolean,
 	overwriteBehaviour: string,
@@ -255,6 +256,95 @@ export async function extractTemplate(
 	if (record.type !== SnapshotType.Template) return false;
 
 	// TODO: add code
+}
+
+export async function createTemplateFromDirectory(
+	key: string | undefined,
+	desc: string | undefined,
+	tags: string | undefined,
+	fromPath: string,
+): Promise<boolean> {
+	// TODO: add code
+}
+
+export async function updateTemplate(
+	key: string | undefined,
+): Promise<boolean> {
+	const io = new SaveTemplateIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (!store.doesKeyExist(key)) {
+		io.errorKeyNotFound(key);
+		return false;
+	}
+
+	const record = store.fetch(key);
+	if (!record) {
+		io.errorFetchingSnapshot(key);
+		return false;
+	}
+
+	if (record.type !== SnapshotType.Template) {
+		io.errorUnsupportedOperation(
+			key,
+			record.type,
+			"Update template",
+			SnapshotType.Template,
+		);
+		return false;
+	}
+
+	if (!record.gitRepoSource || !record.gitRepoSource.url) {
+		io.errorCannotUpdateNonGitTemplate(key);
+		return false;
+	}
+
+	const git: SimpleGit = simpleGit.simpleGit();
+	const gitIO = new SaveGitRepoIO();
+	const remoteVersion = await getLatestRemoteTag(git, record.gitRepoSource.url);
+
+	if (!remoteVersion) {
+		gitIO.errorFetchingGitRepo(record.gitRepoSource.url);
+		return false;
+	}
+
+	if (
+		record.gitRepoSource.version &&
+		remoteVersion === record.gitRepoSource.version
+	) {
+		io.successTemplateGitRepoAlreadyLatest(
+			key,
+			record.gitRepoSource.url,
+			record.gitRepoSource.version,
+		);
+		return true;
+	}
+
+	store.delete(key);
+
+	const retVal = await saveTemplate(
+		record.key,
+		record.description,
+		record.tags ? record.tags.join(",") : undefined,
+		"git",
+		record.gitRepoSource!.url,
+	);
+
+	if (retVal) {
+		store.updateCreationTime(key, record.createdAt!);
+		store.update();
+
+		io.successTemplateUpdated(key);
+		return true;
+	}
+
+	return false;
 }
 
 // ---------------- [private] --------------------
@@ -283,30 +373,3 @@ async function getLatestRemoteTag(
 }
 
 // -------------------------- [private] ------------------------
-
-/*
-function executeTriggers(
-	mode: "pre" | "post",
-	key: string,
-	workingDir: string,
-	triggers: { preScript: string | null; postScript: string | null } | undefined,
-	destDir: string | undefined = undefined,
-) {
-	if (!triggers) return;
-
-	const snippetDir = SnapshotUtils.getSnapshotDirectory(key);
-
-	if (mode == "pre" && triggers.preScript) {
-		const preScriptPath = FileUtils.formPath([snippetDir, triggers.preScript]);
-		MiscUtils.executeScript(preScriptPath, workingDir, destDir);
-	}
-
-	if (mode == "post" && triggers.postScript) {
-		const postScriptPath = FileUtils.formPath([
-			snippetDir,
-			triggers.postScript,
-		]);
-		MiscUtils.executeScript(postScriptPath, workingDir);
-	}
-}
-*/

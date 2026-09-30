@@ -51,5 +51,21 @@ export class SaveTemplateIO extends ConsoleIO {
 	invalidTemplateZipFile(filePath: string): void {
 		// TODO: add code
 	}
+
+	errorCannotUpdateNonGitTemplate(key: string): void {
+		// TODO: add code
+	}
+
+	successTemplateUpdated(key: string): void {
+		// TODO: add code
+	}
+
+	successTemplateGitRepoAlreadyLatest(
+		key: string,
+		url: string,
+		version: string,
+	): void {
+		// TODO: add code
+	}
 }
 // --------------------------------------------------------

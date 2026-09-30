@@ -98,6 +98,21 @@ export function createRandomFileAndOpenInEditor(
 	return path;
 }
 
+export function createRandomTempDirectory(): string | null {
+	const dir =
+		"temp_" +
+		(+new Date()).toString() +
+		"_" +
+		getRandomInt(1000, 9999).toString();
+
+	const path = Config.getStoragePath([dir]);
+	if (FileUtils.createDirectory(path)) {
+		return path;
+	}
+
+	return null;
+}
+
 // Generates a random integer between min and max (both inclusive)
 export function getRandomInt(min: number, max: number): number {
 	// Ensure inputs are integers

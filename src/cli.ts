@@ -517,6 +517,7 @@ export class CLI {
 			);
 	}
 
+	// parked for future version
 	private defineTransformGroup(): void {
 		const transformGroup = this.program
 			.command("transform")
@@ -737,14 +738,6 @@ export class CLI {
 			.description(
 				"Create a new bscaff template from a directory (and saves it)",
 			)
-			.option(
-				"--pre-trigger <path/to/script>",
-				"Saves a pre-trigger script to the template, and executes it when template extracted",
-			)
-			.option(
-				"--post-trigger <path/to/script>",
-				"Saves a pre-trigger script to the template, and executes it when template extracted",
-			)
 			.action(
 				async (
 					path: string,
@@ -752,11 +745,17 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
+					const parentOpts = command.parent?.opts();
+					const retVal = await TemplateCommands.createTemplateFromDirectory(
+						globalOpts.key,
+						parentOpts?.desc,
+						parentOpts?.tags,
+						path,
+					);
+					if (!retVal) throw new Error();
 				},
 			);
 
-		/*
 		const updateTemplateCommand = templateGroup
 			.command("update")
 			.description(
@@ -764,9 +763,12 @@ export class CLI {
 			)
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
-				// TODO: add code
+				const retVal = await TemplateCommands.updateTemplate(globalOpts.key);
+				if (!retVal) throw new Error();
 			});
 
+		/* 
+		// parked for future-version
 		const updateTemplateProjectCommand = templateGroup
 			.command("update-project <path-to-project>")
 			.description(

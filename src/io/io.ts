@@ -685,4 +685,17 @@ export class ConsoleIO {
 		);
 		return choice ? await cm.paste() : null;
 	}
+
+	errorUnsupportedOperation(
+		key: string,
+		sType: SnapshotType,
+		operation: string,
+		requiredType: SnapshotType,
+	): void {
+		// TODO: add code
+	}
+
+	errorCreatingTempDirectory(): void {
+		// TODO: add code
+	}
 }

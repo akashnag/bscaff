@@ -13,6 +13,7 @@
 
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
+import * as MiscUtils from "../utils/misc-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
 import { Config } from "./config.js";
@@ -85,6 +86,23 @@ export class Store {
 
 		record.structure = newStructure;
 		record.modifiedAt = new Date();
+
+		const index = this.fetchIndex(key);
+		this.list[index] = record;
+
+		return true;
+	}
+
+	updateCreationTime(key: string, cTime: Date): boolean {
+		if (this.doesKeyExist(key)) return false;
+		const record = this.fetch(key);
+		if (!record) return false;
+
+		record.createdAt = cTime;
+
+		const index = this.fetchIndex(key);
+		this.list[index] = record;
+
 		return true;
 	}
 
@@ -114,7 +132,11 @@ export class Store {
 
 	fetch(key: string): SnapshotRecord | null {
 		const record = this.list.find((item) => item.key === key);
-		return record ? record : null;
+		return record ? MiscUtils.deepClone(record) : null;
+	}
+
+	fetchIndex(key: string): number {
+		return this.list.findIndex((item) => item.key === key);
 	}
 
 	delete(key: string): boolean {
