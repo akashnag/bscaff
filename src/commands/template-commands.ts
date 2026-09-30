@@ -17,12 +17,17 @@ import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
 import { SaveGitRepoIO } from "../io/save-io.js";
-import { SaveTemplateIO, VerifyTemplateIO } from "../io/template-io.js";
+import {
+	ExtractTemplateIO,
+	SaveTemplateIO,
+	VerifyTemplateIO,
+} from "../io/template-io.js";
 import { TemplateParseError } from "../types/errors.js";
 import { Template } from "../types/template-types.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
+import * as ParamUtils from "../utils/param-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
 import * as TemplateUtils from "../utils/template-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
@@ -259,15 +264,72 @@ export async function saveTemplate(
 
 // called from extract-commands::extract()
 export async function extractTemplate(
-	key: string | undefined,
+	key: string,
 	record: SnapshotRecord,
-	dryRun: boolean,
-	overwriteBehaviour: string,
-	partialRelativePath: string | undefined,
+	dryRun: boolean | undefined,
+	overwriteBehaviour: string | undefined,
 	toPath: string,
-	parameterValues: Record<string, any>,
 ): Promise<boolean> {
 	if (record.type !== SnapshotType.Template) return false;
+
+	const io = new ExtractTemplateIO();
+
+	const templateFile = SnapshotUtils.getFileUnderSnapshot(
+		key,
+		record.fileName!,
+	);
+
+	if (!FileUtils.doesFileExist(templateFile)) {
+		io.errorCorruptedData("template-config-file");
+		return false;
+	}
+
+	const template = await TemplateUtils.readTemplateFile(templateFile);
+	if (!template) {
+		io.errorReadingTemplateConfigFile(key);
+		return false;
+	}
+
+	const templateDir = FileUtils.getPathAndFileName(templateFile).path;
+	const templateDirName = FileUtils.getPathAndFileName(templateDir).filename;
+	const templateSourceDir = template._subdirectory
+		? FileUtils.formPath([templateDir, template._subdirectory])
+		: templateDir;
+
+	const engine = ParamUtils.createTemplateEngine(template._envops);
+	const templateOptions = {
+		exclude: template._exclude ?? undefined,
+		include: template._include ?? undefined,
+		templatesSuffix: template._templates_suffix ?? undefined,
+	};
+
+	const paramValues = io.promptForTemplateParameters(
+		record.parameters!,
+		TemplateUtils.getCustomKeysFromTemplate(template),
+		template,
+	);
+
+	const targetRoot = FileUtils.formPath([
+		toPath,
+		ParamUtils.replacePlaceholdersInFileName(
+			templateDirName,
+			paramValues,
+			templateOptions,
+			engine,
+		),
+	]);
+
+	if (!FileUtils.doesDirectoryExist(targetRoot)) {
+		FileUtils.createDirectory(targetRoot);
+	}
+
+	for (let i = 0; i < record.structure!.length; ++i) {
+		const node = record.structure![i];
+		const sourcePath = FileUtils.formPath([templateSourceDir, node.path]);
+		const targetPath = FileUtils.formPath([targetRoot, node.path]);
+
+		// TODO: add code
+	}
 
 	// TODO: add code
 }
@@ -502,5 +564,3 @@ async function getLatestRemoteTag(
 	// The first element in the array is the latest version tag
 	return tags && tags.length > 0 ? tags[0] : undefined;
 }
-
-// -------------------------- [private] ------------------------

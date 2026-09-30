@@ -11,8 +11,10 @@
  * GNU General Public License for more details.
  */
 
+import * as inquirer from "@inquirer/prompts";
 import { Config } from "../core/config.js";
 import { TemplateParseError } from "../types/errors.js";
+import { Template, TemplateQuestion } from "../types/template-types.js";
 import {
 	ConsoleIO,
 	printField,
@@ -93,5 +95,160 @@ export class VerifyTemplateIO extends ConsoleIO {
 
 	warnTemplateSubdirectoryDoesNotExist(dirPath: string): void {
 		// TODO: add code
+	}
+}
+
+export class ExtractTemplateIO extends ConsoleIO {
+	private _evaluateWhenCondition(
+		condition: string,
+		context: Record<string, any>,
+	): boolean {
+		try {
+			const keys = Object.keys(context);
+			const values = Object.values(context);
+			// Safely evaluate simple conditions in context scope
+			const func = new Function(...keys, `return Boolean(${condition});`);
+			return func(...values);
+		} catch {
+			// Fallback to strict truthiness check if expression evaluation fails
+			return Boolean(context[condition]);
+		}
+	}
+
+	private _parseChoices(
+		choices: TemplateQuestion["choices"],
+	): Array<{ name: string; value: any }> {
+		if (!choices) return [];
+
+		if (Array.isArray(choices)) {
+			return choices.map((c) => ({ name: String(c), value: c }));
+		}
+
+		// If choices is a Record<string, value>
+		return Object.entries(choices).map(([label, val]) => ({
+			name: `${label} (${val})`,
+			value: val,
+		}));
+	}
+
+	async promptForTemplateParameters(
+		identifiedParams: string[],
+		templateDefinedParams: string[],
+		template: Template,
+	): Promise<Record<string, any>> {
+		const self = this;
+		const answers: Record<string, any> = {};
+
+		// Merge parameter keys while giving priority to order and avoiding duplicates
+		const allParamKeys = Array.from(
+			new Set([...templateDefinedParams, ...identifiedParams]),
+		);
+
+		for (const key of allParamKeys) {
+			const rawQuestion = template[key] ?? template[key];
+			const question: TemplateQuestion | undefined =
+				typeof rawQuestion === "object" && rawQuestion !== null
+					? (rawQuestion as TemplateQuestion)
+					: undefined;
+
+			// 1. Evaluate "when" condition
+			if (question?.when !== undefined) {
+				if (typeof question.when === "boolean" && !question.when) {
+					continue;
+				}
+				if (typeof question.when === "string") {
+					const shouldPrompt = this._evaluateWhenCondition(
+						question.when,
+						answers,
+					);
+					if (!shouldPrompt) {
+						continue;
+					}
+				}
+			}
+
+			// Default message prompt label
+			const message = question?.prompt || `Please provide value for ${key}:`;
+			const defaultValue = question?.default;
+
+			// 2. Determine prompt type based on TemplateQuestion configuration
+
+			// Secret / Password Input
+			if (question?.secret) {
+				answers[key] = await inquirer.password({
+					message,
+					mask: "*",
+				});
+				continue;
+			}
+
+			// Multiline / Text Editor Input
+			if (question?.multiline) {
+				answers[key] = await inquirer.editor({
+					message: message,
+					default:
+						defaultValue !== undefined ? String(defaultValue) : undefined,
+					waitForUserInput: false,
+				});
+				continue;
+			}
+
+			// Select / Choice List
+			if (question?.choices) {
+				const parsedChoices = this._parseChoices(question.choices);
+				answers[key] = await inquirer.select({
+					message,
+					choices: parsedChoices,
+					default: defaultValue,
+				});
+				continue;
+			}
+
+			// Boolean Toggle Input
+			if (question?.type === "bool") {
+				answers[key] = await inquirer.confirm({
+					message,
+					default: typeof defaultValue === "boolean" ? defaultValue : true,
+				});
+				continue;
+			}
+
+			// Standard Text/String Input (Supports identifiedParams fallback & regex validation)
+			const validateInput = (val: string) => {
+				if (question?.validator) {
+					const regex = new RegExp(question.validator);
+					if (!regex.test(val)) {
+						return (
+							question.validator_error ||
+							`Input does not match pattern: ${question.validator}`
+						);
+					}
+				}
+				return true;
+			};
+
+			const rawResult = await inquirer.input({
+				message,
+				default: defaultValue !== undefined ? String(defaultValue) : undefined,
+				validate: validateInput,
+			});
+
+			// 3. Type casting for scalar/numeric values
+			if (question?.type === "int") {
+				answers[key] = parseInt(rawResult, 10);
+			} else if (question?.type === "float") {
+				answers[key] = parseFloat(rawResult);
+			} else if (question?.type === "json") {
+				try {
+					answers[key] = JSON.parse(rawResult);
+				} catch {
+					answers[key] = rawResult;
+				}
+			} else {
+				answers[key] = rawResult;
+			}
+		}
+
+		return answers;
 	}
 }

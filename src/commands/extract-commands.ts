@@ -275,7 +275,10 @@ export async function extract(
 	if (!overwriteBehaviour) overwriteBehaviour = "prompt";
 	if (!dryRun) dryRun = false;
 
-	const parameterValues = io.promptForParameters(record.parameters);
+	let parameterValues = null;
+	if (record.type !== SnapshotType.Template) {
+		parameterValues = io.promptForParameters(record.parameters);
+	}
 
 	switch (record.type) {
 		case SnapshotType.Files:
@@ -286,7 +289,7 @@ export async function extract(
 				overwriteBehaviour,
 				partialRelativePath,
 				toPath,
-				parameterValues,
+				parameterValues!,
 			);
 
 		case SnapshotType.Tree:
@@ -297,7 +300,7 @@ export async function extract(
 				overwriteBehaviour,
 				partialRelativePath,
 				toPath,
-				parameterValues,
+				parameterValues!,
 			);
 
 		case SnapshotType.Template:
@@ -306,9 +309,7 @@ export async function extract(
 				record,
 				dryRun,
 				overwriteBehaviour,
-				partialRelativePath,
 				toPath,
-				parameterValues,
 			);
 
 		default:

@@ -97,6 +97,8 @@ export interface Template {
 	// Migration tasks executed sequentially during template version updates
 	_migrations?: TemplateMigrationTask[];
 
+	//_questions?: Record<string, TemplateQuestion>;
+
 	// Top-level prompts/variables or additional metadata keys. Any key not starting with `_` is treated as a user prompt definition or plain default variable.
 	[key: string]: unknown | TemplateQuestion;
 }

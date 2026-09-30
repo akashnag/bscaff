@@ -94,6 +94,10 @@ export function doesZipHaveFileUnderRootDirectory(
 
 // ------------------- [Template operations] ---------------------
 
+export function getCustomKeysFromTemplate(template: Template): string[] {
+	return Object.keys(template).filter((key) => !key.startsWith("_"));
+}
+
 export function writeTemplate(
 	template: Template,
 	filePath?: string,
