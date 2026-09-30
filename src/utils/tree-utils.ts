@@ -296,7 +296,7 @@ export function isValidASCIITree(tree: string): boolean {
 	return treeLineCount > 0;
 }
 
-// converts a directory path to FileTreeNode[]
+// converts a directory path to FileTreeNode[], does not include the root-folder name itself as one of the entries
 export async function extractStructureFromDirectory(
 	dirPath: string,
 	readContent: boolean = false,

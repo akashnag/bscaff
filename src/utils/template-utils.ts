@@ -94,6 +94,25 @@ export function doesZipHaveFileUnderRootDirectory(
 
 // ------------------- [Template operations] ---------------------
 
+export function writeTemplate(
+	template: Template,
+	filePath?: string,
+): string | boolean {
+	try {
+		const content = YAML.stringify(template);
+		if (filePath) {
+			return FileUtils.writeTextFile(filePath, content);
+		} else {
+			return content;
+		}
+	} catch (err) {
+		throw new TemplateParseError(
+			`Failed to serialize template to YAML: ${(err as Error).message}`,
+			err,
+		);
+	}
+}
+
 export async function readTemplateFile(
 	filePath: string,
 ): Promise<Template | null> {

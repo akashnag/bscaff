@@ -12,10 +12,14 @@
  */
 
 import simpleGit, { SimpleGit } from "simple-git";
+import pkg from "../../package.json" with { type: "json" };
 import { Config } from "../core/config.js";
+import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
 import { SaveGitRepoIO } from "../io/save-io.js";
-import { SaveTemplateIO } from "../io/template-io.js";
+import { SaveTemplateIO, VerifyTemplateIO } from "../io/template-io.js";
+import { TemplateParseError } from "../types/errors.js";
+import { Template } from "../types/template-types.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
@@ -24,7 +28,7 @@ import * as TemplateUtils from "../utils/template-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
 
 // --------------------------------------------------------
-// template save <zip-OR-repo-URL> [--git]
+// template save <zip-OR-repo-URL> [--source <git|zip|dir>]
 // --------------------------------------------------------
 export async function saveTemplate(
 	key: string | undefined,
@@ -189,7 +193,7 @@ export async function saveTemplate(
 		return false;
 	}
 
-	const template = TemplateUtils.readTemplateFile(
+	const template = await TemplateUtils.readTemplateFile(
 		FileUtils.formPath([localDir, Config.TEMPLATE_CONFIG_FILE]),
 	);
 
@@ -203,8 +207,18 @@ export async function saveTemplate(
 		FileUtils.formPath([localDir, Config.TEMPLATE_CONFIG_FILE]),
 	);
 	const tagList = tags ? tags.split(",") : undefined;
+
+	const templateConfigFilePath = FileUtils.formPath([
+		localDir,
+		Config.TEMPLATE_CONFIG_FILE,
+	]);
+
+	const templateDir = template._subdirectory
+		? FileUtils.formPath([localDir, template._subdirectory])
+		: localDir;
+
 	const { structure, parameters, stats } =
-		await TreeUtils.extractStructureFromDirectory(localDir);
+		await TreeUtils.extractStructureFromDirectory(templateDir);
 
 	if (!structure) {
 		FileUtils.deleteDirectory(snapshotDir);
@@ -217,7 +231,7 @@ export async function saveTemplate(
 		description: description,
 		type: SnapshotType.Template,
 		tags: tagList,
-		fileName: relativeTemplateFilePath,
+		fileName: FileUtils.getRelativePath(templateConfigFilePath, snapshotDir),
 		structure: structure,
 		parameters: parameters ?? undefined,
 	};
@@ -264,7 +278,124 @@ export async function createTemplateFromDirectory(
 	tags: string | undefined,
 	fromPath: string,
 ): Promise<boolean> {
-	// TODO: add code
+	const io = new SaveTemplateIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	fromPath = FileUtils.resolvePath(fromPath);
+	if (FileUtils.doesDirectoryExist(fromPath)) {
+		io.errorSourceDirectoryMissing(fromPath);
+		return false;
+	}
+
+	const template: Template = {
+		_min_bscaff_version: pkg.version,
+		_exclude: Settings.get("exclude") ?? undefined,
+		_include: Settings.get("include") ?? undefined,
+		_skip_if_exists: [],
+		_templates_suffix: ".jinja",
+	};
+
+	const templateContent: string = TemplateUtils.writeTemplate(
+		template,
+	) as string;
+
+	const randFile = MiscUtils.createRandomFile(
+		"yml",
+		templateContent,
+		true,
+		false,
+	);
+
+	if (!randFile) {
+		io.errorCreatingTempFile();
+		return false;
+	}
+
+	if (!verifyTemplate(randFile, template)) {
+		io.errorCreatingTemplateDueToInvalidTemplateFormat();
+		return false;
+	}
+
+	const store = await Store.create();
+	SnapshotUtils.createSnapshotDirectory(key);
+	const snapshotDir = SnapshotUtils.getSnapshotDirectory(key);
+	const localDir = FileUtils.copyDirectory(fromPath, snapshotDir);
+	const templateConfigFilePath = FileUtils.formPath([
+		localDir,
+		Config.TEMPLATE_CONFIG_FILE,
+	]);
+
+	FileUtils.copyFile(randFile, templateConfigFilePath);
+	const templateDir = template._subdirectory
+		? FileUtils.formPath([localDir, template._subdirectory])
+		: localDir;
+	const { structure, parameters, stats } =
+		await TreeUtils.extractStructureFromDirectory(templateDir, false);
+
+	const tagList = tags ? tags.split(",") : undefined;
+	const info: SnapshotRecord = {
+		key: key,
+		description: desc,
+		type: SnapshotType.Template,
+		tags: tagList,
+		fileName: FileUtils.getRelativePath(templateConfigFilePath, snapshotDir),
+		structure: structure ?? undefined,
+		parameters: parameters ?? undefined,
+	};
+	store.save(info);
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		MiscUtils.formatFileSize(stats.sizeInBytes),
+		stats.fileCount,
+		stats.dirCount,
+		desc,
+		tagList,
+		"Template",
+	);
+
+	return true;
+}
+
+export async function verifyTemplate(
+	filePath: string,
+	targetTemplate?: Template,
+): Promise<boolean> {
+	const io = new VerifyTemplateIO();
+
+	try {
+		const modTemplate = await TemplateUtils.readTemplateFile(filePath);
+		if (!modTemplate) {
+			io.errorParsingTemplateFileContent();
+			return false;
+		}
+
+		if (modTemplate._subdirectory) {
+			const subDirPath = FileUtils.formPath([
+				FileUtils.getPathAndFileName(filePath).path,
+				modTemplate._subdirectory,
+			]);
+
+			if (!FileUtils.doesDirectoryExist(subDirPath)) {
+				io.warnTemplateSubdirectoryDoesNotExist(subDirPath);
+			}
+		}
+
+		if (targetTemplate) {
+			Object.assign(targetTemplate, modTemplate);
+		} else {
+			io.successTemplateVerified();
+		}
+		return true;
+	} catch (err: any) {
+		io.errorDuringTemplateParsing(err as TemplateParseError);
+		return false;
+	}
 }
 
 export async function updateTemplate(

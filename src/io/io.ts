@@ -698,4 +698,8 @@ export class ConsoleIO {
 	errorCreatingTempDirectory(): void {
 		// TODO: add code
 	}
+
+	errorCreatingTempFile(): void {
+		// TODO: add code
+	}
 }

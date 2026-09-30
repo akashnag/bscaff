@@ -12,6 +12,7 @@
  */
 
 import { Config } from "../core/config.js";
+import { TemplateParseError } from "../types/errors.js";
 import {
 	ConsoleIO,
 	printField,
@@ -67,5 +68,30 @@ export class SaveTemplateIO extends ConsoleIO {
 	): void {
 		// TODO: add code
 	}
+
+	errorCreatingTemplateDueToInvalidTemplateFormat(): void {
+		// TODO: add code
+	}
 }
 // --------------------------------------------------------
+
+// --------------------------------------------------------
+// template verify <path>
+// --------------------------------------------------------
+export class VerifyTemplateIO extends ConsoleIO {
+	errorParsingTemplateFileContent(): void {
+		// TODO: add code
+	}
+
+	successTemplateVerified(): void {
+		// TODO: add code
+	}
+
+	errorDuringTemplateParsing(err: TemplateParseError): void {
+		// TODO: add code
+	}
+
+	warnTemplateSubdirectoryDoesNotExist(dirPath: string): void {
+		// TODO: add code
+	}
+}

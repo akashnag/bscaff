@@ -702,16 +702,36 @@ export class CLI {
 
 		/*
 		Examples:
-			[Save template from zip]			--> bscaff -k my-template template save ./bscaff-react-template.zip
-			[Save template from git repo]		--> bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --git
+			[Verify template file]			--> bscaff template verify <path-to-yaml-file>
+		*/
+		const verifyTemplateCommand = templateGroup
+			.command("verify <path-to-template-config-file>")
+			.description(
+				"Verifies if a template-config file is syntactically correct",
+			)
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					const retVal = await TemplateCommands.verifyTemplate(path);
+					if (!retVal) throw new Error();
+				},
+			);
+
+		/*
+		Examples:
+			[Save template from zip]			--> bscaff -k my-template template save ./bscaff-react-template.zip --source zip
+			[Save template from git repo]		--> bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --source git
 		*/
 		const saveTemplateCommand = templateGroup
 			.command("save <path-to-template>")
 			.addOption(
-				new Option(
-					"-s, --source <source>",
-					"Type of the path specified",
-				).choices(["zip", "git", "dir"]),
+				new Option("-s, --source <source>", "Type of the path specified")
+					.choices(["zip", "git", "dir"])
+					.default("dir"),
 			)
 			.description("Save a bscaff template")
 			.action(
@@ -733,6 +753,10 @@ export class CLI {
 				},
 			);
 
+		/*
+		Examples:
+			[Create template from directory]			--> bscaff -k my-template template create projects/my-react-app
+		*/
 		const createTemplateCommand = templateGroup
 			.command("create <path-to-directory>")
 			.description(
@@ -756,6 +780,11 @@ export class CLI {
 				},
 			);
 
+		/*
+		Examples: 
+			NOTE: this works only if the template was originally created from a git-repo
+			[Update template]		--> bscaff -k my-template template update
+		*/
 		const updateTemplateCommand = templateGroup
 			.command("update")
 			.description(
@@ -767,8 +796,13 @@ export class CLI {
 				if (!retVal) throw new Error();
 			});
 
-		/* 
-		// parked for future-version
+		/*
+		Examples: 
+			NOTE: this works only if the template was originally created from a git-repo
+			[Update template-generated project]		--> bscaff -k my-template template update-project projects/my-react-app
+		*/
+		/*
+		// parked for future
 		const updateTemplateProjectCommand = templateGroup
 			.command("update-project <path-to-project>")
 			.description(

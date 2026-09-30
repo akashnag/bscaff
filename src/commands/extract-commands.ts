@@ -175,9 +175,10 @@ export async function openSnapshotReadOnly(
 			}
 
 			// open editor in detached mode
-			MiscUtils.createRandomFileAndOpenInEditor(
+			MiscUtils.createRandomFile(
 				FileUtils.getFileType(snippetFile),
 				snippetContent,
+				true,
 			);
 			break;
 
@@ -210,10 +211,7 @@ export async function openSnapshotReadOnly(
 				return false;
 			}
 
-			MiscUtils.createRandomFileAndOpenInEditor(
-				FileUtils.getFileType(file),
-				content,
-			);
+			MiscUtils.createRandomFile(FileUtils.getFileType(file), content, true);
 			break;
 	}
 

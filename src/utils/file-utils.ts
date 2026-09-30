@@ -231,7 +231,7 @@ export async function readTextFile(filePath: string): Promise<string | null> {
 	}
 }
 
-export function copyDirectory(src: string, dest: string): void {
+export function copyDirectory(src: string, dest: string): string {
 	// Ensure target directory exists
 	if (!fs.existsSync(dest)) {
 		fs.mkdirSync(dest, { recursive: true });
@@ -253,6 +253,8 @@ export function copyDirectory(src: string, dest: string): void {
 			fs.copyFileSync(srcPath, destPath);
 		}
 	}
+
+	return path.join(dest, path.basename(src));
 }
 
 export function resolvePaths(paths: string[]): string[] {

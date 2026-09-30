@@ -79,9 +79,10 @@ export async function countLOCFromFile(
 	return countLOC(data);
 }
 
-export function createRandomFileAndOpenInEditor(
+export function createRandomFile(
 	fileType: string = "txt",
 	content: string | null = null,
+	openInEditor: boolean = true,
 	detach: boolean = true,
 ): string | null {
 	const fileName =
@@ -94,7 +95,10 @@ export function createRandomFileAndOpenInEditor(
 	if (content) {
 		if (!FileUtils.writeTextFile(path, content)) return null;
 	}
-	if (!openFileInEditor(path)) return null;
+
+	if (openInEditor) {
+		if (!openFileInEditor(path)) return null;
+	}
 	return path;
 }
 
