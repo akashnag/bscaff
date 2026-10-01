@@ -474,11 +474,28 @@ export class ConsoleIO {
 	}
 
 	errorFetchingSnapshot(key: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Error Fetching Snapshot");
+		printField("Key", key);
+		printField(
+			"Error",
+			`Unable to fetch snapshot record or retrieve its data.`,
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Ensure the snapshot key is valid and exists in storage");
+		printBullet("Run `bscaff list` to inspect available snapshots\n");
 	}
 
 	warnOptionIgnored(param: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Option Ignored", IOHeaderType.WARNING);
+		printField(
+			"Warning",
+			`The option '${param}' is not applicable in this context and was ignored.\n`,
+		);
 	}
 
 	errorReadingSnapshotFile(
@@ -486,11 +503,39 @@ export class ConsoleIO {
 		sType: SnapshotType,
 		relPath: string,
 	): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Error Reading Snapshot File");
+		printField("Key", key);
+		printField("Type", String(sType));
+		printField("File", relPath);
+		printField(
+			"Error",
+			"Could not read the snapshot file contents from storage.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Check read permissions for the file in ~/.bscaff storage");
+		printBullet(
+			`Inspect the files in this snapshot using: bscaff list -k ${key}\n`,
+		);
 	}
 
 	errorCorruptedData(dataItem: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Corrupted Snapshot Data");
+		printField("Item", dataItem);
+		printField(
+			"Error",
+			`The snapshot data item '${dataItem}' is corrupted or missing.`,
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"The underlying snapshot database or storage directory may have been modified",
+		);
+		printBullet("Delete and recreate the snapshot to restore data integrity\n");
 	}
 
 	async promptForParameters(
@@ -679,7 +724,7 @@ export class ConsoleIO {
 		cm: ClipboardManager,
 	): Promise<string | null> {
 		const choice = await quickConfirm(
-			"Press R when ready with file-content copied to clipboard, else Enter/Return to skip:",
+			"Press R when ready with file-content copied to clipboard, any other key to skip:",
 			{ r: true },
 			false,
 		);
@@ -692,14 +737,46 @@ export class ConsoleIO {
 		operation: string,
 		requiredType: SnapshotType,
 	): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Unsupported Operation");
+		printField("Key", key);
+		printField("Current Type", String(sType));
+		printField("Operation", operation);
+		printField("Required Type", requiredType);
+		printField(
+			"Error",
+			`Operation '${operation}' is not supported on snapshot type '${sType}'.`,
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			`This command is only applicable to snapshots of type '${requiredType}'\n`,
+		);
 	}
 
 	errorCreatingTempDirectory(): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Failed to Create Temporary Directory");
+		printField("Error", "Could not create temporary directory for operation.");
+
+		console.log("\nTo resolve:");
+		printBullet("Ensure that your system temporary directory is writable");
+		printBullet("Check for sufficient disk space\n");
 	}
 
 	errorCreatingTempFile(): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Failed to Create Temporary File");
+		printField(
+			"Error",
+			"Could not create temporary file for viewing or editing.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Ensure that your system temporary directory is writable");
+		printBullet("Check for sufficient disk space\n");
 	}
 }
