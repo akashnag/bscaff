@@ -251,4 +251,71 @@ export class ExtractTemplateIO extends ConsoleIO {
 
 		return answers;
 	}
+
+	errorReadingTemplateConfigFile(key: string, templateFile: string): void {
+		// TODO: add code
+	}
+
+	errorCannotDryRunInPresenceOfTriggers(): void {
+		// TODO: add code
+	}
+
+	infoCreateDirectory(targetRoot: string): void {
+		// TODO: add code
+	}
+
+	errorTemplateExtractionFailed(reason: string, data?: string): void {
+		// TODO: add code
+	}
+
+	infoSkipFileOrDirectory(
+		fType: "file" | "dir",
+		fPath: string,
+		reason: string,
+	): void {
+		// TODO: add code
+	}
+
+	infoCreateFile(fPath: string): void {
+		// TODO: add code
+	}
+
+	successTemplateExtracted(key: string): void {
+		// TODO: add code
+	}
+
+	infoInitiatingAllGenerationTasks(eventType: "Pre" | "Post"): void {
+		// TODO: add code
+	}
+
+	errorInRenderingGenerationTaskCommand(
+		command: string,
+		errMessage: string,
+	): void {
+		// TODO: add code
+	}
+
+	infoInitiatingGenerationTask(index: number, command: string): void {
+		// TODO: add code
+	}
+
+	errorExecutingGenerationTask(
+		command: string,
+		workingDir: string,
+		errMessage: string,
+	): void {
+		// TODO: add code
+	}
+
+	infoCompletedGenerationTask(): void {
+		// TODO: add code
+	}
+
+	infoCompletedAllGenerationTasks(eventType: "Pre" | "Post"): void {
+		// TODO: add code
+	}
+
+	errorFailedToCompleteGenerationTasks(eventType: "Pre" | "Post"): void {
+		// TODO: add code
+	}
 }

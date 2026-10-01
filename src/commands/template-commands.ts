@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { execSync } from "child_process";
+import * as nunjucks from "nunjucks";
 import simpleGit, { SimpleGit } from "simple-git";
 import pkg from "../../package.json" with { type: "json" };
 import { Config } from "../core/config.js";
@@ -271,6 +273,7 @@ export async function extractTemplate(
 	toPath: string,
 ): Promise<boolean> {
 	if (record.type !== SnapshotType.Template) return false;
+	if (!overwriteBehaviour) overwriteBehaviour = "prompt";
 
 	const io = new ExtractTemplateIO();
 
@@ -286,7 +289,15 @@ export async function extractTemplate(
 
 	const template = await TemplateUtils.readTemplateFile(templateFile);
 	if (!template) {
-		io.errorReadingTemplateConfigFile(key);
+		io.errorReadingTemplateConfigFile(key, templateFile);
+		return false;
+	}
+
+	if (
+		dryRun &&
+		(template._pre_generation_tasks || template._post_generation_tasks)
+	) {
+		io.errorCannotDryRunInPresenceOfTriggers();
 		return false;
 	}
 
@@ -320,18 +331,105 @@ export async function extractTemplate(
 	]);
 
 	if (!FileUtils.doesDirectoryExist(targetRoot)) {
-		FileUtils.createDirectory(targetRoot);
+		io.infoCreateDirectory(targetRoot);
+		if (!dryRun) FileUtils.createDirectory(targetRoot);
 	}
+
+	if (!dryRun) {
+		if (
+			!(await executeTemplateTriggerTasks(
+				"Pre",
+				template._pre_generation_tasks,
+				targetRoot,
+				paramValues,
+				engine,
+				io,
+			))
+		) {
+			io.errorTemplateExtractionFailed("PRE_GENERATION_TASKS_FAILED");
+			return false;
+		}
+	}
+
+	const excludedDirs: string[] = [];
 
 	for (let i = 0; i < record.structure!.length; ++i) {
 		const node = record.structure![i];
-		const sourcePath = FileUtils.formPath([templateSourceDir, node.path]);
-		const targetPath = FileUtils.formPath([targetRoot, node.path]);
 
-		// TODO: add code
+		const nodePath = ParamUtils.replacePlaceholdersInFileName(
+			node.path,
+			paramValues,
+			templateOptions,
+			engine,
+		);
+
+		if (ParamUtils.shouldFileOrDirectoryBeExcluded(nodePath, templateOptions)) {
+			if (node.type === "dir") {
+				excludedDirs.push(nodePath);
+			}
+			io.infoSkipFileOrDirectory(node.type, nodePath, "EXCLUDED");
+			continue;
+		}
+
+		const hasMatchingPrefix: boolean = excludedDirs.some((prefix) =>
+			nodePath.startsWith(prefix),
+		);
+		if (hasMatchingPrefix) {
+			io.infoSkipFileOrDirectory(node.type, nodePath, "EXCLUDED");
+			continue;
+		}
+
+		const sourcePath = FileUtils.formPath([templateSourceDir, nodePath]);
+		const targetPath = FileUtils.formPath([targetRoot, nodePath]);
+
+		if (node.type === "dir") {
+			if (!FileUtils.doesDirectoryExist(targetPath)) {
+				io.infoCreateDirectory(targetPath);
+				if (!dryRun) FileUtils.createDirectory(targetPath);
+			}
+		} else {
+			if (FileUtils.doesFileExist(targetPath)) {
+				if (overwriteBehaviour === "fail") {
+					io.errorTemplateExtractionFailed("FILE_EXISTS", targetPath);
+					return false;
+				} else if (overwriteBehaviour === "skip") {
+					io.infoSkipFileOrDirectory("file", targetPath, "FILE_EXISTS");
+					continue;
+				} else if (overwriteBehaviour === "prompt") {
+					const overwrite = await io.promptForFileOverwrite(targetPath);
+					if (!overwrite) {
+						io.infoSkipFileOrDirectory("file", targetPath, "USER_SKIPPED");
+						continue;
+					}
+				}
+			}
+
+			io.infoCreateFile(targetPath);
+			if (!dryRun) FileUtils.copyFile(sourcePath, targetPath);
+		}
 	}
 
-	// TODO: add code
+	if (!dryRun) {
+		if (
+			await executeTemplateTriggerTasks(
+				"Post",
+				template._post_generation_tasks,
+				targetRoot,
+				paramValues,
+				engine,
+				io,
+			)
+		) {
+			io.successTemplateExtracted(key);
+			return true;
+		} else {
+			io.errorTemplateExtractionFailed("POST_GENERATION_TASKS_FAILED");
+			return false;
+		}
+	} else {
+		io.successTemplateExtracted(key);
+		return true;
+	}
 }
 
 export async function createTemplateFromDirectory(
@@ -541,6 +639,63 @@ export async function updateTemplate(
 }
 
 // ---------------- [private] --------------------
+
+async function executeTemplateTriggerTasks(
+	eventType: "Pre" | "Post",
+	tasks: string[] | undefined,
+	workingDir: string,
+	paramValues: Record<string, any>,
+	engine: nunjucks.Environment,
+	io: ExtractTemplateIO,
+): Promise<boolean> {
+	if (!tasks) return true;
+	if (!tasks || tasks.length === 0) return true;
+
+	io.infoInitiatingAllGenerationTasks(eventType);
+	let success = true;
+	let count = 0;
+
+	for (const rawTask of tasks) {
+		let command: string;
+
+		// Render template variables inside the command string
+		try {
+			command = engine.renderString(rawTask, paramValues);
+		} catch (err: any) {
+			io.errorInRenderingGenerationTaskCommand(rawTask, err.message);
+			success = false;
+			break;
+		}
+
+		// Skip empty or whitespace-only commands after rendering
+		if (!command.trim()) continue;
+
+		io.infoInitiatingGenerationTask(++count, command);
+
+		// Execute command sequentially in workingDir
+		try {
+			execSync(command, {
+				cwd: workingDir,
+				stdio: "inherit",
+				encoding: "utf-8",
+			});
+		} catch (err: any) {
+			io.errorExecutingGenerationTask(command, workingDir, err.message);
+			success = false;
+			break;
+		}
+
+		io.infoCompletedGenerationTask();
+	}
+
+	if (success) {
+		io.infoCompletedAllGenerationTasks(eventType);
+		return true;
+	} else {
+		io.errorFailedToCompleteGenerationTasks(eventType);
+		return false;
+	}
+}
 
 async function getLatestRemoteTag(
 	git: SimpleGit,

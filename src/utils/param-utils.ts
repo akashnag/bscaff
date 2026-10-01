@@ -134,6 +134,28 @@ export async function getParametersFromFileContent(
 	return content ? getParametersFromText(content, engine) : [];
 }
 
+export function shouldFileOrDirectoryBeExcluded(
+	fPath: string,
+	options: { exclude?: string[]; include?: string[]; templatesSuffix?: string },
+): boolean {
+	const matchesAny = (patterns: string[]): boolean =>
+		patterns.some((pattern) => globToRegex(pattern).test(fPath));
+
+	const hasInclude = Boolean(options.include && options.include.length > 0);
+	const hasExclude = Boolean(options.exclude && options.exclude.length > 0);
+
+	const isIncluded = hasInclude ? matchesAny(options.include!) : false;
+	const isExcluded = hasExclude ? matchesAny(options.exclude!) : false;
+
+	// If explicit includes exist, file must NOT be included to be excluded.
+	// If an exclude pattern matches, exclude it unless explicit includes take precedence.
+	if (hasInclude) {
+		return isExcluded || !isIncluded;
+	}
+
+	return isExcluded;
+}
+
 export function replacePlaceholdersInFileName(
 	fileName: string,
 	paramValues: Record<string, any>,

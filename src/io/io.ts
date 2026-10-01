@@ -552,7 +552,7 @@ export class ConsoleIO {
 				}
 			}
 
-			const message = question.help || `Enter value for ${key}:`;
+			const message = question.prompt || `Enter value for ${key}:`;
 			const qType = question.type || "str";
 
 			// 3. Choice Selection (select prompt)
