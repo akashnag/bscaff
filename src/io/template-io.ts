@@ -392,7 +392,7 @@ export class ExtractTemplateIO extends ConsoleIO {
 	infoCreateDirectory(targetRoot: string): void {
 		if (QUIET_MODE) return;
 
-		const tag = chalk.bgGreen.black.bold(" CREATE ");
+		const tag = chalk.green.bold(" CREATE ");
 		printIndented(`${tag} ${targetRoot}/`);
 	}
 
@@ -418,7 +418,7 @@ export class ExtractTemplateIO extends ConsoleIO {
 	): void {
 		if (QUIET_MODE) return;
 
-		const tag = chalk.bgYellow.black.bold(" SKIP ");
+		const tag = chalk.yellow.bold(" SKIP ");
 		const suffix = fType === "dir" ? "/" : "";
 		printIndented(`${tag} ${fPath}${suffix} (${reason})`);
 	}
@@ -426,7 +426,7 @@ export class ExtractTemplateIO extends ConsoleIO {
 	infoCreateFile(fPath: string): void {
 		if (QUIET_MODE) return;
 
-		const tag = chalk.bgGreen.black.bold(" CREATE ");
+		const tag = chalk.green.bold(" CREATE ");
 		printIndented(`${tag} ${fPath}`);
 	}
 

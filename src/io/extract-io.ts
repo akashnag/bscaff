@@ -17,58 +17,6 @@ import { SnapshotType } from "../types/types.js";
 import * as IOUtils from "./io.js";
 import { ConsoleIO, printIndented } from "./io.js";
 
-/*
-export class CopySnapshotIO extends ConsoleIO {
-	successSnapshotCopied(key: string, sType: SnapshotType): void {
-		// TODO: add code
-	}
-}
-
-export class OpenSnapshotIO extends ConsoleIO {
-	errorOpeningURL(browser: string | null, url: string | undefined): void {
-		// TODO: add code
-	}
-}
-
-export class ExtractSnapshotIO extends ConsoleIO {
-	errorExtractionUnsupported(sType: SnapshotType): void {
-		// TODO: add code
-	}
-
-	infoFileCreate(fPath: string): void {
-		// TODO: add code
-	}
-
-	infoFileCreateSkipPostPrompt(): void {
-		// TODO: add code
-	}
-
-	infoFileCreateOverwritePostPrompt(): void {
-		// TODO: add code
-	}
-
-	infoFileCreateSkip(fPath: string): void {
-		// TODO: add code
-	}
-
-	infoFileCreateFail(fPath: string): void {
-		// TODO: add code
-	}
-
-	infoFileCreateOverwrite(fPath: string): void {
-		// TODO: add code
-	}
-
-	infoDirectoryCreate(tPath: string): void {
-		// TODO: add code
-	}
-
-	infoDirectoryCreateSkip(tPath: string): void {
-		// TODO: add code
-	}
-}
-*/
-
 export class CopySnapshotIO extends ConsoleIO {
 	successSnapshotCopied(key: string, sType: SnapshotType): void {
 		if (IOUtils.QUIET_MODE) return;

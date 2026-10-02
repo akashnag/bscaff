@@ -17,6 +17,7 @@
 		"dev": "tsc --watch & node --watch bin/index.js",
 		"test": "vitest",
 		"test:run": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"build:completions": "npm run build && tsx scripts/generate-completions.ts"
 	},
 	"keywords": [
@@ -51,6 +52,7 @@
 		"tsx": "^4.23.15",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.70.0",
-		"vitest": "^4.1.11"
+		"vitest": "^4.1.11",
+		"@vitest/coverage-v8": "^4.1.11"
 	}
 }
