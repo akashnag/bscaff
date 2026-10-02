@@ -22,8 +22,8 @@ export class ScriptMissingError extends Error {
 	}
 }
 
-export class TemplateParseError extends Error {
-	public override readonly name = "TemplateParseError";
+export class YAMLParseError extends Error {
+	public override readonly name = "YAMLParseError";
 	public readonly cause?: unknown;
 	public readonly lineNumber?: number;
 

@@ -15,7 +15,7 @@ import * as inquirer from "@inquirer/prompts";
 import chalk from "chalk";
 import ora, { Ora } from "ora";
 import { Config } from "../core/config.js";
-import { TemplateParseError } from "../types/errors.js";
+import { YAMLParseError } from "../types/errors.js";
 import { Template, TemplateQuestion } from "../types/template-types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import {
@@ -179,7 +179,7 @@ export class VerifyTemplateIO extends ConsoleIO {
 		printField("Status", "The template structure and syntax are valid.\n");
 	}
 
-	errorDuringTemplateParsing(err: TemplateParseError): void {
+	errorDuringTemplateParsing(err: YAMLParseError): void {
 		if (QUIET_MODE) return;
 
 		printHeader("Template Verification Failed");

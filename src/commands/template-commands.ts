@@ -24,13 +24,14 @@ import {
 	SaveTemplateIO,
 	VerifyTemplateIO,
 } from "../io/template-io.js";
-import { TemplateParseError } from "../types/errors.js";
+import { YAMLParseError } from "../types/errors.js";
 import { Template } from "../types/template-types.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as ParamUtils from "../utils/param-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import * as SpecialFileIOUtils from "../utils/special-file-io.js";
 import * as TemplateUtils from "../utils/template-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
 
@@ -134,7 +135,7 @@ export async function saveTemplate(
 			return false;
 		}
 
-		const zipRootDir = TemplateUtils.getZipRootDirectory(filePath);
+		const zipRootDir = SpecialFileIOUtils.getZipRootDirectory(filePath);
 		if (!zipRootDir) {
 			FileUtils.deleteDirectory(snapshotDir);
 			io.invalidTemplateZipFile(filePath);
@@ -142,7 +143,7 @@ export async function saveTemplate(
 		}
 
 		if (
-			!TemplateUtils.doesZipHaveFileUnderRootDirectory(
+			!SpecialFileIOUtils.doesZipHaveFileUnderRootDirectory(
 				filePath,
 				Config.TEMPLATE_CONFIG_FILE,
 				zipRootDir,
@@ -153,7 +154,7 @@ export async function saveTemplate(
 			return false;
 		}
 
-		if (!TemplateUtils.extractZipFile(filePath, snapshotDir)) {
+		if (!SpecialFileIOUtils.extractZipFile(filePath, snapshotDir)) {
 			io.errorExtractingZip(filePath);
 			return false;
 		}
@@ -553,7 +554,7 @@ export async function verifyTemplate(
 		}
 		return true;
 	} catch (err: any) {
-		io.errorDuringTemplateParsing(err as TemplateParseError);
+		io.errorDuringTemplateParsing(err as YAMLParseError);
 		return false;
 	}
 }

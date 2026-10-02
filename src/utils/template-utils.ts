@@ -11,143 +11,48 @@
  * GNU General Public License for more details.
  */
 
-import AdmZip from "adm-zip";
 import * as fs from "fs/promises";
-import YAML from "yaml";
 import { Config } from "../core/config.js";
-import { TemplateParseError } from "../types/errors.js";
+import { YAMLParseError } from "../types/errors.js";
 import { Template, TemplateQuestion } from "../types/template-types.js";
 import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
+import * as SpecialFileIOUtils from "./special-file-io.js";
 import {
 	drawFileTree,
 	extractStructureFromASCIITree,
 	extractStructureFromDirectory,
 } from "./tree-utils.js";
 
-// ------------------- [Zip operations] ---------------------
-
-export function extractZipFile(
-	zipFilePath: string,
-	targetPath: string,
-): boolean {
-	const zip = new AdmZip(zipFilePath);
-	zip.extractAllTo(targetPath, true);
-	return true;
-}
-
-export function getZipRootDirectory(zipFilePath: string): string | null {
-	try {
-		const zip = new AdmZip(zipFilePath);
-		const zipEntries = zip.getEntries();
-
-		if (zipEntries.length === 0) {
-			return null; // Empty zip
-		}
-
-		// Get the top-level segment of the very first entry
-		// Example: "folder/subfolder/file.txt" -> "folder/"
-		const firstEntryName = zipEntries[0].entryName;
-		const firstSlashIndex = firstEntryName.indexOf("/");
-
-		if (firstSlashIndex === -1) {
-			// The first entry is a file in the absolute root of the zip
-			return null;
-		}
-
-		const suspectedRoot = firstEntryName.substring(0, firstSlashIndex + 1);
-
-		// Verify that EVERY entry in the zip starts with this exact root prefix
-		for (const entry of zipEntries) {
-			if (!entry.entryName.startsWith(suspectedRoot)) {
-				return null; // Found a file or folder outside the suspected root
-			}
-		}
-
-		return suspectedRoot; // Returns something like "my-project-master/"
-	} catch (error) {
-		return null;
-	}
-}
-
-export function doesZipHaveFileUnderRootDirectory(
-	zipFilePath: string,
-	fileName: string,
-	zipRootDir: string | null = null,
-): boolean {
-	try {
-		if (!zipRootDir) zipRootDir = getZipRootDirectory(zipFilePath);
-		if (!zipRootDir) return false;
-
-		const targetPath = `${zipRootDir}${fileName}`;
-
-		const zip = new AdmZip(zipFilePath);
-		const entry = zip.getEntry(targetPath);
-
-		// Ensure it exists and is not a directory
-		return entry !== null && !entry.isDirectory;
-	} catch (error) {
-		return false;
-	}
-}
-
-// ------------------- [Template operations] ---------------------
-
-export function getCustomKeysFromTemplate(template: Template): string[] {
-	return Object.keys(template).filter((key) => !key.startsWith("_"));
-}
-
 export function writeTemplate(
 	template: Template,
 	filePath?: string,
 ): string | boolean {
-	try {
-		const content = YAML.stringify(template);
-		if (filePath) {
-			return FileUtils.writeTextFile(filePath, content);
-		} else {
-			return content;
-		}
-	} catch (err) {
-		const error = err as Error;
-
-		// Attempt to extract line number if present on the YAML error instance
-		const lineNumber =
-			(err as { line?: number; mark?: { line?: number } }).line ??
-			(err as { mark?: { line?: number } }).mark?.line;
-
-		throw new TemplateParseError(error.message, err, lineNumber);
+	const content = SpecialFileIOUtils.stringifyYaml(template);
+	if (filePath) {
+		return FileUtils.writeTextFile(filePath, content);
 	}
+	return content;
 }
 
 export async function readTemplateFile(
 	filePath: string,
 ): Promise<Template | null> {
-	const fileContent = await FileUtils.readTextFile(filePath);
-	if (!fileContent) return null;
-
-	let rawDoc: unknown;
-	try {
-		rawDoc = YAML.parse(fileContent);
-	} catch (err) {
-		const error = err as Error;
-
-		const lineNumber =
-			(err as { linePos?: { line?: number }[] }).linePos?.[0]?.line ??
-			(err as { line?: number }).line ??
-			(err as { mark?: { line?: number } }).mark?.line;
-
-		throw new TemplateParseError(error.message, err, lineNumber);
-	}
+	const rawDoc = await SpecialFileIOUtils.readYamlFile<unknown>(filePath);
+	if (!rawDoc) return null;
 
 	if (typeof rawDoc !== "object" || rawDoc === null) {
-		throw new TemplateParseError(
+		throw new YAMLParseError(
 			`Invalid template file structure in ${filePath}. Root must be an object.`,
 		);
 	}
 
 	return normalizeAndValidateTemplate(rawDoc as Record<string, unknown>);
+}
+
+export function getCustomKeysFromTemplate(template: Template): string[] {
+	return Object.keys(template).filter((key) => !key.startsWith("_"));
 }
 
 function normalizeAndValidateTemplate(raw: Record<string, unknown>): Template {

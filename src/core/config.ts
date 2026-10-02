@@ -22,7 +22,7 @@ export class Config {
 	static readonly DIRECTORY_NAME: string = ".bscaff";
 	static readonly SNAPSHOT_DB_FILE: string = "db.json";
 	static readonly SINGLE_FILE_NAME: string = "data";
-	static readonly SETTINGS_FILE: string = "settings.json";
+	static readonly SETTINGS_FILE: string = "settings.yml";
 	static readonly TEMPLATE_CONFIG_FILE: string = "bscaff-template.yml";
 	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
 	static readonly BSCAFF_USER_DIR_ENV_VARIABLE: string = "BSCAFF_USER_DIR";
