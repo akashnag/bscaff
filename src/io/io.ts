@@ -290,6 +290,10 @@ export class ConsoleIO {
 		QUIET_MODE = true;
 	}
 
+	static log(message: string): void {
+		if (!QUIET_MODE) console.log(message);
+	}
+
 	errorMissingParameter(param: string): void {
 		if (QUIET_MODE) return;
 

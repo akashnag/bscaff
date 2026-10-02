@@ -21,7 +21,7 @@ import * as SaveSnapshotCommands from "./commands/save-commands.js";
 import * as TemplateCommands from "./commands/template-commands.js";
 import { Config } from "./core/config.js";
 import { ConsoleIO } from "./io/io.js";
-import * as MiscUtils from "./utils/misc-utils.js";
+import * as FileUtils from "./utils/file-utils.js";
 
 export class CLI {
 	// shared Commander object
@@ -46,12 +46,29 @@ export class CLI {
 				"-q, --quiet",
 				"Works silently without printing anything to screen",
 			)
+			.option(
+				"--data-dir <path>",
+				"Path to use for saving all data; data will be saved under <path>/.bscaff",
+			)
 
 			// pre-hook
 			.hook("preAction", (thisCommand, actionCommand) => {
 				const options = thisCommand.opts();
 				if (options.quiet) {
 					ConsoleIO.setSilentMode();
+				}
+				if (options.dataDir) {
+					const sPath = FileUtils.resolvePath(options.dataDir);
+					if (!FileUtils.doesDirectoryExist(sPath)) {
+						ConsoleIO.log(
+							"ERROR: specified data directory does not exist, resorting to defaults",
+						);
+					} else {
+						Config.setStoragePath(sPath);
+						ConsoleIO.log(
+							`Using storage directory: ${sPath}/${Config.DIRECTORY_NAME}\n`,
+						);
+					}
 				}
 			});
 
@@ -60,8 +77,10 @@ export class CLI {
 		this.defineListGroup();
 		this.defineExtractGroup();
 		this.defineCreateGroup();
-		//this.defineTransformGroup();
 		this.defineTemplateGroup();
+
+		// ------- parked for future ----
+		//this.defineTransformGroup();
 	}
 
 	private defineSaveGroup(): void {
@@ -515,123 +534,6 @@ export class CLI {
 			);
 	}
 
-	// parked for future version
-	private defineTransformGroup(): void {
-		const transformGroup = this.program
-			.command("transform")
-			.description("Transform external files");
-
-		const insertCommand = transformGroup
-			.command("insert <files...>")
-			.option(
-				"--before <text>",
-				"Inserts the snippet before each occurrence of <text> (in double-quotes)",
-			)
-			.option(
-				"--after <text>",
-				"Inserts the snippet after each occurrence of <text> (in double-quotes)",
-			)
-			.description(
-				"Inserts snippets before/after each occurrence of a given text pattern",
-			)
-			.action(
-				async (
-					files: string[],
-					options: Record<string, any>,
-					command: Command,
-				) => {
-					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
-				},
-			);
-
-		const replaceCommand = transformGroup
-			.command("replace <files...>")
-			.option(
-				"--with-snippet <snippet-key>",
-				"Replace occurrences of the snippet (under key) with this new snippet text",
-			)
-			.option(
-				"--with-text <text>",
-				"Replace occurrences of the snippet (under key) with this new text (within double-quotes)",
-			)
-			.option(
-				"--pattern <text>",
-				"Replace occurrences of this pattern text (within double quotes) with the snippet (under key)",
-			)
-			.option(
-				"--regex <text>",
-				"Replace occurrences of this regex-pattern (within double-quotes) with the snippet (under key)",
-			)
-			.option(
-				"--comment-block <start,end>",
-				"Places the snippet text (if found) under block comments denoted by comment-start and end characters",
-			)
-			.option(
-				"--comment-line <start>",
-				"Places each line of the snippet text (if found) under comment specified by comment-start character",
-			)
-			.description("Replaces text in files")
-			.action(
-				async (
-					files: string[],
-					options: Record<string, any>,
-					command: Command,
-				) => {
-					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
-				},
-			);
-
-		const trimCommand = transformGroup
-			.command("trim <files...>")
-			.option("--first <N>", "Delete first N lines from the target files")
-			.option("--last <N>", "Delete last N lines from the target files")
-			.description("Delete first/last N lines from the target files")
-			.action(
-				async (
-					files: string[],
-					options: Record<string, any>,
-					command: Command,
-				) => {
-					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
-				},
-			);
-
-		const appendCommand = transformGroup
-			.command("append <files...>")
-			.option("--trim-first <N>", "Delete first N lines from the target files")
-			.option("--trim-last <N>", "Delete last N lines from the target files")
-			.description("Append the text snippet to the target files")
-			.action(
-				async (
-					files: string[],
-					options: Record<string, any>,
-					command: Command,
-				) => {
-					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
-				},
-			);
-
-		const prependCommand = transformGroup
-			.command("prepend <files...>")
-			.option("--trim-first <N>", "Delete first N lines from the target files")
-			.option("--trim-last <N>", "Delete last N lines from the target files")
-			.description("Prepend the text snippet to the target files")
-			.action(
-				async (
-					files: string[],
-					options: Record<string, any>,
-					command: Command,
-				) => {
-					const globalOpts = command.optsWithGlobals();
-					// TODO: add code
-				},
-			);
-	}
-
 	private defineCreateGroup(): void {
 		const createGroup = this.program
 			.command("create")
@@ -818,4 +720,124 @@ export class CLI {
 			);
 		*/
 	}
+
+	// -------------------- [future] ------------------------
+
+	/*
+	private defineTransformGroup(): void {
+		const transformGroup = this.program
+			.command("transform")
+			.description("Transform external files");
+
+		const insertCommand = transformGroup
+			.command("insert <files...>")
+			.option(
+				"--before <text>",
+				"Inserts the snippet before each occurrence of <text> (in double-quotes)",
+			)
+			.option(
+				"--after <text>",
+				"Inserts the snippet after each occurrence of <text> (in double-quotes)",
+			)
+			.description(
+				"Inserts snippets before/after each occurrence of a given text pattern",
+			)
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const replaceCommand = transformGroup
+			.command("replace <files...>")
+			.option(
+				"--with-snippet <snippet-key>",
+				"Replace occurrences of the snippet (under key) with this new snippet text",
+			)
+			.option(
+				"--with-text <text>",
+				"Replace occurrences of the snippet (under key) with this new text (within double-quotes)",
+			)
+			.option(
+				"--pattern <text>",
+				"Replace occurrences of this pattern text (within double quotes) with the snippet (under key)",
+			)
+			.option(
+				"--regex <text>",
+				"Replace occurrences of this regex-pattern (within double-quotes) with the snippet (under key)",
+			)
+			.option(
+				"--comment-block <start,end>",
+				"Places the snippet text (if found) under block comments denoted by comment-start and end characters",
+			)
+			.option(
+				"--comment-line <start>",
+				"Places each line of the snippet text (if found) under comment specified by comment-start character",
+			)
+			.description("Replaces text in files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const trimCommand = transformGroup
+			.command("trim <files...>")
+			.option("--first <N>", "Delete first N lines from the target files")
+			.option("--last <N>", "Delete last N lines from the target files")
+			.description("Delete first/last N lines from the target files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const appendCommand = transformGroup
+			.command("append <files...>")
+			.option("--trim-first <N>", "Delete first N lines from the target files")
+			.option("--trim-last <N>", "Delete last N lines from the target files")
+			.description("Append the text snippet to the target files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+
+		const prependCommand = transformGroup
+			.command("prepend <files...>")
+			.option("--trim-first <N>", "Delete first N lines from the target files")
+			.option("--trim-last <N>", "Delete last N lines from the target files")
+			.description("Prepend the text snippet to the target files")
+			.action(
+				async (
+					files: string[],
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					// TODO: add code
+				},
+			);
+	}
+	*/
 }
