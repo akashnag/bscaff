@@ -134,9 +134,10 @@ export function executeCLI(
 	const { command, argsPrefix } = getCLICommand();
 	const defaultHome = path.join(cwd, ".home");
 	const env: Record<string, string> = {
+		...(process.env as Record<string, string>),
 		HOME: defaultHome,
 		USERPROFILE: defaultHome,
-		...(process.env as Record<string, string>),
+		BSCAFF_USER_DIR: defaultHome,
 		...(options.env as Record<string, string>),
 	};
 	return execa(command, [...argsPrefix, ...args], {
@@ -201,7 +202,8 @@ export async function runCLI(
 				? String(result.stderr)
 				: "";
 	const shouldStrip = options.stripAnsiOutput !== false;
-	const exitCode: number = typeof result.exitCode === "number" ? result.exitCode : 0;
+	const exitCode: number =
+		typeof result.exitCode === "number" ? result.exitCode : 0;
 
 	return {
 		exitCode,

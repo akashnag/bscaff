@@ -57,7 +57,7 @@ export async function quickConfirm(
 	defaultValue: any,
 	toLowerCase: boolean = true,
 ): Promise<any> {
-	let choice = await getche(question);
+	let choice = await getche(chalk.cyan(question));
 	if (toLowerCase) choice = choice.toLowerCase();
 	if (choice in choiceMapper) {
 		return choiceMapper[choice];
@@ -324,7 +324,6 @@ export class ConsoleIO {
 		);
 
 		console.log(`\nTo resolve:`);
-
 		printBullet(
 			`Ensure you have spelt the path correctly and the directory exists`,
 		);
@@ -342,31 +341,8 @@ export class ConsoleIO {
 		);
 
 		console.log(`\nTo resolve:`);
-
 		printBullet(`Ensure you have spelt the path correctly and the file exists`);
 		printBullet(`Allow read permissions (if file exists)\n`);
-	}
-
-	errorTriggerScriptsMissing(
-		scriptType: "pre" | "post",
-		path: string,
-		mode: "save" | "recall",
-	): void {
-		if (QUIET_MODE) return;
-
-		printHeader(
-			`Lifecycle Hook Error: ${scriptType == "pre" ? "Pre" : "Post"}-Script Not Found`,
-		);
-
-		if (mode === "recall") {
-			printField(
-				"Phase",
-				`${scriptType == "pre" ? "Pre" : "Post"}-scaffold hook (--${scriptType}-script)`,
-			);
-		}
-
-		printField("Path", FileUtils.getRelativePath(path));
-		printField("Status", `File does not exist or is inaccessible.\n`);
 	}
 
 	successSnapshotTaken(
@@ -426,12 +402,16 @@ export class ConsoleIO {
 					continue;
 
 				console.log(structure[i].path);
-				const choice = await getche(
-					"\t" +
-						chalk.blue("Press C to copy (from clipboard) or Enter to skip: "),
+				const choice = await quickConfirm(
+					"\tPress C to copy (from clipboard) or Enter to skip: ",
+					{
+						c: true,
+					},
+					false,
+					true,
 				);
 
-				if (choice.toLowerCase().trim() == "c") {
+				if (choice) {
 					const content = await cm.paste();
 					const sizeInBytes = MiscUtils.getSizeOfTextContent(content);
 					totalSize += sizeInBytes;

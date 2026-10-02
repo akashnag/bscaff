@@ -17,6 +17,7 @@ import { ClipboardManager } from "../core/clipboard.js";
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { FileTreeNode } from "../types/types.js";
+import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
 import {
@@ -59,16 +60,6 @@ export class SaveDirectoryIO extends ConsoleIO {
 		printBullet(`Save with a different key\n`);
 	}
 
-	errorTriggerScriptsMissing(scriptType: "pre" | "post", path: string): void {
-		if (QUIET_MODE) return;
-
-		super.errorTriggerScriptsMissing(scriptType, path, "recall");
-		printIndented(`Operation aborted. No snapshot was taken.`);
-		console.log(`\nTo resolve:`);
-		printBullet(`Verify the script path exists`);
-		printBullet(`Omit the hook option\n`);
-	}
-
 	successSnapshotTaken(
 		key: string,
 		size: string | null,
@@ -90,6 +81,34 @@ export class SaveDirectoryIO extends ConsoleIO {
 			sType,
 		);
 	}
+
+	errorCreatingTree(): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Tree Creation Failed");
+		printField(
+			"Error",
+			"An error occurred while creating the file tree on disk.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Ensure you have write permissions in the target directory");
+		printBullet("Check for sufficient disk space\n");
+	}
+
+	infoStartingTreeCreation(path: string): void {
+		if (QUIET_MODE) return;
+
+		console.log(chalk.bold("Initiating file tree generation..."));
+		printField("Target", FileUtils.getRelativePath(path) + "\n");
+	}
+
+	successTreeCreated(path: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("File Tree Created Successfully!", IOHeaderType.SUCCESS);
+		printField("Path", FileUtils.getRelativePath(path) + "\n");
+	}
 }
 
 export class SaveGitRepoIO extends SaveDirectoryIO {
@@ -105,14 +124,13 @@ export class SaveGitRepoIO extends SaveDirectoryIO {
 
 	cloneComplete() {
 		if (QUIET_MODE) return;
-
-		this.spinner!.stop();
+		this.spinner!.succeed("Cloning completed successfully!");
 	}
 
 	cloneFailed() {
 		if (QUIET_MODE) return;
 
-		printHeader("Clone Failed");
+		this.spinner!.fail("Cloning Failed");
 		printField("Error", "Could not clone git repo");
 		console.log("\nTo resolve:");
 		printBullet("Ensure the Git Repo URL is correct");
@@ -140,13 +158,27 @@ export class SaveGitRepoIO extends SaveDirectoryIO {
 		);
 	}
 
-	errorFetchingGitRepo(url: string): void {
-		// TODO: add code
+	startFetchGitTag(url: string): void {
+		if (QUIET_MODE) return;
+
+		this.spinner = ora(
+			chalk.bold(chalk.cyan(`Fetching tags from repo: `)) + url,
+		).start();
+	}
+
+	errorFetchingGitTag(url: string): void {
+		if (QUIET_MODE) return;
+		this.spinner!.warn(`No Tags Found in repo: ${url}`);
+	}
+
+	doneFetchingGitTag(): void {
+		if (QUIET_MODE) return;
+		this.spinner!.succeed("Tags Retrieved Successfully!");
 	}
 }
 
 export class SaveASCIITreeIO extends SaveDirectoryIO {
-	errorInvalidTreeStructure(): void {
+	errorInvalidTree(): void {
 		if (QUIET_MODE) return;
 
 		printHeader("Invalid Tree Structure");

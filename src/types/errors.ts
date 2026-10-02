@@ -23,11 +23,16 @@ export class ScriptMissingError extends Error {
 }
 
 export class TemplateParseError extends Error {
-	constructor(
-		message: string,
-		public readonly cause?: unknown,
-	) {
+	public override readonly name = "TemplateParseError";
+	public readonly cause?: unknown;
+	public readonly lineNumber?: number;
+
+	constructor(message: string, cause?: unknown, lineNumber?: number) {
 		super(message);
-		this.name = "TemplateParseError";
+		this.cause = cause;
+		this.lineNumber = lineNumber;
+
+		// Restore correct prototype chain for extending built-in Error in ES5/TypeScript
+		Object.setPrototypeOf(this, new.target.prototype);
 	}
 }

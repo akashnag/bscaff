@@ -146,7 +146,7 @@ export async function saveASCIITreeFromClipboard(
 		TreeUtils.extractStructureFromASCIITree(tree));
 
 	if (!structure || !stats) {
-		io.errorInvalidTreeStructure();
+		io.errorInvalidTree();
 		return false;
 	}
 

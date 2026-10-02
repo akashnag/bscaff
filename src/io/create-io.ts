@@ -12,56 +12,62 @@
  */
 
 import { ClipboardManager } from "../core/clipboard.js";
-import { ConsoleIO } from "./io.js";
+import * as FileUtils from "../utils/file-utils.js";
+import {
+	ConsoleIO,
+	IOHeaderType,
+	printBullet,
+	printField,
+	printHeader,
+	QUIET_MODE,
+} from "./io.js";
 
-export class CreateTreeIO extends ConsoleIO {
-	errorInvalidTree(): void {
-		// TODO: add code
+export class CreateFileIO extends ConsoleIO {
+	errorNoContentForFileCreation(filePath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("No Content Provided");
+		printField("File", FileUtils.getRelativePath(filePath));
+		printField("Error", "Cannot create file without initial content.\n");
 	}
 
-	errorCreatingTree(): void {
-		// TODO: add code
+	warnOperationAborted(filePath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Operation Aborted", IOHeaderType.WARNING);
+		printField("File", FileUtils.getRelativePath(filePath));
+		printField("Status", "File creation was aborted by the user.\n");
 	}
 
-	infoStartingTreeCreation(path: string): void {
-		// TODO: add code
+	errorCreatingFile(filePath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Failed to Create File");
+		printField("File", FileUtils.getRelativePath(filePath));
+		printField(
+			"Error",
+			"Could not create or write content to the target file.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Ensure you have write permissions for the destination directory",
+		);
+		printBullet("Check if the path is valid and accessible\n");
 	}
 
-	infoTreeNodeProcessed(
-		path: string,
-		nodeRelativePath: string,
-		action: string,
-	): void {
-		// TODO: add code
+	successFileCreated(filePath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("File Created Successfully!", IOHeaderType.SUCCESS);
+		printField("Path", FileUtils.getRelativePath(filePath) + "\n");
 	}
 
-	successTreeCreated(path: string): void {
-		// TODO: add code
-	}
-
-	infoFileSkipped(dirPath: string, filePath: string): void {
+	infoFileSkipped(targetPath: string, filePath: string): void {
 		// TODO: add code
 	}
 
 	infoFileOverwriteAborted(filePath: string): void {
-		// TODO: add code
-	}
-}
-
-export class CreateFileIO extends CreateTreeIO {
-	errorNoContentForFileCreation(filePath: string): void {
-		// TODO: add code
-	}
-
-	warnOperationAborted(filePath: string): void {
-		// TODO: add code
-	}
-
-	errorCreatingFile(filePath: string): void {
-		// TODO: add code
-	}
-
-	successFileCreated(filePath: string): void {
 		// TODO: add code
 	}
 }

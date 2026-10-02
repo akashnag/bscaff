@@ -25,6 +25,10 @@ export function getPlatform(): string {
 	return process.platform.toString();
 }
 
+export function getEnvironmentVariable(name: string): string | undefined {
+	return process.env[name];
+}
+
 export function containsChar(text: string, charList: string[]): boolean {
 	return charList.some((char) => text.includes(char));
 }

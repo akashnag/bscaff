@@ -13,16 +13,11 @@
 
 import { CLI } from "./cli.js";
 import { Config } from "./core/config.js";
-import { Logger } from "./io/logger.js";
 
 async function main(): Promise<void> {
-	const logger = new Logger();
-
 	try {
 		if (await Config.ensureStorageDirectoryExists()) {
 			const cli = new CLI();
-
-			//process.exit(await cli.parseArgsAndExecute(process.argv));
 
 			await cli.program.parseAsync(process.argv);
 			process.exit(0);
@@ -30,7 +25,6 @@ async function main(): Promise<void> {
 			throw new Error("File path issue");
 		}
 	} catch (error: any) {
-		//logger.error("An unexpected error occurred during execution:", error);
 		process.exit(1);
 	}
 }

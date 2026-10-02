@@ -110,10 +110,14 @@ export function writeTemplate(
 			return content;
 		}
 	} catch (err) {
-		throw new TemplateParseError(
-			`Failed to serialize template to YAML: ${(err as Error).message}`,
-			err,
-		);
+		const error = err as Error;
+
+		// Attempt to extract line number if present on the YAML error instance
+		const lineNumber =
+			(err as { line?: number; mark?: { line?: number } }).line ??
+			(err as { mark?: { line?: number } }).mark?.line;
+
+		throw new TemplateParseError(error.message, err, lineNumber);
 	}
 }
 
@@ -127,10 +131,14 @@ export async function readTemplateFile(
 	try {
 		rawDoc = YAML.parse(fileContent);
 	} catch (err) {
-		throw new TemplateParseError(
-			`Failed to parse YAML syntax in ${filePath}: ${(err as Error).message}`,
-			err,
-		);
+		const error = err as Error;
+
+		const lineNumber =
+			(err as { linePos?: { line?: number }[] }).linePos?.[0]?.line ??
+			(err as { line?: number }).line ??
+			(err as { mark?: { line?: number } }).mark?.line;
+
+		throw new TemplateParseError(error.message, err, lineNumber);
 	}
 
 	if (typeof rawDoc !== "object" || rawDoc === null) {

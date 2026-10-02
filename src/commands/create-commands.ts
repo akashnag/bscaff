@@ -12,8 +12,9 @@
  */
 
 import { ClipboardManager } from "../core/clipboard.js";
-import { CreateFileIO, CreateTreeIO } from "../io/create-io.js";
+import { CreateFileIO } from "../io/create-io.js";
 import { ConsoleIO, getche } from "../io/io.js";
+import { SaveASCIITreeIO } from "../io/save-io.js";
 import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
@@ -28,7 +29,7 @@ export async function createTreeOnDiskFromClipboard(
 	overwriteBehaviour: string | undefined,
 	promptForContent: boolean | undefined,
 ): Promise<boolean> {
-	const io = new CreateFileIO();
+	const io = new SaveASCIITreeIO();
 	const cm = new ClipboardManager();
 
 	const tree: string = await cm.paste();
@@ -54,7 +55,6 @@ export async function createTreeOnDiskFromClipboard(
 		overwriteBehaviour as overwriteMode,
 		promptForContent,
 		false,
-		io,
 	);
 
 	if (!success) {

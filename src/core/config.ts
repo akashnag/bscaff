@@ -14,6 +14,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import * as FileUtils from "../utils/file-utils.js";
+import * as MiscUtils from "../utils/misc-utils.js";
 import { Settings } from "./settings.js";
 
 export class Config {
@@ -23,19 +25,39 @@ export class Config {
 	static readonly SETTINGS_FILE: string = "settings.json";
 	static readonly TEMPLATE_CONFIG_FILE: string = "bscaff-template.yml";
 	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
+	static readonly BSCAFF_USER_DIR_ENV_VARIABLE: string = "BSCAFF_USER_DIR";
 
-	static getStoragePath(additional: string[] | null = null): string {
-		// return base storage directory (e.g., ~/.bscaff)
-		if (additional)
-			return path.join(os.homedir(), Config.DIRECTORY_NAME, ...additional);
-		else return path.join(os.homedir(), Config.DIRECTORY_NAME);
+	private static storagePath: string | null = null;
+
+	static setStoragePath(sPath: string): void {
+		Config.storagePath = FileUtils.resolvePath(sPath);
+	}
+
+	static getStoragePath(additional?: string[]): string {
+		if (!Config.storagePath) {
+			let sPath = MiscUtils.getEnvironmentVariable(
+				Config.BSCAFF_USER_DIR_ENV_VARIABLE,
+			);
+			if (!sPath) {
+				sPath = os.homedir();
+			} else {
+				sPath = FileUtils.resolvePath(sPath);
+			}
+			Config.storagePath = path.join(sPath, Config.DIRECTORY_NAME);
+		}
+
+		if (additional) {
+			return path.join(Config.storagePath, ...additional);
+		} else {
+			return Config.storagePath;
+		}
 	}
 
 	static async ensureStorageDirectoryExists(): Promise<boolean> {
-		const storagePath = Config.getStoragePath();
+		const sPath = Config.getStoragePath();
 
 		try {
-			await fs.mkdir(storagePath, { recursive: true });
+			await fs.mkdir(sPath, { recursive: true });
 			return await Settings.initSettings();
 		} catch {
 			return false;

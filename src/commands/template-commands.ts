@@ -598,12 +598,16 @@ export async function updateTemplate(
 
 	const git: SimpleGit = simpleGit.simpleGit();
 	const gitIO = new SaveGitRepoIO();
+
+	gitIO.startFetchGitTag(record.gitRepoSource.url);
 	const remoteVersion = await getLatestRemoteTag(git, record.gitRepoSource.url);
 
 	if (!remoteVersion) {
-		gitIO.errorFetchingGitRepo(record.gitRepoSource.url);
+		gitIO.errorFetchingGitTag(record.gitRepoSource.url);
 		return false;
 	}
+
+	gitIO.doneFetchingGitTag();
 
 	if (
 		record.gitRepoSource.version &&

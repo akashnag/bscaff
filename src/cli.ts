@@ -21,7 +21,6 @@ import * as SaveSnapshotCommands from "./commands/save-commands.js";
 import * as TemplateCommands from "./commands/template-commands.js";
 import { Config } from "./core/config.js";
 import { ConsoleIO } from "./io/io.js";
-import { Logger } from "./io/logger.js";
 import * as MiscUtils from "./utils/misc-utils.js";
 
 export class CLI {
@@ -52,7 +51,6 @@ export class CLI {
 			.hook("preAction", (thisCommand, actionCommand) => {
 				const options = thisCommand.opts();
 				if (options.quiet) {
-					Logger.setSilentMode();
 					ConsoleIO.setSilentMode();
 				}
 			});

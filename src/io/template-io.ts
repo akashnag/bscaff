@@ -12,11 +12,16 @@
  */
 
 import * as inquirer from "@inquirer/prompts";
+import chalk from "chalk";
+import ora, { Ora } from "ora";
 import { Config } from "../core/config.js";
 import { TemplateParseError } from "../types/errors.js";
 import { Template, TemplateQuestion } from "../types/template-types.js";
+import * as FileUtils from "../utils/file-utils.js";
 import {
 	ConsoleIO,
+	IOHeaderType,
+	printBullet,
 	printField,
 	printHeader,
 	printIndented,
@@ -40,27 +45,82 @@ export class SaveTemplateIO extends ConsoleIO {
 	}
 
 	errorTemplateFileMissing(repoPath: string, isGit: boolean): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Template File Missing");
+		printField("Path", FileUtils.getRelativePath(repoPath));
+		printField("Git Repo", isGit ? "Yes" : "No");
+		printField("Error", "Required template configuration file was not found.");
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Ensure the directory or repository contains a valid template file",
+		);
+		printBullet("Verify spelling and path existence\n");
 	}
 
 	errorExpectedZipFile(filePath: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Invalid File Type");
+		printField("Path", FileUtils.getRelativePath(filePath));
+		printField("Error", "Expected a .zip archive file for this operation.");
+
+		console.log("\nTo resolve:");
+		printBullet("Provide a path pointing to a valid .zip file\n");
 	}
 
 	errorExtractingZip(filePath: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Error Extracting Zip Archive");
+		printField("Path", FileUtils.getRelativePath(filePath));
+		printField(
+			"Error",
+			"Could not extract content from the provided zip archive.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Check if the zip archive is corrupt or password protected");
+		printBullet("Ensure sufficient permissions and disk space\n");
 	}
 
 	invalidTemplateZipFile(filePath: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Invalid Template Zip Archive");
+		printField("Path", FileUtils.getRelativePath(filePath));
+		printField(
+			"Error",
+			"The zip archive does not contain a valid bscaff template structure.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Ensure the zip archive includes a valid template definition file\n",
+		);
 	}
 
 	errorCannotUpdateNonGitTemplate(key: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Cannot Update Template");
+		printField("Key", key);
+		printField(
+			"Error",
+			"Only templates cloned from remote Git repositories can be updated automatically.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Re-create or edit local templates directly\n");
 	}
 
 	successTemplateUpdated(key: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Template Updated Successfully", IOHeaderType.SUCCESS);
+		printField("Key", key);
+		console.log("");
 	}
 
 	successTemplateGitRepoAlreadyLatest(
@@ -68,37 +128,85 @@ export class SaveTemplateIO extends ConsoleIO {
 		url: string,
 		version: string,
 	): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Template Already Up-to-Date", IOHeaderType.INFO);
+		printField("Key", key);
+		printField("URL", url);
+		printField("Version", version);
+		console.log("");
 	}
 
 	errorCreatingTemplateDueToInvalidTemplateFormat(): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Failed to Save Template");
+		printField(
+			"Error",
+			"The template structure or configuration file contains formatting errors.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Fix syntax errors in the template configuration file and try again\n",
+		);
 	}
 }
-// --------------------------------------------------------
 
 // --------------------------------------------------------
 // template verify <path>
 // --------------------------------------------------------
 export class VerifyTemplateIO extends ConsoleIO {
 	errorParsingTemplateFileContent(): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Failed to Parse Template Configuration");
+		printField(
+			"Error",
+			"Unable to parse the content of the template configuration file.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Verify JSON/YAML syntax in your template configuration file\n",
+		);
 	}
 
 	successTemplateVerified(): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Template Verification Passed", IOHeaderType.SUCCESS);
+		printField("Status", "The template structure and syntax are valid.\n");
 	}
 
 	errorDuringTemplateParsing(err: TemplateParseError): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Template Verification Failed");
+		if (err.lineNumber !== undefined) {
+			printField("Line", String(err.lineNumber));
+		}
+		printField("Error", err.message);
+
+		console.log("\nTo resolve:");
+		printBullet("Correct the indicated template configuration error\n");
 	}
 
 	warnTemplateSubdirectoryDoesNotExist(dirPath: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Subdirectory Missing", IOHeaderType.WARNING);
+		printField("Path", dirPath);
+		printField(
+			"Warning",
+			"The specified template subdirectory does not exist within the source structure.\n",
+		);
 	}
 }
 
 export class ExtractTemplateIO extends ConsoleIO {
+	private activeSpinner: Ora | null = null;
+
 	private _evaluateWhenCondition(
 		condition: string,
 		context: Record<string, any>,
@@ -253,19 +361,54 @@ export class ExtractTemplateIO extends ConsoleIO {
 	}
 
 	errorReadingTemplateConfigFile(key: string, templateFile: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Error Reading Template Config");
+		printField("Key", key);
+		printField("File", templateFile);
+		printField(
+			"Error",
+			"Could not read or locate the template configuration file.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Verify that the template snapshot is not corrupted");
+		printBullet(`Inspect files in snapshot using: bscaff list -k ${key}\n`);
 	}
 
 	errorCannotDryRunInPresenceOfTriggers(): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Dry Run Not Supported");
+		printField(
+			"Error",
+			"Dry run mode cannot be executed because this template includes generation tasks/triggers.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet("Run extraction without the dry-run flag\n");
 	}
 
 	infoCreateDirectory(targetRoot: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		const tag = chalk.bgGreen.black.bold(" CREATE ");
+		printIndented(`${tag} ${targetRoot}/`);
 	}
 
 	errorTemplateExtractionFailed(reason: string, data?: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Template Extraction Failed");
+		printField("Error", reason);
+		if (data) {
+			printField("Details", data);
+		}
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Check destination directory permissions and available space\n",
+		);
 	}
 
 	infoSkipFileOrDirectory(
@@ -273,30 +416,55 @@ export class ExtractTemplateIO extends ConsoleIO {
 		fPath: string,
 		reason: string,
 	): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		const tag = chalk.bgYellow.black.bold(" SKIP ");
+		const suffix = fType === "dir" ? "/" : "";
+		printIndented(`${tag} ${fPath}${suffix} (${reason})`);
 	}
 
 	infoCreateFile(fPath: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		const tag = chalk.bgGreen.black.bold(" CREATE ");
+		printIndented(`${tag} ${fPath}`);
 	}
 
 	successTemplateExtracted(key: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Template Extracted Successfully", IOHeaderType.SUCCESS);
+		printField("Key", key);
+		console.log("");
 	}
 
 	infoInitiatingAllGenerationTasks(eventType: "Pre" | "Post"): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader(`Initiating ${eventType}-Generation Tasks`, IOHeaderType.INFO);
 	}
 
 	errorInRenderingGenerationTaskCommand(
 		command: string,
 		errMessage: string,
 	): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader("Task Command Render Error");
+		printField("Command", command);
+		printField("Error", errMessage);
+
+		console.log("\nTo resolve:");
+		printBullet("Check template variable expressions in task command\n");
 	}
 
 	infoInitiatingGenerationTask(index: number, command: string): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		this.activeSpinner = ora({
+			text: `Executing task [${index}]: ${command}`,
+			color: "cyan",
+		}).start();
 	}
 
 	errorExecutingGenerationTask(
@@ -304,18 +472,47 @@ export class ExtractTemplateIO extends ConsoleIO {
 		workingDir: string,
 		errMessage: string,
 	): void {
-		// TODO: add code
+		if (this.activeSpinner) {
+			this.activeSpinner.fail(`Failed task: ${command}`);
+			this.activeSpinner = null;
+		}
+
+		if (QUIET_MODE) return;
+
+		printHeader("Generation Task Failed");
+		printField("Command", command);
+		printField("Working Dir", workingDir);
+		printField("Error", errMessage);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Verify command availability and working directory permissions\n",
+		);
 	}
 
 	infoCompletedGenerationTask(): void {
-		// TODO: add code
+		if (this.activeSpinner) {
+			this.activeSpinner.succeed();
+			this.activeSpinner = null;
+		}
 	}
 
 	infoCompletedAllGenerationTasks(eventType: "Pre" | "Post"): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader(
+			`Completed All ${eventType}-Generation Tasks`,
+			IOHeaderType.SUCCESS,
+		);
 	}
 
 	errorFailedToCompleteGenerationTasks(eventType: "Pre" | "Post"): void {
-		// TODO: add code
+		if (QUIET_MODE) return;
+
+		printHeader(`Failed ${eventType}-Generation Tasks`);
+		printField(
+			"Error",
+			`One or more ${eventType.toLowerCase()}-generation tasks failed to complete successfully.\n`,
+		);
 	}
 }

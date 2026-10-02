@@ -12,10 +12,9 @@
  */
 
 import { ClipboardManager } from "../core/clipboard.js";
-import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
-import { CreateTreeIO } from "../io/create-io.js";
-import { ConsoleIO, getche, prompt } from "../io/io.js";
+import { CreateFileIO } from "../io/create-io.js";
+import { SaveASCIITreeIO } from "../io/save-io.js";
 import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
@@ -434,8 +433,10 @@ export async function createTree(
 	overwriteBehaviour: "overwrite" | "fail" | "skip" | "prompt" = "prompt",
 	promptForFileContent: boolean = false,
 	ignorePromptWhereContentExistsInStructure: boolean = false,
-	ioHandler: CreateTreeIO | undefined = undefined,
 ): Promise<boolean> {
+	const ioHandler = new SaveASCIITreeIO();
+	const fileIO = new CreateFileIO();
+
 	if (!path) return false;
 	if (promptForFileContent && !ioHandler) return false;
 	if (overwriteBehaviour === "prompt" && !ioHandler) return false;
@@ -467,16 +468,16 @@ export async function createTree(
 			if (FileUtils.doesFileExist(fullPath)) {
 				switch (overwriteBehaviour) {
 					case "skip":
-						if (ioHandler) ioHandler.infoFileSkipped(path, fullPath);
+						if (ioHandler) fileIO.infoFileSkipped(path, fullPath);
 						break;
 
 					case "fail":
-						if (ioHandler) ioHandler.infoFileOverwriteAborted(fullPath);
+						if (ioHandler) fileIO.infoFileOverwriteAborted(fullPath);
 						return false;
 
 					case "prompt":
 						if (!(await ioHandler!.promptForFileOverwrite(fullPath))) {
-							ioHandler!.infoFileSkipped(path, fullPath);
+							fileIO.infoFileSkipped(path, fullPath);
 							continue;
 						}
 				}
@@ -505,7 +506,7 @@ export async function createTree(
 				if (content) {
 					FileUtils.writeTextFile(fullPath, content);
 				} else {
-					ioHandler!.infoFileSkipped(path, fullPath);
+					fileIO.infoFileSkipped(path, fullPath);
 				}
 			} else {
 				// create blank file
