@@ -14,6 +14,7 @@
 import simpleGit, { type SimpleGit } from "simple-git";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Config } from "../core/config.js";
+import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
 import { ConsoleIO } from "../io/io.js";
 import {
@@ -83,8 +84,15 @@ export async function saveGitRepo(
 		return false;
 	}
 
+	const settingsOptions = {
+		exclude: Settings.get("exclude") ?? undefined,
+		include: Settings.get("include") ?? undefined,
+	};
 	const tagList = tags ? tags.split(",") : undefined;
-	const result = await TreeUtils.extractStructureFromDirectory(repoLocalDir);
+	const result = await TreeUtils.extractStructureFromDirectory(
+		repoLocalDir,
+		settingsOptions,
+	);
 
 	if (!result.structure || !result.parameters) {
 		io.errorGeneric("saveGitRepo::1");
@@ -229,17 +237,29 @@ export async function saveDirectory(
 		return false;
 	}
 
-	// create snippet directory
-	SnapshotUtils.createSnapshotDirectory(key);
+	// create snapshot directory
+	if (!SnapshotUtils.createSnapshotDirectory(key)) {
+		io.errorGeneric("saveDirectory::1");
+		return false;
+	}
 
-	// copy the directory
+	const settingsOptions = {
+		exclude: Settings.get("exclude") ?? undefined,
+		include: Settings.get("include") ?? undefined,
+	};
 	const destPath = SnapshotUtils.getSnapshotDirectory(key);
-	FileUtils.copyDirectory(dirPath, destPath);
-
-	const result = await TreeUtils.extractStructureFromDirectory(destPath);
+	const result = await TreeUtils.extractStructureFromDirectory(
+		dirPath,
+		settingsOptions,
+	);
 
 	if (!result.structure || !result.parameters) {
-		io.errorGeneric("saveDirectory::1");
+		io.errorGeneric("saveDirectory::2");
+		return false;
+	}
+
+	if (!(await TreeUtils.copyTree(dirPath, destPath, result.structure))) {
+		io.errorCopyingDirectoryTree(dirPath, destPath);
 		return false;
 	}
 

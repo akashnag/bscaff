@@ -226,7 +226,10 @@ export async function saveTemplate(
 		: localDir;
 
 	const { structure, parameters, stats } =
-		await TreeUtils.extractStructureFromDirectory(templateDir);
+		await TreeUtils.extractStructureFromDirectory(templateDir, {
+			exclude: template._exclude,
+			include: template._include,
+		});
 
 	if (!structure) {
 		FileUtils.deleteDirectory(snapshotDir);
@@ -495,7 +498,11 @@ export async function createTemplateFromDirectory(
 		? FileUtils.formPath([localDir, template._subdirectory])
 		: localDir;
 	const { structure, parameters, stats } =
-		await TreeUtils.extractStructureFromDirectory(templateDir, false);
+		await TreeUtils.extractStructureFromDirectory(
+			templateDir,
+			{ exclude: template._exclude, include: template._include },
+			false,
+		);
 
 	const tagList = tags ? tags.split(",") : undefined;
 	const info: SnapshotRecord = {

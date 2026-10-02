@@ -136,7 +136,7 @@ export async function getParametersFromFileContent(
 
 export function shouldFileOrDirectoryBeExcluded(
 	fPath: string,
-	options: { exclude?: string[]; include?: string[]; templatesSuffix?: string },
+	options: { exclude?: string[]; include?: string[] },
 ): boolean {
 	const matchesAny = (patterns: string[]): boolean =>
 		patterns.some((pattern) => globToRegex(pattern).test(fPath));

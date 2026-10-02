@@ -21,7 +21,13 @@ export class Settings {
 	static readonly DEFAULT_SETTINGS: BScaffSettings = {
 		textEditor: MiscUtils.getPlatform() == "win32" ? "notepad" : "nano",
 		browser: "google-chrome",
-		exclude: [".git", ".vscode", "node_modules"],
+		exclude: [
+			".git",
+			".vscode",
+			"node_modules",
+			"__pycache__",
+			".pytest_cache",
+		],
 		include: [],
 		templatesSuffix: ".jinja",
 	};

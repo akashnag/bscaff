@@ -14,7 +14,10 @@
 import { ClipboardManager } from "../core/clipboard.js";
 import { Settings } from "../core/settings.js";
 import { CreateFileIO } from "../io/create-io.js";
+import { ExtractSnapshotIO } from "../io/extract-io.js";
+import { ConsoleIO } from "../io/io.js";
 import { SaveASCIITreeIO } from "../io/save-io.js";
+import { ExtractTemplateIO } from "../io/template-io.js";
 import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
@@ -298,6 +301,7 @@ export function isValidASCIITree(tree: string): boolean {
 // converts a directory path to FileTreeNode[], does not include the root-folder name itself as one of the entries
 export async function extractStructureFromDirectory(
 	dirPath: string,
+	options: { exclude?: string[]; include?: string[] },
 	readContent: boolean = false,
 ): Promise<{
 	structure: FileTreeNode[] | null;
@@ -328,6 +332,11 @@ export async function extractStructureFromDirectory(
 			// Calculate relative path starting with a leading slash
 			const relativePath = "/" + FileUtils.formRelativePath(dirPath, fullPath);
 
+			// Check if file or folder should be excluded using the helper
+			if (ParamUtils.shouldFileOrDirectoryBeExcluded(relativePath, options)) {
+				continue;
+			}
+
 			const params: string[] = ParamUtils.getParametersFromText(entry.name);
 
 			if (entry.isDirectory()) {
@@ -342,10 +351,12 @@ export async function extractStructureFromDirectory(
 				});
 
 				// Recurse into directory
-				traverse(fullPath, level + 1);
+				await traverse(fullPath, level + 1);
 			} else if (entry.isFile()) {
+				const fileSize = FileUtils.getFileSizeInBytes(fullPath) ?? 0;
+
 				++stats.fileCount;
-				stats.sizeInBytes += FileUtils.getFileSizeInBytes(fullPath) ?? 0;
+				stats.sizeInBytes += fileSize;
 
 				let content: string | null = null;
 
@@ -361,6 +372,7 @@ export async function extractStructureFromDirectory(
 					name: entry.name,
 					path: relativePath,
 					content,
+					sizeInBytes: fileSize,
 				});
 			}
 
@@ -424,8 +436,8 @@ export function getFileListFromStructure(nodes: FileTreeNode[]): string {
 	return list.join("\n");
 }
 
-// creates the file structure on disk (include content if available) - does not copy saved files
-// (WARNING: not to be used for templates)
+// creates the file structure on disk (include content if available)
+// WARNING: only to be used for Tree snapshot type (not Files, Templates)
 export async function createTree(
 	path: string | null,
 	structure: FileTreeNode[],
@@ -435,7 +447,7 @@ export async function createTree(
 	ignorePromptWhereContentExistsInStructure: boolean = false,
 ): Promise<boolean> {
 	const ioHandler = new SaveASCIITreeIO();
-	const fileIO = new CreateFileIO();
+	const extIO = new ExtractSnapshotIO();
 
 	if (!path) return false;
 	if (promptForFileContent && !ioHandler) return false;
@@ -443,23 +455,32 @@ export async function createTree(
 
 	const cm = new ClipboardManager();
 	const engine = ParamUtils.createTemplateEngine();
+	const options = {
+		exclude: Settings.get("exclude") ?? [],
+		include: Settings.get("include") ?? [],
+		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+	};
 
 	for (let i = 0; i < structure.length; ++i) {
+		const node = structure[i];
+
 		const subPath = parameters
 			? ParamUtils.replacePlaceholdersInFileName(
-					structure[i].path,
+					node.path,
 					parameters,
-					{
-						exclude: Settings.get("exclude") ?? [],
-						include: Settings.get("include") ?? [],
-						templatesSuffix: Settings.get("templatesSuffix") ?? "",
-					},
+					options,
 					engine,
 				)
-			: structure[i].path;
+			: node.path;
+
+		// Skip files/folders that match exclude rules or don't match include rules
+		if (ParamUtils.shouldFileOrDirectoryBeExcluded(subPath, options)) {
+			continue;
+		}
+
 		const fullPath = FileUtils.formPath([path, subPath]);
 
-		if (structure[i].type == "file") {
+		if (node.type === "file") {
 			const dir = FileUtils.getPathAndFileName(fullPath).path;
 			if (!FileUtils.doesDirectoryExist(dir)) {
 				FileUtils.createDirectory(dir, true);
@@ -468,49 +489,45 @@ export async function createTree(
 			if (FileUtils.doesFileExist(fullPath)) {
 				switch (overwriteBehaviour) {
 					case "skip":
-						if (ioHandler) fileIO.infoFileSkipped(path, fullPath);
-						break;
+						if (ioHandler) extIO.infoFileCreateSkip(fullPath);
+						continue;
 
 					case "fail":
-						if (ioHandler) fileIO.infoFileOverwriteAborted(fullPath);
+						if (ioHandler) extIO.infoFileCreateFail(fullPath);
 						return false;
 
 					case "prompt":
 						if (!(await ioHandler!.promptForFileOverwrite(fullPath))) {
-							fileIO.infoFileSkipped(path, fullPath);
+							extIO.infoFileCreateSkipPostPrompt();
 							continue;
 						}
+						break;
+
+					case "overwrite":
+						break;
 				}
 			}
 
 			if (promptForFileContent) {
-				let content = null;
-				if (ignorePromptWhereContentExistsInStructure && structure[i].content) {
-					content = structure[i].content;
+				let content: string | null = null;
+				if (ignorePromptWhereContentExistsInStructure && node.content) {
+					content = node.content;
 				} else {
 					content = await ioHandler!.promptForFileContent(fullPath, cm);
-					if (parameters) {
+					if (parameters && content) {
 						content = await ParamUtils.replacePlaceholdersInFileContent(
 							fullPath,
 							parameters,
-							{
-								exclude: Settings.get("exclude") ?? [],
-								include: Settings.get("include") ?? [],
-								templatesSuffix: Settings.get("templatesSuffix") ?? "",
-							},
+							options,
 							engine,
 						);
 					}
 				}
 
-				if (content) {
-					FileUtils.writeTextFile(fullPath, content);
-				} else {
-					fileIO.infoFileSkipped(path, fullPath);
-				}
+				FileUtils.writeTextFile(fullPath, content ?? "");
 			} else {
-				// create blank file
-				FileUtils.writeTextFile(fullPath, "");
+				// Create file with existing node content or blank
+				FileUtils.writeTextFile(fullPath, node.content ?? "");
 			}
 		} else {
 			if (!FileUtils.doesDirectoryExist(fullPath)) {
@@ -518,8 +535,6 @@ export async function createTree(
 			}
 		}
 	}
-
-	// TODO: verify if Settings.exclude and include are considered while copying files (i.e. excludes must not be copied)
 
 	return true;
 }
@@ -539,6 +554,82 @@ export function sortTreeStructure(nodes: FileTreeNode[]): FileTreeNode[] {
 		// Optional: Sort alphabetically by name for deterministic ordering
 		return a.name.localeCompare(b.name);
 	});
+}
+
+// WARNING: use this function only for saving snapshots, never for extracting them
+export async function copyTree(
+	sourceDir: string,
+	destPath: string,
+	nodes: FileTreeNode[],
+	overwriteBehaviour: "fail" | "prompt" | "skip" | "overwrite" = "prompt",
+	io?: ExtractTemplateIO,
+): Promise<boolean> {
+	try {
+		// Resolve source and derive target directory name (e.g., "my-app")
+		const absSourceDir = FileUtils.resolvePath(sourceDir);
+		const sourceDirName =
+			absSourceDir.split(/[/\\]/).filter(Boolean).pop() || "";
+		const targetBaseDir = FileUtils.resolvePath(`${destPath}/${sourceDirName}`);
+
+		// Create the target parent directory
+		FileUtils.createDirectory(targetBaseDir);
+
+		// Sort nodes by level/path depth to ensure parent directories are created before files
+		const sortedNodes = [...nodes].sort((a, b) => a.level - b.level);
+
+		for (const node of sortedNodes) {
+			// Build absolute source and destination paths
+			const srcNodePath = FileUtils.formPath([absSourceDir, node.path]);
+			const destNodePath = FileUtils.formPath([targetBaseDir, node.path]);
+
+			if (node.type === "dir") {
+				io?.infoCreateDirectory(destNodePath);
+				FileUtils.createDirectory(destNodePath);
+				continue;
+			}
+
+			// Check if file already exists at destination
+			let destExists = false;
+			try {
+				// If resolve/access check reveals file exists
+				destExists = FileUtils.doesFileExist(destNodePath);
+			} catch {
+				destExists = false;
+			}
+
+			if (destExists) {
+				switch (overwriteBehaviour) {
+					case "fail":
+						return false;
+
+					case "skip":
+						continue;
+
+					case "prompt": {
+						const shouldOverwrite =
+							await io?.promptForFileOverwrite(destNodePath);
+
+						if (!shouldOverwrite) {
+							continue; // Skip copying if user answers false
+						}
+
+						break;
+					}
+
+					case "overwrite":
+						// Proceed to copy over existing file
+						break;
+				}
+			}
+
+			io?.infoCreateFile(destNodePath);
+			FileUtils.copyFile(srcNodePath, destNodePath);
+		}
+
+		return true;
+	} catch (error) {
+		return false;
+	}
 }
 
 // ------------------------- [private] --------------------------

@@ -378,6 +378,8 @@ export class ConsoleIO {
 
 		if (fileCount + dirCount > 0) {
 			printField("Contents", `${fileCount} files, ${dirCount} directories\n`);
+		} else {
+			console.log("\n");
 		}
 	}
 

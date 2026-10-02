@@ -109,6 +109,21 @@ export class SaveDirectoryIO extends ConsoleIO {
 		printHeader("File Tree Created Successfully!", IOHeaderType.SUCCESS);
 		printField("Path", FileUtils.getRelativePath(path) + "\n");
 	}
+
+	errorCopyingDirectoryTree(sourceDir: string, destPath: string): void {
+		printHeader("Error Copying Directory");
+
+		printField(
+			"Error",
+			"An error was encountered while copying the directory for saving",
+		);
+		printField("Source", sourceDir);
+		printField("Target", destPath);
+
+		console.log("\nTo resolve:");
+		printBullet("Ensure you have read permissions on the source directory");
+		printBullet("Ensure you have sufficient disk space\n");
+	}
 }
 
 export class SaveGitRepoIO extends SaveDirectoryIO {

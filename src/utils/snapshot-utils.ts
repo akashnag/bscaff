@@ -36,7 +36,9 @@ export function getFileUnderSnapshot(key: string, relFilePath: string): string {
 }
 
 export function createSnapshotDirectory(key: string): boolean {
-	FileUtils.createDirectory(getSnapshotDirectory(key));
+	const dir = getSnapshotDirectory(key);
+	if (FileUtils.doesDirectoryExist(dir)) return true;
+	FileUtils.createDirectory(dir);
 	return true;
 }
 

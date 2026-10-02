@@ -62,12 +62,4 @@ export class CreateFileIO extends ConsoleIO {
 		printHeader("File Created Successfully!", IOHeaderType.SUCCESS);
 		printField("Path", FileUtils.getRelativePath(filePath) + "\n");
 	}
-
-	infoFileSkipped(targetPath: string, filePath: string): void {
-		// TODO: add code
-	}
-
-	infoFileOverwriteAborted(filePath: string): void {
-		// TODO: add code
-	}
 }

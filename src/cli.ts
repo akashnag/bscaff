@@ -98,7 +98,7 @@ export class CLI {
 
 		/*
 		Examples:
-			[Save directory tree]							-->	bscaff -k react-snapshot --desc --tags=react,app "My awesome react app" save tree ~/projects/my-react-app
+			[Save directory tree]							-->	bscaff -k react-snapshot --desc "My awesome react app" --tags=react,app save tree ~/projects/my-react-app
 			[Save git repo]									-->	bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
 		*/
 		const saveTreeCommand = saveGroup
