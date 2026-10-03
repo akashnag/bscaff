@@ -141,14 +141,55 @@ export class Store {
 
 	delete(key: string): boolean {
 		if (this.doesKeyExist(key)) {
-			const success = SnapshotUtils.deleteSnapshotDirectory(key);
-			if (success) {
-				this.list = this.list.filter((item) => item.key !== key);
+			const index = this.fetchIndex(key);
+			if (index < 0) return false;
+
+			let success = true;
+
+			if (this.list[index].type !== SnapshotType.URL) {
+				success = SnapshotUtils.deleteSnapshotDirectory(key);
 			}
+
+			if (success) {
+				this.list.splice(index, 1);
+			}
+
 			return success;
 		}
 
 		return false;
+	}
+
+	deletePartial(key: string, relPath: string): boolean {
+		const record = this.fetch(key);
+		if (!record) return false;
+		if (!record.structure) return false;
+
+		if (![SnapshotType.Files, SnapshotType.Tree].includes(record.type)) {
+			return false;
+		}
+
+		const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
+
+		const hasDir = SnapshotUtils.doesSnapshotContainDirectory(record, relPath);
+
+		if (!hasFile && !hasDir) {
+			return false;
+		}
+
+		const structure = MiscUtils.deepClone(record.structure);
+		if (
+			!SnapshotUtils.deleteFileOrDirectoryUnderSnapshot(
+				key,
+				relPath,
+				hasFile ? "file" : "dir",
+				structure,
+			)
+		) {
+			return false;
+		}
+
+		return this.updateStructure(key, structure);
 	}
 
 	update(): void {

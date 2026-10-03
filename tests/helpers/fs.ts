@@ -171,7 +171,9 @@ export async function readFileTree(
 
 		for (const entry of entries) {
 			const entryName = entry.name;
-			if (ignore.some((ig) => entryName === ig || entryName.startsWith(`${ig}/`))) {
+			if (
+				ignore.some((ig) => entryName === ig || entryName.startsWith(`${ig}/`))
+			) {
 				continue;
 			}
 

@@ -173,9 +173,9 @@ export function deleteDirectoryUnderSnapshot(
 export function writeContentToSnapshotFile(
 	content: string,
 	key: string,
-	filePath: string,
+	relFilePath: string,
 ): boolean {
-	FileUtils.writeTextFile(getFileUnderSnapshot(key, filePath), content);
+	FileUtils.writeTextFile(getFileUnderSnapshot(key, relFilePath), content);
 	return true;
 }
 
@@ -286,10 +286,10 @@ export async function computeSnapshotSize(
 	}
 }
 
-export async function doesSnapshotContainFile(
+export function doesSnapshotContainFile(
 	record: SnapshotRecord,
 	relPath: string,
-): Promise<boolean> {
+): boolean {
 	let structure: FileTreeNode[] | undefined | null = undefined;
 
 	if (
@@ -302,9 +302,42 @@ export async function doesSnapshotContainFile(
 
 	if (!structure) return false;
 
-	if (!relPath.startsWith("/")) relPath = "/" + relPath;
+	if (!FileUtils.doesFileExist(getFileUnderSnapshot(record.key, relPath))) {
+		return false;
+	}
+
 	for (let i = 0; i < structure.length; ++i) {
-		if (structure[i].path === relPath) return true;
+		if (FileUtils.areRelativePathsSame(relPath, structure[i].path)) {
+			if (structure[i].type === "file") return true;
+		}
+	}
+
+	return false;
+}
+
+export function deleteFileOrDirectoryUnderSnapshot(
+	key: string,
+	relPath: string,
+	pType: "file" | "dir",
+	structure: FileTreeNode[],
+): boolean {
+	const item = getFileUnderSnapshot(key, relPath);
+
+	if (pType === "file") {
+		if (!FileUtils.doesFileExist(item)) return false;
+		FileUtils.deleteFile(item);
+	} else {
+		if (!FileUtils.doesDirectoryExist(item)) return false;
+		FileUtils.deleteDirectory(item);
+	}
+
+	for (let i = 0; i < structure.length; ++i) {
+		if (FileUtils.areRelativePathsSame(relPath, structure[i].path)) {
+			if (structure[i].type === pType) {
+				structure.splice(i, 1);
+				return true;
+			}
+		}
 	}
 
 	return false;

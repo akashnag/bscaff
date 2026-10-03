@@ -13,9 +13,9 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Settings } from "../core/settings.js";
+import { ConsoleIO } from "../io/io.js";
 import { CreateFileIO } from "../io/create-io.js";
 import { ExtractSnapshotIO } from "../io/extract-io.js";
-import { ConsoleIO } from "../io/io.js";
 import { SaveASCIITreeIO } from "../io/save-io.js";
 import { ExtractTemplateIO } from "../io/template-io.js";
 import { FileTreeNode } from "../types/types.js";

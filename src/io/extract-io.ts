@@ -80,11 +80,32 @@ export class OpenSnapshotIO extends ConsoleIO {
 	}
 
 	errorOpeningFileInEditor(): void {
-		// TODO: add code
+		printHeader("Error Opening File");
+		printField(
+			"Error",
+			"An error was encountered while attempting to open the requested file/snapshot in a text-editor.",
+		);
+		console.log("\nTo resolve:");
+		printBullet(
+			"Ensure you have the correct text-editor configured in settings; to check, run: bscaff settings\n",
+		);
 	}
 
 	errorOpeningFile(): void {
-		// TODO: add code
+		printHeader("Error Opening File");
+		printField(
+			"Error",
+			"An error was encountered while attempting to open the requested file/snapshot.\n",
+		);
+	}
+
+	errorExecutingCustomOpenCommand(command: string): void {
+		printHeader("Error Executing Command");
+		printField("Command", `${command} <file>`);
+		printField(
+			"Error",
+			"An error was encountered while attempting to execute the command.\n",
+		);
 	}
 }
 

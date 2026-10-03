@@ -88,10 +88,7 @@ export async function copyToClipboard(
 					io.warnOptionIgnored("--as-tree");
 				}
 
-				const hasFile = await SnapshotUtils.doesSnapshotContainFile(
-					record,
-					relPath,
-				);
+				const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
 				if (!hasFile) {
 					io.errorInvalidFile(key, record, relPath);
 					return false;
@@ -169,8 +166,18 @@ export async function openSnapshotReadOnly(
 	switch (record.type) {
 		case SnapshotType.URL:
 			if (forceEditor) {
-				if (!MiscUtils.createRandomFile("txt", record.urlContent, true, true)) {
+				if (!MiscUtils.createTempFile("txt", record.urlContent, true, true)) {
 					io.errorOpeningFileInEditor();
+					return false;
+				}
+			} else if (commandToExec) {
+				if (
+					!MiscUtils.executeCommand(
+						`${commandToExec} ${record.urlContent}`,
+						true,
+					)
+				) {
+					io.errorExecutingCustomOpenCommand(commandToExec);
 					return false;
 				}
 			} else if (!(await MiscUtils.openURLInBrowser(record.urlContent!))) {
@@ -192,20 +199,35 @@ export async function openSnapshotReadOnly(
 			}
 
 			if (forceEditor) {
-				// open editor in detached mode
-				MiscUtils.createRandomFile(
-					FileUtils.getFileType(snippetFile),
-					snippetContent,
-					true,
-				);
+				if (
+					!MiscUtils.createTempFile(
+						FileUtils.getFileType(snippetFile),
+						snippetContent,
+						true,
+					)
+				) {
+					io.errorOpeningFileInEditor();
+					return false;
+				}
 			} else {
-				const tempFile = MiscUtils.createRandomFile(
+				const tempFile = MiscUtils.createTempFile(
 					FileUtils.getFileType(snippetFile),
 					snippetContent,
 				);
+
+				let success = false;
 				if (tempFile) {
-					MiscUtils.openFileByOS(tempFile, true);
-				} else {
+					if (commandToExec) {
+						success = MiscUtils.executeCommand(
+							`${commandToExec} ${tempFile}`,
+							true,
+						);
+					} else {
+						success = MiscUtils.openFileByOS(tempFile, true);
+					}
+				}
+
+				if (!success) {
 					io.errorOpeningFile();
 					return false;
 				}
@@ -221,10 +243,8 @@ export async function openSnapshotReadOnly(
 				return false;
 			}
 
-			const hasFile = await SnapshotUtils.doesSnapshotContainFile(
-				record,
-				relPath,
-			);
+			const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
+
 			if (!hasFile) {
 				io.errorInvalidFile(key, record, relPath);
 				return false;
@@ -242,7 +262,36 @@ export async function openSnapshotReadOnly(
 				return false;
 			}
 
-			MiscUtils.createRandomFile(FileUtils.getFileType(file), content, true);
+			if (forceEditor) {
+				if (
+					!MiscUtils.createTempFile(FileUtils.getFileType(file), content, true)
+				) {
+					io.errorOpeningFileInEditor();
+					return false;
+				}
+			} else {
+				const tempFile = MiscUtils.createTempFile(
+					FileUtils.getFileType(file),
+					content,
+				);
+
+				let success = false;
+				if (tempFile) {
+					if (commandToExec) {
+						success = MiscUtils.executeCommand(
+							`${commandToExec} ${tempFile}`,
+							true,
+						);
+					} else {
+						success = MiscUtils.openFileByOS(tempFile, true);
+					}
+				}
+
+				if (!success) {
+					io.errorOpeningFile();
+					return false;
+				}
+			}
 			break;
 	}
 

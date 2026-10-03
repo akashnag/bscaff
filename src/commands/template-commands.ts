@@ -467,7 +467,7 @@ export async function createTemplateFromDirectory(
 		template,
 	) as string;
 
-	const randFile = MiscUtils.createRandomFile(
+	const randFile = MiscUtils.createTempFile(
 		"yml",
 		templateContent,
 		true,

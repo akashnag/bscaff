@@ -21,6 +21,7 @@ import { TemplateQuestion } from "../types/template-types.js";
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 
 const SYMBOL_INFO: string = "ℹ";
 const SYMBOL_ERROR: string = "✖";
@@ -258,12 +259,14 @@ export async function printPreviewFile(
 	lineCount: number = 10,
 ): Promise<void> {
 	const content = await FileUtils.readTextFile(filePath);
+	printLinedHeader("File Preview", indented, width);
 	if (!content) {
 		printCentered("<No preview available>", true);
 	} else {
 		const lines: string[] = MiscUtils.splitContentByLines(content);
 		printPreview(lines, indented, width, lineCount);
 	}
+	printSeparatorLine(indented, width);
 }
 
 export function printPreview(
@@ -779,5 +782,14 @@ export class ConsoleIO {
 		console.log("\nTo resolve:");
 		printBullet("Ensure that your system temporary directory is writable");
 		printBullet("Check for sufficient disk space\n");
+	}
+
+	errorInvalidOption(option: string): void {
+		printHeader("Invalid Option Specified");
+		printField("Option", option);
+		printField("Error", "Invalid option specified for the current operation.");
+
+		console.log("\nTo resolve:");
+		printBullet("Retry the operation without this option.\n");
 	}
 }

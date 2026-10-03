@@ -391,7 +391,7 @@ export async function saveSnippetFromLiveInput(
 
 	if (!fType) fType = "txt";
 
-	const filePath = MiscUtils.createRandomFile(fType, null, true);
+	const filePath = MiscUtils.createTempFile(fType, null, true);
 	if (!filePath) {
 		io.errorLaunchingTextEditor();
 		return false;

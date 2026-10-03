@@ -239,15 +239,17 @@ export async function updateFileContent(
 // --------------------------------------------------------
 export async function deleteSnapshotOrFile(
 	key: string | undefined,
+	forceDelete: boolean | undefined,
 	relPath: string | undefined,
 ): Promise<boolean> {
-	const store = await Store.create();
 	const io = new EditSnapshotsIO();
 
 	if (!key) {
 		io.errorMissingParameter("key");
 		return false;
 	}
+
+	const store = await Store.create();
 
 	if (!store.doesKeyExist(key)) {
 		io.errorKeyNotFound(key);
@@ -260,40 +262,89 @@ export async function deleteSnapshotOrFile(
 		return false;
 	}
 
-	if (!relPath) {
-		if (!store.delete(key)) {
-			io.errorDeletingSnapshot(key);
-			return false;
-		}
+	switch (record.type) {
+		case SnapshotType.Snippet:
+		case SnapshotType.URL:
+			if (relPath) {
+				io.errorFileOrDirectoryDeletionUnsupported(key, record.type);
+				return false;
+			}
 
-		io.successSnapshotDeleted(key);
-		return true;
-	}
+			if (
+				forceDelete ||
+				(await io.promptForSnapshotDeletion(key, record.type))
+			) {
+				if (!store.delete(key)) {
+					io.errorDeletingSnapshot(key);
+					return false;
+				}
+			}
+			break;
 
-	if (record.type == SnapshotType.Snippet || record.type == SnapshotType.URL) {
-		io.errorFileOrDirectoryDeletionUnsupported(key, record.type);
-		return false;
-	}
+		case SnapshotType.Files:
+		case SnapshotType.Tree:
+			let success = false;
+			if (relPath) {
+				const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
+				const hasDirectory = SnapshotUtils.doesSnapshotContainDirectory(
+					record,
+					relPath,
+				);
 
-	const hasFile = await SnapshotUtils.doesSnapshotContainFile(record, relPath);
-	const hasDirectory = await SnapshotUtils.doesSnapshotContainDirectory(
-		record,
-		relPath,
-	);
-	if (!hasFile && !hasDirectory) {
-		io.errorInvalidFile(key, record, relPath);
-		return false;
-	}
+				if (!hasFile && !hasDirectory) {
+					io.errorInvalidFileOrDirectory(key, record, relPath);
+					return false;
+				}
 
-	const retVal = hasFile
-		? SnapshotUtils.deleteFileUnderSnapshot(store, key, relPath)
-		: SnapshotUtils.deleteDirectoryUnderSnapshot(store, key, relPath);
-	if (!retVal) {
-		io.errorDeletingFileOrDirectory(key, relPath, hasFile);
-		return false;
+				if (
+					forceDelete ||
+					(await io.promptForSnapshotDeletion(key, record.type))
+				) {
+					success = store.deletePartial(key, relPath);
+				}
+			} else {
+				if (
+					forceDelete ||
+					(await io.promptForSnapshotDeletion(key, record.type, relPath))
+				) {
+					success = store.delete(key);
+				}
+			}
+
+			if (!success) {
+				if (relPath) {
+					io.errorDeletingSnapshotPartial(key, relPath);
+				} else {
+					io.errorDeletingSnapshot(key);
+				}
+				return false;
+			}
+			break;
+
+		case SnapshotType.Template:
+			if (relPath) {
+				io.errorInvalidOption("rel-path");
+				return false;
+			}
+
+			if (
+				forceDelete ||
+				(await io.promptForSnapshotDeletion(key, record.type))
+			) {
+				if (!store.delete(key)) {
+					io.errorDeletingSnapshot(key);
+					return false;
+				}
+			}
+			break;
 	}
 
 	store.update();
-	io.successFileOrDirectoryDeleted(key, relPath, hasFile);
+
+	if (relPath) {
+		io.successFileOrDirectoryDeleted(key, relPath);
+	} else {
+		io.successSnapshotDeleted(key);
+	}
 	return true;
 }

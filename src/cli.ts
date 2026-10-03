@@ -378,16 +378,17 @@ export class CLI {
 		const deleteCommand = this.program
 			.command("delete [rel-path]")
 			.description("Delete snapshot, or a file under the snapshot")
+			.option("-f, --force", "Delete without confirmation")
 			.action(
 				async (
 					relPath: string | undefined,
 					options: Record<string, any>,
 					command: Command,
 				) => {
-					// TODO: add option --force, else prompt user before deleting
 					const globalOpts = command.optsWithGlobals();
 					const retVal = await SnapshotManagementCommands.deleteSnapshotOrFile(
 						globalOpts.key,
+						options.force,
 						relPath,
 					);
 					if (!retVal) throw new Error();

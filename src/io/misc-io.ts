@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { SnapshotType } from "../types/types.js";
+import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import {
 	ConsoleIO,
 	IOHeaderType,
@@ -19,7 +19,13 @@ import {
 	printField,
 	printHeader,
 	QUIET_MODE,
+	quickConfirm,
+	printLinedHeader,
+	printPreview,
+	printSeparatorLine,
 } from "./io.js";
+import * as MiscUtils from "../utils/misc-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 
 export class EditSnapshotsIO extends ConsoleIO {
 	errorRenamingKey(oldKey: string, newKey: string): void {
@@ -259,19 +265,64 @@ export class EditSnapshotsIO extends ConsoleIO {
 		printBullet("Check write permissions for storage directory\n");
 	}
 
-	successFileOrDirectoryDeleted(
-		key: string,
-		relPath: string,
-		isFile: boolean,
-	): void {
+	successFileOrDirectoryDeleted(key: string, relPath: string): void {
 		if (QUIET_MODE) return;
 
-		printHeader(
-			`${isFile ? "File" : "Directory"} Deleted Successfully`,
-			IOHeaderType.SUCCESS,
-		);
+		printHeader(`File/Directory Deleted Successfully`, IOHeaderType.SUCCESS);
 		printField("Key", key);
-		printField(isFile ? "File" : "Directory", relPath);
+		printField("Path", relPath);
 		console.log("");
+	}
+
+	errorDeletingSnapshotPartial(key: string, relPath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader(`Failed to Delete File/Directory From Snapshot`);
+		printField("Key", key);
+		printField("Path", relPath);
+		printField("Error", `Could not remove file/directory from snapshot.`);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			`Inspect snapshot files to check if the path is valid, using: bscaff list -k ${key}`,
+		);
+	}
+
+	async promptForSnapshotDeletion(
+		key: string,
+		sType: SnapshotType,
+		relPath?: string,
+	): Promise<boolean> {
+		const msg =
+			`Delete ` +
+			(relPath ? `file/directory [${relPath}] under ` : ``) +
+			`${sType}-snapshot <${key}> (Y/N)?`;
+		return await quickConfirm(msg, { y: true, n: false }, false);
+	}
+
+	errorInvalidFileOrDirectory(
+		key: string,
+		record: SnapshotRecord,
+		relPath: string,
+	): void {
+		printHeader("Invalid Path Specified");
+		printField("Key", key);
+		printField("Path", relPath);
+		printField("Error", "Invalid/Non-existent path specified.");
+
+		if (record && record.structure) {
+			const treeLines = MiscUtils.splitContentByLines(
+				TreeUtils.drawFileTree(record.structure),
+			);
+			printLinedHeader("File Tree", true);
+			printPreview(treeLines, true, 60, treeLines.length);
+			printPreview(treeLines, true);
+			printSeparatorLine(true);
+		}
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Retry the operation with a correct path by consulting the file-tree above (if available).\n",
+		);
 	}
 }

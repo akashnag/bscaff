@@ -83,7 +83,7 @@ export async function countLOCFromFile(
 	return countLOC(data);
 }
 
-export function createRandomFile(
+export function createTempFile(
 	fileType: string = "txt",
 	content: string | null = null,
 	openInEditor: boolean = true,
@@ -95,7 +95,7 @@ export function createRandomFile(
 		getRandomInt(1000, 9999).toString() +
 		(fileType.startsWith(".") ? "" : ".") +
 		fileType;
-	const path = Config.getStoragePath([fileName]);
+	const path = Config.getStoragePath([Config.TEMP_DIRECTORY, fileName]);
 	if (content) {
 		if (!FileUtils.writeTextFile(path, content)) return null;
 	}
@@ -106,7 +106,7 @@ export function createRandomFile(
 	return path;
 }
 
-export function createRandomTempDirectory(): string | null {
+export function createTempDirectory(): string | null {
 	const dir =
 		"temp_" +
 		(+new Date()).toString() +
@@ -153,7 +153,7 @@ export function getCallerName(): string | null {
 
 export async function openURLInBrowser(url: string): Promise<boolean> {
 	const browser = Settings.get("browser");
-	return await executeCommand(`${browser} ${url}`);
+	return executeCommand(`${browser} ${url}`, true);
 }
 
 // Executes an OS-specific script file
@@ -304,6 +304,14 @@ export function executeCommand(
 		console.error(`Failed to execute on ${process.platform}:`, err);
 		return false;
 	}
+}
+
+export function asSingleLineString(data: any): string {
+	return data
+		.toString()
+		.replaceAll("\t", " ")
+		.replaceAll("\r\n", " ")
+		.replaceAll("\n", " ");
 }
 
 // ------------------------- [private] -------------------------

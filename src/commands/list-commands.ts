@@ -165,7 +165,7 @@ async function displaySnapshotFile(
 		record.type == SnapshotType.Template ||
 		record.type == SnapshotType.Tree
 	) {
-		if (!(await SnapshotUtils.doesSnapshotContainFile(record, relPath))) {
+		if (!SnapshotUtils.doesSnapshotContainFile(record, relPath)) {
 			io.errorInvalidFile(key, record, relPath);
 			return false;
 		}

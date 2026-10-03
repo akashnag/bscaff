@@ -26,6 +26,11 @@ export class Config {
 	static readonly TEMPLATE_CONFIG_FILE: string = "bscaff-template.yml";
 	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
 	static readonly BSCAFF_USER_DIR_ENV_VARIABLE: string = "BSCAFF_USER_DIR";
+	static readonly TEMP_DIRECTORY: string = ".temp";
+	static readonly LOG_FILE_PATH: string = FileUtils.formPath([
+		os.homedir(),
+		"bscaff-logs.log",
+	]);
 
 	private static storagePath: string | null = null;
 
@@ -54,10 +59,16 @@ export class Config {
 	}
 
 	static async ensureStorageDirectoryExists(): Promise<boolean> {
-		const sPath = Config.getStoragePath();
+		const tempDir = Config.getStoragePath([Config.TEMP_DIRECTORY]);
 
 		try {
-			await fs.mkdir(sPath, { recursive: true });
+			// if tempDir exists, then its parent (storage path) also exists since recursive = true
+			await fs.mkdir(tempDir, { recursive: true });
+
+			// clean all files inside tempDirectory
+			FileUtils.deleteDirectory(tempDir);
+			FileUtils.createDirectory(tempDir);
+
 			return await Settings.initSettings();
 		} catch {
 			return false;
