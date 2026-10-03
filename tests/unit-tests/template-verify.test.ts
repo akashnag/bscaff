@@ -18,7 +18,7 @@ import {
 	createFileTree,
 	createSampleTemplateFixture,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
 	TEST_DIR,
 } from "../helpers/index";
 
@@ -44,20 +44,18 @@ describe("template verify command", () => {
 			},
 		});
 
-		const result = await executeCLI(
-			["template", "verify", fixture.configFile],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"template",
+			"verify",
+			fixture.configFile,
+		]);
 
 		expect(result.exitCode).toBe(0);
 	});
 
 	it("fails verification when template config file does not exist", async () => {
 		const missingConfig = path.join(TEST_DIR, "does-not-exist.yml");
-		const result = await executeCLI(
-			["template", "verify", missingConfig],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest(["template", "verify", missingConfig]);
 
 		expect(result.exitCode).not.toBe(0);
 	});
@@ -68,10 +66,7 @@ describe("template verify command", () => {
 			"corrupt-template.yml": "invalid: [yaml: broken",
 		});
 
-		const result = await executeCLI(
-			["template", "verify", badConfig],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest(["template", "verify", badConfig]);
 
 		expect(result.exitCode).not.toBe(0);
 	});

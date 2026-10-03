@@ -19,8 +19,8 @@ import {
 	createFileTree,
 	createMockClipboard,
 	createTestDir,
-	executeCLI,
 	readTestDB,
+	runCLIForTest,
 	SAMPLE_SNIPPETS,
 	TEST_DIR,
 } from "../helpers/index";
@@ -40,10 +40,13 @@ describe("save snippet command", () => {
 			"add.ts": SAMPLE_SNIPPETS.TYPESCRIPT,
 		});
 
-		const result = await executeCLI(
-			["-k", "snippet-add", "save", "snippet", snippetFile],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"snippet-add",
+			"save",
+			"snippet",
+			snippetFile,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -60,20 +63,17 @@ describe("save snippet command", () => {
 			"script.sh": SAMPLE_SNIPPETS.SHELL,
 		});
 
-		const result = await executeCLI(
-			[
-				"-k",
-				"shell-script",
-				"save",
-				"--desc",
-				"Useful bash greeting",
-				"--tags",
-				"bash,shell",
-				"snippet",
-				snippetFile,
-			],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"shell-script",
+			"save",
+			"--desc",
+			"Useful bash greeting",
+			"--tags",
+			"bash,shell",
+			"snippet",
+			snippetFile,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -85,10 +85,13 @@ describe("save snippet command", () => {
 
 	it("fails when snippet file does not exist", async () => {
 		const nonExistent = path.join(TEST_DIR, "missing.py");
-		const result = await executeCLI(
-			["-k", "missing-snippet", "save", "snippet", nonExistent],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"missing-snippet",
+			"save",
+			"snippet",
+			nonExistent,
+		]);
 
 		expect(result.exitCode).not.toBe(0);
 	});
@@ -97,7 +100,7 @@ describe("save snippet command", () => {
 		const file = path.join(TEST_DIR, "code.py");
 		await createFileTree(TEST_DIR, { "code.py": SAMPLE_SNIPPETS.PYTHON });
 
-		const result = await executeCLI(["save", "snippet", file], TEST_DIR);
+		const result = await runCLIForTest(["save", "snippet", file]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
@@ -105,16 +108,22 @@ describe("save snippet command", () => {
 		const file = path.join(TEST_DIR, "code.ts");
 		await createFileTree(TEST_DIR, { "code.ts": SAMPLE_SNIPPETS.TYPESCRIPT });
 
-		const first = await executeCLI(
-			["-k", "dup-snip", "save", "snippet", file],
-			TEST_DIR,
-		);
+		const first = await runCLIForTest([
+			"-k",
+			"dup-snip",
+			"save",
+			"snippet",
+			file,
+		]);
 		expect(first.exitCode).toBe(0);
 
-		const second = await executeCLI(
-			["-k", "dup-snip", "save", "snippet", file],
-			TEST_DIR,
-		);
+		const second = await runCLIForTest([
+			"-k",
+			"dup-snip",
+			"save",
+			"snippet",
+			file,
+		]);
 		expect(second.exitCode).not.toBe(0);
 	});
 });

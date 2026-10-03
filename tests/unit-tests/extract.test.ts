@@ -20,10 +20,10 @@ import {
 	createSampleTemplateFixture,
 	createTestDir,
 	dirExists,
-	executeCLI,
 	fileExists,
 	readFile,
 	readFileTree,
+	runCLIForTest,
 	seedSnapshot,
 	TEST_DIR,
 } from "../helpers/index.js";
@@ -56,10 +56,14 @@ describe("extract command", () => {
 			);
 
 			const targetDir = path.join(TEST_DIR, "files-out");
-			const result = await executeCLI(
-				["-k", "files-basic", "extract", targetDir, "-e", "overwrite"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"files-basic",
+				"extract",
+				targetDir,
+				"-e",
+				"overwrite",
+			]);
 
 			expect(result.exitCode).toBe(0);
 
@@ -82,10 +86,13 @@ describe("extract command", () => {
 			);
 
 			const targetDir = path.join(TEST_DIR, "files-dry-out");
-			const result = await executeCLI(
-				["-k", "files-dry", "extract", targetDir, "--dry-run"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"files-dry",
+				"extract",
+				targetDir,
+				"--dry-run",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await fileExists(path.join(targetDir, "data.txt"))).toBe(false);
@@ -106,19 +113,16 @@ describe("extract command", () => {
 			);
 
 			const targetDir = path.join(TEST_DIR, "files-partial-out");
-			const result = await executeCLI(
-				[
-					"-k",
-					"files-partial",
-					"extract",
-					targetDir,
-					"--partial",
-					"keep.txt",
-					"-e",
-					"overwrite",
-				],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"files-partial",
+				"extract",
+				targetDir,
+				"--partial",
+				"keep.txt",
+				"-e",
+				"overwrite",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await fileExists(path.join(targetDir, "keep.txt"))).toBe(true);
@@ -143,10 +147,14 @@ describe("extract command", () => {
 				"config.json": '{"original": true}',
 			});
 
-			const result = await executeCLI(
-				["-k", "files-collision-fail", "extract", targetDir, "-e", "fail"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"files-collision-fail",
+				"extract",
+				targetDir,
+				"-e",
+				"fail",
+			]);
 
 			expect(result.exitCode).not.toBe(0);
 			expect(await readFile(path.join(targetDir, "config.json"))).toBe(
@@ -173,10 +181,14 @@ describe("extract command", () => {
 				"existing.txt": "original content",
 			});
 
-			const result = await executeCLI(
-				["-k", "files-collision-skip", "extract", targetDir, "-e", "skip"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"files-collision-skip",
+				"extract",
+				targetDir,
+				"-e",
+				"skip",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await readFile(path.join(targetDir, "existing.txt"))).toBe(
@@ -205,17 +217,14 @@ describe("extract command", () => {
 				"config.json": '{"old": true}',
 			});
 
-			const result = await executeCLI(
-				[
-					"-k",
-					"files-collision-overwrite",
-					"extract",
-					targetDir,
-					"-e",
-					"overwrite",
-				],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"files-collision-overwrite",
+				"extract",
+				targetDir,
+				"-e",
+				"overwrite",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await readFile(path.join(targetDir, "config.json"))).toBe(
@@ -256,10 +265,14 @@ describe("extract command", () => {
 			);
 
 			const targetDir = path.join(TEST_DIR, "tree-out");
-			const result = await executeCLI(
-				["-k", "tree-nested", "extract", targetDir, "-e", "overwrite"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"tree-nested",
+				"extract",
+				targetDir,
+				"-e",
+				"overwrite",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await dirExists(path.join(targetDir, "src/utils"))).toBe(true);
@@ -291,10 +304,13 @@ describe("extract command", () => {
 			);
 
 			const targetDir = path.join(TEST_DIR, "tree-dry-out");
-			const result = await executeCLI(
-				["-k", "tree-dry", "extract", targetDir, "--dry-run"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"tree-dry",
+				"extract",
+				targetDir,
+				"--dry-run",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await dirExists(path.join(targetDir, "pkg"))).toBe(false);
@@ -329,19 +345,16 @@ describe("extract command", () => {
 			);
 
 			const targetDir = path.join(TEST_DIR, "tree-partial-out");
-			const result = await executeCLI(
-				[
-					"-k",
-					"tree-partial",
-					"extract",
-					targetDir,
-					"--partial",
-					"backend",
-					"-e",
-					"overwrite",
-				],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"tree-partial",
+				"extract",
+				targetDir,
+				"--partial",
+				"backend",
+				"-e",
+				"overwrite",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await fileExists(path.join(targetDir, "server.ts"))).toBe(true);
@@ -371,10 +384,14 @@ describe("extract command", () => {
 				"lock.txt": "existing lock\n",
 			});
 
-			const result = await executeCLI(
-				["-k", "tree-fail-collision", "extract", targetDir, "-e", "fail"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"tree-fail-collision",
+				"extract",
+				targetDir,
+				"-e",
+				"fail",
+			]);
 
 			expect(result.exitCode).not.toBe(0);
 			expect(await readFile(path.join(targetDir, "lock.txt"))).toBe(
@@ -405,10 +422,14 @@ describe("extract command", () => {
 				"base.txt": "original base\n",
 			});
 
-			const result = await executeCLI(
-				["-k", "tree-skip-collision", "extract", targetDir, "-e", "skip"],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"tree-skip-collision",
+				"extract",
+				targetDir,
+				"-e",
+				"skip",
+			]);
 
 			expect(result.exitCode).toBe(0);
 			expect(await readFile(path.join(targetDir, "base.txt"))).toBe(
@@ -430,25 +451,26 @@ describe("extract command", () => {
 				},
 			});
 
-			const saveResult = await executeCLI(
-				[
-					"-k",
-					"my-template",
-					"template",
-					"save",
-					templateDir,
-					"--source",
-					"dir",
-				],
-				TEST_DIR,
-			);
+			const saveResult = await runCLIForTest([
+				"-k",
+				"my-template",
+				"template",
+				"save",
+				templateDir,
+				"--source",
+				"dir",
+			]);
 			expect(saveResult.exitCode).toBe(0);
 
 			const targetDir = path.join(TEST_DIR, "tmpl-target");
-			const extractResult = await executeCLI(
-				["-k", "my-template", "extract", targetDir, "-e", "overwrite"],
-				TEST_DIR,
-			);
+			const extractResult = await runCLIForTest([
+				"-k",
+				"my-template",
+				"extract",
+				targetDir,
+				"-e",
+				"overwrite",
+			]);
 
 			expect(extractResult.exitCode).toBe(0);
 
@@ -470,25 +492,26 @@ describe("extract command", () => {
 				},
 			});
 
-			const saveResult = await executeCLI(
-				[
-					"-k",
-					"tmpl-exclude",
-					"template",
-					"save",
-					templateDir,
-					"--source",
-					"dir",
-				],
-				TEST_DIR,
-			);
+			const saveResult = await runCLIForTest([
+				"-k",
+				"tmpl-exclude",
+				"template",
+				"save",
+				templateDir,
+				"--source",
+				"dir",
+			]);
 			expect(saveResult.exitCode).toBe(0);
 
 			const targetDir = path.join(TEST_DIR, "tmpl-exclude-out");
-			const extractResult = await executeCLI(
-				["-k", "tmpl-exclude", "extract", targetDir, "-e", "overwrite"],
-				TEST_DIR,
-			);
+			const extractResult = await runCLIForTest([
+				"-k",
+				"tmpl-exclude",
+				"extract",
+				targetDir,
+				"-e",
+				"overwrite",
+			]);
 
 			expect(extractResult.exitCode).toBe(0);
 
@@ -503,25 +526,25 @@ describe("extract command", () => {
 			const templateDir = path.join(TEST_DIR, "tmpl-notriggers-src");
 			await createSampleTemplateFixture(templateDir);
 
-			const saveResult = await executeCLI(
-				[
-					"-k",
-					"tmpl-notriggers",
-					"template",
-					"save",
-					templateDir,
-					"--source",
-					"dir",
-				],
-				TEST_DIR,
-			);
+			const saveResult = await runCLIForTest([
+				"-k",
+				"tmpl-notriggers",
+				"template",
+				"save",
+				templateDir,
+				"--source",
+				"dir",
+			]);
 			expect(saveResult.exitCode).toBe(0);
 
 			const targetDir = path.join(TEST_DIR, "tmpl-dry-target");
-			const extractResult = await executeCLI(
-				["-k", "tmpl-notriggers", "extract", targetDir, "--dry-run"],
-				TEST_DIR,
-			);
+			const extractResult = await runCLIForTest([
+				"-k",
+				"tmpl-notriggers",
+				"extract",
+				targetDir,
+				"--dry-run",
+			]);
 
 			expect(extractResult.exitCode).toBe(0);
 			const exists = await dirExists(targetDir);
@@ -537,25 +560,25 @@ describe("extract command", () => {
 				preGenerationTasks: ["echo 'pre'"],
 			});
 
-			const saveResult = await executeCLI(
-				[
-					"-k",
-					"tmpl-tasks",
-					"template",
-					"save",
-					templateDir,
-					"--source",
-					"dir",
-				],
-				TEST_DIR,
-			);
+			const saveResult = await runCLIForTest([
+				"-k",
+				"tmpl-tasks",
+				"template",
+				"save",
+				templateDir,
+				"--source",
+				"dir",
+			]);
 			expect(saveResult.exitCode).toBe(0);
 
 			const targetDir = path.join(TEST_DIR, "tmpl-tasks-dry-fail");
-			const extractResult = await executeCLI(
-				["-k", "tmpl-tasks", "extract", targetDir, "--dry-run"],
-				TEST_DIR,
-			);
+			const extractResult = await runCLIForTest([
+				"-k",
+				"tmpl-tasks",
+				"extract",
+				targetDir,
+				"--dry-run",
+			]);
 
 			// Expected to fail with errorCannotDryRunInPresenceOfTriggers
 			expect(extractResult.exitCode).not.toBe(0);
@@ -565,10 +588,15 @@ describe("extract command", () => {
 			const templateDir = path.join(TEST_DIR, "tmpl-fail-src");
 			await createSampleTemplateFixture(templateDir);
 
-			await executeCLI(
-				["-k", "tmpl-fail", "template", "save", templateDir, "--source", "dir"],
-				TEST_DIR,
-			);
+			await runCLIForTest([
+				"-k",
+				"tmpl-fail",
+				"template",
+				"save",
+				templateDir,
+				"--source",
+				"dir",
+			]);
 
 			const targetDir = path.join(TEST_DIR, "tmpl-fail-target");
 			// Pre-create target root with an existing file to trigger collision
@@ -576,10 +604,14 @@ describe("extract command", () => {
 				"README.md": "original content",
 			});
 
-			const extractResult = await executeCLI(
-				["-k", "tmpl-fail", "extract", targetDir, "-e", "fail"],
-				TEST_DIR,
-			);
+			const extractResult = await runCLIForTest([
+				"-k",
+				"tmpl-fail",
+				"extract",
+				targetDir,
+				"-e",
+				"fail",
+			]);
 
 			expect(extractResult.exitCode).not.toBe(0);
 		});
@@ -598,10 +630,12 @@ describe("extract command", () => {
 			});
 
 			const targetDir = path.join(TEST_DIR, "url-extract-out");
-			const result = await executeCLI(
-				["-k", "url-snapshot", "extract", targetDir],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"url-snapshot",
+				"extract",
+				targetDir,
+			]);
 
 			// Extraction is unsupported for URL snapshots
 			expect(result.exitCode).not.toBe(0);
@@ -622,10 +656,12 @@ describe("extract command", () => {
 			);
 
 			const targetDir = path.join(TEST_DIR, "snippet-extract-out");
-			const result = await executeCLI(
-				["-k", "snippet-snapshot", "extract", targetDir],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"snippet-snapshot",
+				"extract",
+				targetDir,
+			]);
 
 			// Extraction is unsupported for Snippet snapshots
 			expect(result.exitCode).not.toBe(0);
@@ -638,17 +674,19 @@ describe("extract command", () => {
 	describe("Validation and error handling", () => {
 		it("fails when key option (-k) is missing", async () => {
 			const targetDir = path.join(TEST_DIR, "no-key-out");
-			const result = await executeCLI(["extract", targetDir], TEST_DIR);
+			const result = await runCLIForTest(["extract", targetDir]);
 
 			expect(result.exitCode).not.toBe(0);
 		});
 
 		it("fails when snapshot key does not exist in store", async () => {
 			const targetDir = path.join(TEST_DIR, "not-found-out");
-			const result = await executeCLI(
-				["-k", "non-existent-key", "extract", targetDir],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"non-existent-key",
+				"extract",
+				targetDir,
+			]);
 
 			expect(result.exitCode).not.toBe(0);
 		});
@@ -662,10 +700,12 @@ describe("extract command", () => {
 			});
 
 			const targetDir = path.join(TEST_DIR, "corrupt-out");
-			const result = await executeCLI(
-				["-k", "corrupt-structure", "extract", targetDir],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"corrupt-structure",
+				"extract",
+				targetDir,
+			]);
 
 			expect(result.exitCode).not.toBe(0);
 		});
@@ -680,10 +720,12 @@ describe("extract command", () => {
 			});
 
 			const targetDir = path.join(TEST_DIR, "corrupt-params-out");
-			const result = await executeCLI(
-				["-k", "corrupt-params", "extract", targetDir],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"corrupt-params",
+				"extract",
+				targetDir,
+			]);
 
 			expect(result.exitCode).not.toBe(0);
 		});
@@ -697,10 +739,12 @@ describe("extract command", () => {
 			});
 
 			const targetDir = path.join(TEST_DIR, "missing-tmpl-out");
-			const result = await executeCLI(
-				["-k", "missing-tmpl-config", "extract", targetDir],
-				TEST_DIR,
-			);
+			const result = await runCLIForTest([
+				"-k",
+				"missing-tmpl-config",
+				"extract",
+				targetDir,
+			]);
 
 			expect(result.exitCode).not.toBe(0);
 		});

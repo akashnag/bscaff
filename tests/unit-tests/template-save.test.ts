@@ -18,9 +18,9 @@ import {
 	createSampleTemplateFixture,
 	createTemplateZip,
 	createTestDir,
-	executeCLI,
 	initLocalGitRepo,
 	readTestDB,
+	runCLIForTest,
 	TEST_DIR,
 } from "../helpers/index";
 
@@ -39,18 +39,15 @@ describe("template save command", () => {
 			minVersion: "0.0.1",
 		});
 
-		const result = await executeCLI(
-			[
-				"-k",
-				"my-dir-template",
-				"template",
-				"save",
-				templateDir,
-				"--source",
-				"dir",
-			],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"my-dir-template",
+			"template",
+			"save",
+			templateDir,
+			"--source",
+			"dir",
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -67,10 +64,15 @@ describe("template save command", () => {
 		const zipPath = path.join(TEST_DIR, "packaged-template.zip");
 		await createTemplateZip(templateDir, zipPath, "tmpl-root");
 
-		const result = await executeCLI(
-			["-k", "my-zip-template", "template", "save", zipPath, "--source", "zip"],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"my-zip-template",
+			"template",
+			"save",
+			zipPath,
+			"--source",
+			"zip",
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -85,10 +87,15 @@ describe("template save command", () => {
 		await createSampleTemplateFixture(gitDir);
 		await initLocalGitRepo(gitDir);
 
-		const result = await executeCLI(
-			["-k", "my-git-template", "template", "save", gitDir, "--source", "git"],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"my-git-template",
+			"template",
+			"save",
+			gitDir,
+			"--source",
+			"git",
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -102,19 +109,19 @@ describe("template save command", () => {
 		const templateDir = path.join(TEST_DIR, "unkeyed-template");
 		await createSampleTemplateFixture(templateDir);
 
-		const result = await executeCLI(
-			["template", "save", templateDir],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest(["template", "save", templateDir]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
 	it("fails when directory does not contain bscaff-template.yml", async () => {
 		const invalidDir = path.join(TEST_DIR, "empty-template");
-		const result = await executeCLI(
-			["-k", "bad-template", "template", "save", invalidDir],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"bad-template",
+			"template",
+			"save",
+			invalidDir,
+		]);
 
 		expect(result.exitCode).not.toBe(0);
 	});

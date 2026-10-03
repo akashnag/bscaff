@@ -18,8 +18,8 @@ import {
 	cleanupTestDir,
 	createFileTree,
 	createTestDir,
-	executeCLI,
 	readTestDB,
+	runCLIForTest,
 	TEST_DIR,
 } from "../helpers/index";
 
@@ -38,10 +38,13 @@ describe("save files command", () => {
 			"config.json": '{"port": 8080}',
 		});
 
-		const result = await executeCLI(
-			["-k", "app-config", "save", "files", filePath],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"app-config",
+			"save",
+			"files",
+			filePath,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -60,21 +63,18 @@ describe("save files command", () => {
 			"file2.txt": "Second content",
 		});
 
-		const result = await executeCLI(
-			[
-				"-k",
-				"bundle",
-				"save",
-				"--desc",
-				"Two files bundle",
-				"--tags",
-				"docs,text",
-				"files",
-				file1,
-				file2,
-			],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"bundle",
+			"save",
+			"--desc",
+			"Two files bundle",
+			"--tags",
+			"docs,text",
+			"files",
+			file1,
+			file2,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -89,7 +89,7 @@ describe("save files command", () => {
 		const file = path.join(TEST_DIR, "test.txt");
 		await createFileTree(TEST_DIR, { "test.txt": "abc" });
 
-		const result = await executeCLI(["save", "files", file], TEST_DIR);
+		const result = await runCLIForTest(["save", "files", file]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
@@ -98,10 +98,14 @@ describe("save files command", () => {
 		const file2 = path.join(TEST_DIR, "missing.txt");
 		await createFileTree(TEST_DIR, { "exists.txt": "ok" });
 
-		const result = await executeCLI(
-			["-k", "bad-files", "save", "files", file1, file2],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"bad-files",
+			"save",
+			"files",
+			file1,
+			file2,
+		]);
 
 		expect(result.exitCode).not.toBe(0);
 	});
@@ -110,16 +114,22 @@ describe("save files command", () => {
 		const file = path.join(TEST_DIR, "unique.txt");
 		await createFileTree(TEST_DIR, { "unique.txt": "data" });
 
-		const first = await executeCLI(
-			["-k", "dup-files", "save", "files", file],
-			TEST_DIR,
-		);
+		const first = await runCLIForTest([
+			"-k",
+			"dup-files",
+			"save",
+			"files",
+			file,
+		]);
 		expect(first.exitCode).toBe(0);
 
-		const second = await executeCLI(
-			["-k", "dup-files", "save", "files", file],
-			TEST_DIR,
-		);
+		const second = await runCLIForTest([
+			"-k",
+			"dup-files",
+			"save",
+			"files",
+			file,
+		]);
 		expect(second.exitCode).not.toBe(0);
 	});
 });

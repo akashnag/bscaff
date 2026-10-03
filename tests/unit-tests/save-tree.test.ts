@@ -18,9 +18,9 @@ import {
 	cleanupTestDir,
 	createFileTree,
 	createTestDir,
-	executeCLI,
 	initLocalGitRepo,
 	readTestDB,
+	runCLIForTest,
 	TEST_DIR,
 } from "../helpers/index";
 
@@ -41,10 +41,13 @@ describe("save tree command", () => {
 			"src/sub/helper.ts": "export const ok = true;",
 		});
 
-		const result = await executeCLI(
-			["-k", "my-tree", "save", "tree", sourceDir],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"my-tree",
+			"save",
+			"tree",
+			sourceDir,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -62,20 +65,17 @@ describe("save tree command", () => {
 			"file.txt": "content",
 		});
 
-		const result = await executeCLI(
-			[
-				"-k",
-				"tagged-tree",
-				"save",
-				"--desc",
-				"Scaffolding tree description",
-				"--tags",
-				"react,typescript",
-				"tree",
-				sourceDir,
-			],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"tagged-tree",
+			"save",
+			"--desc",
+			"Scaffolding tree description",
+			"--tags",
+			"react,typescript",
+			"tree",
+			sourceDir,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -91,10 +91,14 @@ describe("save tree command", () => {
 			"main.go": "package main\nfunc main() {}\n",
 		});
 
-		const result = await executeCLI(
-			["-k", "git-tree", "save", "tree", gitRepoDir, "--git"],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"git-tree",
+			"save",
+			"tree",
+			gitRepoDir,
+			"--git",
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -108,16 +112,19 @@ describe("save tree command", () => {
 		const sourceDir = path.join(TEST_DIR, "tree-no-key");
 		await createFileTree(sourceDir, { "test.txt": "data" });
 
-		const result = await executeCLI(["save", "tree", sourceDir], TEST_DIR);
+		const result = await runCLIForTest(["save", "tree", sourceDir]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
 	it("fails when source directory does not exist", async () => {
 		const nonExistent = path.join(TEST_DIR, "non-existent-dir");
-		const result = await executeCLI(
-			["-k", "fail-tree", "save", "tree", nonExistent],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"fail-tree",
+			"save",
+			"tree",
+			nonExistent,
+		]);
 
 		expect(result.exitCode).not.toBe(0);
 	});
@@ -126,16 +133,22 @@ describe("save tree command", () => {
 		const sourceDir = path.join(TEST_DIR, "dup-tree");
 		await createFileTree(sourceDir, { "data.txt": "123" });
 
-		const first = await executeCLI(
-			["-k", "dup-key", "save", "tree", sourceDir],
-			TEST_DIR,
-		);
+		const first = await runCLIForTest([
+			"-k",
+			"dup-key",
+			"save",
+			"tree",
+			sourceDir,
+		]);
 		expect(first.exitCode).toBe(0);
 
-		const second = await executeCLI(
-			["-k", "dup-key", "save", "tree", sourceDir],
-			TEST_DIR,
-		);
+		const second = await runCLIForTest([
+			"-k",
+			"dup-key",
+			"save",
+			"tree",
+			sourceDir,
+		]);
 		expect(second.exitCode).not.toBe(0);
 	});
 });

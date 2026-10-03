@@ -375,12 +375,17 @@ export class ConsoleIO {
 		desc: string | undefined,
 		tags: string[] | undefined,
 		type: string,
+		data?: string,
 	): void {
 		if (QUIET_MODE) return;
 
 		printHeader(`Snapshot saved!`, IOHeaderType.SUCCESS);
 		printField("Key", key);
 		printField("Type", type);
+
+		if (type === "URL" && data) {
+			printField("URL", data);
+		}
 
 		if (desc) {
 			printField("Desc.", desc);
@@ -395,10 +400,17 @@ export class ConsoleIO {
 		}
 
 		if (fileCount + dirCount > 0) {
-			printField("Contents", `${fileCount} files, ${dirCount} directories\n`);
-		} else {
-			console.log("\n");
+			printField("Contents", `${fileCount} files, ${dirCount} directories`);
 		}
+
+		if (type === "Snippet" && data) {
+			const lines = MiscUtils.splitContentByLines(data);
+			printLinedHeader("Snippet Preview", true);
+			printPreview(lines, true);
+			printSeparatorLine(true);
+		}
+
+		console.log("");
 	}
 
 	errorGeneric(info: string): void {

@@ -13,15 +13,16 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
-	createFileTree,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
+	seedSnapshot,
 	TEST_DIR,
 } from "../helpers/index";
 
-describe("template create command", () => {
+describe("template update command", () => {
 	beforeEach(async () => {
 		await createTestDir();
 	});
@@ -31,25 +32,34 @@ describe("template create command", () => {
 	});
 
 	it("fails when key option is missing", async () => {
-		const sourceDir = path.join(TEST_DIR, "project-dir");
-		await createFileTree(sourceDir, {
-			"index.js": "console.log('test');",
-		});
-
-		const result = await executeCLI(
-			["template", "create", sourceDir],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest(["template", "update"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
-	it("fails when source directory does not exist", async () => {
-		const nonExistent = path.join(TEST_DIR, "missing-project");
-		const result = await executeCLI(
-			["-k", "tmpl-from-dir", "template", "create", nonExistent],
-			TEST_DIR,
-		);
+	it("fails when template key does not exist", async () => {
+		const result = await runCLIForTest([
+			"-k",
+			"non-existent-template",
+			"template",
+			"update",
+		]);
+		expect(result.exitCode).not.toBe(0);
+	});
 
+	it("fails when template was not saved from a Git source", async () => {
+		const homeDir = path.join(TEST_DIR, ".home");
+		await seedSnapshot(homeDir, {
+			key: "dir-based-template",
+			type: SnapshotType.Template,
+			// No gitRepoSource property
+		});
+
+		const result = await runCLIForTest([
+			"-k",
+			"dir-based-template",
+			"template",
+			"update",
+		]);
 		expect(result.exitCode).not.toBe(0);
 	});
 });

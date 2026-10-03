@@ -17,7 +17,7 @@ import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
 	seedSnapshot,
 	stripAnsi,
 	TEST_DIR,
@@ -47,7 +47,7 @@ describe("list command", () => {
 			tags: ["web"],
 		});
 
-		const result = await executeCLI(["list"], TEST_DIR);
+		const result = await runCLIForTest(["list"]);
 		expect(result.exitCode).toBe(0);
 
 		const stdout = stripAnsi(String(result.stdout));
@@ -67,7 +67,7 @@ describe("list command", () => {
 			type: SnapshotType.Files,
 		});
 
-		const result = await executeCLI(["list", "--type", "url"], TEST_DIR);
+		const result = await runCLIForTest(["list", "--type", "url"]);
 		expect(result.exitCode).toBe(0);
 
 		const stdout = stripAnsi(String(result.stdout));
@@ -88,7 +88,7 @@ describe("list command", () => {
 			tags: ["backend"],
 		});
 
-		const result = await executeCLI(["list", "--tags", "react"], TEST_DIR);
+		const result = await runCLIForTest(["list", "--tags", "react"]);
 		expect(result.exitCode).toBe(0);
 
 		const stdout = stripAnsi(String(result.stdout));
@@ -110,7 +110,7 @@ describe("list command", () => {
 			},
 		);
 
-		const result = await executeCLI(["-k", "my-package", "list"], TEST_DIR);
+		const result = await runCLIForTest(["-k", "my-package", "list"]);
 		expect(result.exitCode).toBe(0);
 
 		const stdout = stripAnsi(String(result.stdout));
@@ -119,7 +119,7 @@ describe("list command", () => {
 	});
 
 	it("fails when listing an unknown snapshot key", async () => {
-		const result = await executeCLI(["-k", "ghost-key", "list"], TEST_DIR);
+		const result = await runCLIForTest(["-k", "ghost-key", "list"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 });

@@ -126,7 +126,7 @@ export function getCLICommand(): { command: string; argsPrefix: string[] } {
  * @param cwd - Current working directory
  * @param options - Additional execa options
  */
-export function executeCLI(
+function executeCLI(
 	args: string[],
 	cwd: string,
 	options: Options = {},
@@ -145,6 +145,15 @@ export function executeCLI(
 		reject: false,
 		...options,
 		env,
+	});
+}
+
+export async function runCLIForTest(
+	args: string[],
+): Promise<CLIExecutionResult> {
+	return await runCLI(args, {
+		homeDir: path.join(TEST_DIR, ".home"),
+		cwd: TEST_DIR,
 	});
 }
 

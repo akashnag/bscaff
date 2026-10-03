@@ -18,9 +18,9 @@ import {
 	cleanupTestDir,
 	createTestDir,
 	dirExists,
-	executeCLI,
 	getSnapshotDiskFiles,
 	readTestDB,
+	runCLIForTest,
 	seedSnapshot,
 	TEST_DIR,
 } from "../helpers/index";
@@ -47,7 +47,7 @@ describe("delete command", () => {
 			},
 		);
 
-		const result = await executeCLI(["-k", "delete-me", "delete"], TEST_DIR);
+		const result = await runCLIForTest(["-k", "delete-me", "delete"]);
 		expect(result.exitCode).toBe(0);
 
 		const db = await readTestDB(homeDir);
@@ -71,10 +71,12 @@ describe("delete command", () => {
 			},
 		);
 
-		const result = await executeCLI(
-			["-k", "partial-del", "delete", "remove.txt"],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"partial-del",
+			"delete",
+			"remove.txt",
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -84,15 +86,12 @@ describe("delete command", () => {
 	});
 
 	it("fails when key option is missing", async () => {
-		const result = await executeCLI(["delete"], TEST_DIR);
+		const result = await runCLIForTest(["delete"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
 	it("fails when attempting to delete an unknown snapshot", async () => {
-		const result = await executeCLI(
-			["-k", "phantom-snapshot", "delete"],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest(["-k", "phantom-snapshot", "delete"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 });

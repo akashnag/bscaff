@@ -13,30 +13,35 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+} from "vitest";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
 	TEST_DIR,
 } from "./helpers/cli";
 
 describe("TODO: add description of test feature", () => {
-	beforeEach(async () => {
+	beforeAll(async () => {
 		await createTestDir();
 	});
 
-	afterEach(async () => {
+	afterAll(async () => {
 		await cleanupTestDir();
 	});
 
 	it("TODO: add description of test variant", async () => {
-		const result = await executeCLI(
-			[
-				/* command line args */
-			],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			/* command line args */
+		]);
 
 		expect(result.exitCode).toBe(0);
 

@@ -17,7 +17,7 @@ import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
 	seedSnapshot,
 	stripAnsi,
 	TEST_DIR,
@@ -45,7 +45,7 @@ describe("search command", () => {
 			description: "Vue application boilerplate",
 		});
 
-		const result = await executeCLI(["-k", "react", "search"], TEST_DIR);
+		const result = await runCLIForTest(["-k", "react", "search"]);
 
 		expect(result.exitCode).toBe(0);
 		const stdout = stripAnsi(String(result.stdout));
@@ -64,10 +64,7 @@ describe("search command", () => {
 			type: SnapshotType.Files,
 		});
 
-		const result = await executeCLI(
-			["-k", "my", "search", "--type", "url"],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest(["-k", "my", "search", "--type", "url"]);
 
 		expect(result.exitCode).toBe(0);
 		const stdout = stripAnsi(String(result.stdout));

@@ -17,12 +17,13 @@ import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
+	readTestDB,
+	runCLIForTest,
 	seedSnapshot,
 	TEST_DIR,
 } from "../helpers/index";
 
-describe("open command", () => {
+describe("update commands", () => {
 	beforeEach(async () => {
 		await createTestDir();
 	});
@@ -31,53 +32,46 @@ describe("open command", () => {
 		await cleanupTestDir();
 	});
 
-	it("fails when key option is missing", async () => {
-		const result = await executeCLI(["open"], TEST_DIR);
+	it("fails when key flag is missing", async () => {
+		const result = await runCLIForTest(["update", "desc", "New description"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
-	it("fails when snapshot key does not exist", async () => {
-		const result = await executeCLI(
-			["-k", "non-existent-key", "open"],
-			TEST_DIR,
-		);
+	it("fails when updating an unknown snapshot key", async () => {
+		const result = await runCLIForTest([
+			"-k",
+			"unknown-key",
+			"update",
+			"desc",
+			"New description",
+		]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
-	it("fails when opening a tree/files snapshot without relative-path", async () => {
+	it("updates snapshot key when target key is unique", async () => {
 		const homeDir = path.join(TEST_DIR, ".home");
 		await seedSnapshot(
 			homeDir,
 			{
-				key: "open-tree",
-				type: SnapshotType.Tree,
+				key: "old-key",
+				type: SnapshotType.Files,
 			},
 			{
 				"file.txt": "content",
 			},
 		);
 
-		const result = await executeCLI(["-k", "open-tree", "open"], TEST_DIR);
-		expect(result.exitCode).not.toBe(0);
-	});
+		const result = await runCLIForTest([
+			"-k",
+			"old-key",
+			"update",
+			"key",
+			"new-renamed-key",
+		]);
 
-	it("fails when relative file does not exist under snapshot", async () => {
-		const homeDir = path.join(TEST_DIR, ".home");
-		await seedSnapshot(
-			homeDir,
-			{
-				key: "open-files",
-				type: SnapshotType.Files,
-			},
-			{
-				"actual.txt": "content",
-			},
-		);
-
-		const result = await executeCLI(
-			["-k", "open-files", "open", "missing.txt"],
-			TEST_DIR,
-		);
-		expect(result.exitCode).not.toBe(0);
+		expect(result.exitCode).toBe(0);
+		const db = await readTestDB(homeDir);
+		expect(db.find((r) => r.key === "new-renamed-key")).toBeDefined();
+		expect(db.find((r) => r.key === "old-key")).toBeUndefined();
 	});
 });

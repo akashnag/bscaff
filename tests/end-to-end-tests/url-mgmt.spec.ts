@@ -11,26 +11,45 @@
  * GNU General Public License for more details.
  */
 
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+} from "vitest";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
 	TEST_DIR,
-} from "../helpers/index";
+} from "../helpers/cli";
 
-describe("create file command", () => {
-	beforeEach(async () => {
+describe("URL management", () => {
+	beforeAll(async () => {
 		await createTestDir();
 	});
 
-	afterEach(async () => {
+	afterAll(async () => {
 		await cleanupTestDir();
 	});
 
-	it("fails when destination path argument is omitted", async () => {
-		const result = await executeCLI(["create", "file"], TEST_DIR);
-		expect(result.exitCode).not.toBe(0);
+	it("Save URL", async () => {
+		const result = await runCLIForTest([
+			"-k",
+			"github",
+			"save",
+			"url",
+			"https://github.com/",
+		]);
+
+		expect(result.exitCode).toBe(0);
+		expect(result.rawStdout).toContain("Snapshot saved!");
+		expect(result.rawStdout).toContain("github");
+		expect(result.rawStdout).toContain("https://github.com/");
 	});
 });

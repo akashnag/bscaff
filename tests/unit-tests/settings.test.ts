@@ -16,9 +16,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
 	fileExists,
 	readTestSettings,
+	runCLIForTest,
 	TEST_DIR,
 	writeTestSettings,
 } from "../helpers/index";

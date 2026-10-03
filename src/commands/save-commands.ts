@@ -372,7 +372,7 @@ export async function saveSnippet(
 		0,
 		description,
 		tagList,
-		"Snippet",
+		content,
 	);
 
 	return true;
@@ -458,7 +458,7 @@ export async function saveURL(
 	});
 
 	store.update();
-	io.successSnapshotTaken(key, null, 0, 0, description, tagList, "URL");
+	io.successSnapshotTaken(key, null, 0, 0, description, tagList, url);
 
 	return true;
 }

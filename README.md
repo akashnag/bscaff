@@ -46,7 +46,7 @@ bscaff --help
 Save an existing directory as a reusable snapshot:
 
 ```bash
-bscaff --key my-project --save-dir ./my-project
+bscaff --key my-project save tree ./my-project
 ```
 
 ### Create a project from a snapshot
@@ -54,31 +54,19 @@ bscaff --key my-project --save-dir ./my-project
 Extract it whenever you need it:
 
 ```bash
-bscaff --key my-project --extract ./new-project
+bscaff --key my-project extract ./new-project
 ```
 
 ### List saved snapshots
 
 ```bash
-bscaff --list
+bscaff list
 ```
 
 ### Inspect a snapshot
 
 ```bash
-bscaff --key my-project --list
-```
-
-### Display saved content
-
-```bash
-bscaff --key my-config --display
-```
-
-### Edit a saved snapshot
-
-```bash
-bscaff --key my-config --edit
+bscaff --key my-project list
 ```
 
 ---
@@ -90,8 +78,8 @@ bscaff --key my-config --edit
 Save and recreate complete project structures, including directories and files.
 
 ```bash
-bscaff --key node-api --save-dir ./node-api
-bscaff --key node-api --extract ./new-api
+bscaff --key node-api save dir ./node-api
+bscaff --key node-api extract ./new-api
 ```
 
 File and directory names, as well as text file contents, can contain variables using the `{{ variable }}` syntax.
@@ -100,38 +88,37 @@ File and directory names, as well as text file contents, can contain variables u
 
 ### Reusable templates
 
-Create reusable `.bs_template` files from existing directories.
+Create reusable templates from existing directories.
 
 ```bash
-bscaff --key web-app --create-template ./web-app
+bscaff --key web-app template create ./web-app
 ```
 
-Templates can later be stored, shared, and used as project scaffolding resources.
+Templates can later be stored, shared, and used as project scaffolding resources. Templates support variable prompts and executing commands prior-to/post generation.
 
 ---
 
 ### Save anything you frequently reuse
 
-bscaff can store more than complete projects.
+**bscaff** can store more than complete projects.
 
 Save:
 - directories
 - multiple files
 - individual files
-- text from files
+- text from files / code snippets
 - live text input
 - URLs
-- Git repositories
-- project trees
+- templates from git repositories / zip files
 
 For example:
 
 ```bash
-bscaff --key dockerfile --save-file ./Dockerfile
+bscaff --key dockerfile save files ./Dockerfile
 
-bscaff --key common-utils --save-multi ./utils.ts ./constants.ts
+bscaff --key common-utils save files ./utils.ts ./constants.ts
 
-bscaff --key useful-url --save-url https://example.com/docs
+bscaff --key useful-url save url https://example.com/docs
 ```
 
 ---
@@ -154,7 +141,7 @@ my-app/
 you can create the structure directly:
 
 ```bash
-bscaff --create-tree ./my-app
+bscaff create tree ./my-app
 ```
 
 You can also have bscaff prompt for the contents of the files as they are created.
@@ -187,7 +174,7 @@ For example:
 └── README.md
 ```
 
-Variable replacement can be controlled through `settings.json`.
+Variable replacement can be controlled through `settings.yml`, or inside the template config file (`bscaff-template.yml`) for templates.
 
 ---
 
@@ -196,7 +183,7 @@ Variable replacement can be controlled through `settings.json`.
 A Git repository can be saved as a reusable bscaff snapshot:
 
 ```bash
-bscaff --key my-template --save-git https://github.com/example/project.git
+bscaff --key my-template template save https://github.com/example/project.git --source git
 ```
 
 The repository contents are captured without the `.git` directory.
@@ -212,17 +199,19 @@ Saved content can be used directly from the command line.
 For example:
 
 ```bash
-bscaff --key config --copy
+bscaff --key config copy
 ```
 
 copies saved content to the clipboard.
 
+<!--
 Append or prepend saved text to existing files:
 
 ```bash
-bscaff --key header --append ./README.md
-bscaff --key header --prepend ./README.md
+bscaff --key header transform append ./README.md
+bscaff --key header transform prepend ./README.md
 ```
+-->
 
 Saved files and text can also be opened for editing or inspection.
 
@@ -231,14 +220,6 @@ Saved files and text can also be opened for editing or inspection.
 ### Pre- and post-extraction scripts
 
 Templates can optionally define scripts to run before and after extraction.
-
-```bash
-bscaff \
-  --key my-project \
-  --save-dir ./my-project \
-  --pre-extract ./before.sh \
-  --post-extract ./after.sh
-```
 
 This makes it possible to add project-specific setup or cleanup steps around the scaffolding process.
 
@@ -266,25 +247,28 @@ bscaff stores its data and configuration under:
 The configuration file is:
 
 ```
-~/.bscaff/settings.json
+~/.bscaff/settings.yml
 ```
 
 A typical configuration looks like:
 
-```json
-{
-  "editorPreference": "terminal",
-  "terminalEditor": "nano",
-  "guiEditor": "gedit",
-  "browser": "google-chrome",
-  "excludePatternReplacementInFileContent": []
-}
+```yaml
+textEditor: nano
+browser: google-chrome
+exclude:
+  - .git
+  - .vscode
+  - node_modules
+  - __pycache__
+  - .pytest_cache
+include: []
+templatesSuffix: .jinja
 ```
 
 Run:
 
 ```bash
-bscaff --settings
+bscaff settings
 ```
 
 to open the settings file for editing.
@@ -306,7 +290,7 @@ Detailed documentation for individual features and workflows is available in:
 
 Contributions, improvements, documentation updates, bug reports, and feature discussions are welcome.
 
-Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for contribution guidelines and development information.
+Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md) for contribution guidelines and development information.
 
 ---
 

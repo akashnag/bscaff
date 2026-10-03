@@ -285,11 +285,20 @@ export class SaveSnippetIO extends ConsoleIO {
 		dirCount: number,
 		desc: string | undefined,
 		tags: string[] | undefined,
-		type: string,
+		snippetContent: string,
 	): void {
 		if (QUIET_MODE) return;
 
-		super.successSnapshotTaken(key, size, 0, 0, desc, tags, "Snippet");
+		super.successSnapshotTaken(
+			key,
+			size,
+			0,
+			0,
+			desc,
+			tags,
+			"Snippet",
+			snippetContent,
+		);
 	}
 }
 // --------------------------------------------------------
@@ -322,11 +331,11 @@ export class SaveURLIO extends ConsoleIO {
 		dirCount: number,
 		desc: string | undefined,
 		tags: string[] | undefined,
-		type: string,
+		url: string,
 	): void {
 		if (QUIET_MODE) return;
 
-		super.successSnapshotTaken(key, null, 0, 0, desc, tags, "URL");
+		super.successSnapshotTaken(key, null, 0, 0, desc, tags, "URL", url);
 	}
 }
 // --------------------------------------------------------

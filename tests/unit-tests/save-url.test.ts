@@ -16,8 +16,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
 	readTestDB,
+	runCLIForTest,
 	TEST_DIR,
 } from "../helpers/index";
 
@@ -33,10 +33,13 @@ describe("save url command", () => {
 	it("saves a valid URL bookmark", async () => {
 		const targetUrl = "https://github.com/akashnag/bscaff";
 
-		const result = await executeCLI(
-			["-k", "bscaff-repo", "save", "url", targetUrl],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"bscaff-repo",
+			"save",
+			"url",
+			targetUrl,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -50,20 +53,17 @@ describe("save url command", () => {
 	it("saves a URL with description and tags", async () => {
 		const targetUrl = "https://nodejs.org";
 
-		const result = await executeCLI(
-			[
-				"-k",
-				"nodejs-docs",
-				"save",
-				"--desc",
-				"Node.js documentation portal",
-				"--tags",
-				"nodejs,docs,javascript",
-				"url",
-				targetUrl,
-			],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest([
+			"-k",
+			"nodejs-docs",
+			"save",
+			"--desc",
+			"Node.js documentation portal",
+			"--tags",
+			"nodejs,docs,javascript",
+			"url",
+			targetUrl,
+		]);
 
 		expect(result.exitCode).toBe(0);
 
@@ -74,24 +74,27 @@ describe("save url command", () => {
 	});
 
 	it("fails when key option is missing", async () => {
-		const result = await executeCLI(
-			["save", "url", "https://google.com"],
-			TEST_DIR,
-		);
+		const result = await runCLIForTest(["save", "url", "https://google.com"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
 	it("fails when duplicate key is provided", async () => {
-		const first = await executeCLI(
-			["-k", "dup-url", "save", "url", "https://one.com"],
-			TEST_DIR,
-		);
+		const first = await runCLIForTest([
+			"-k",
+			"dup-url",
+			"save",
+			"url",
+			"https://one.com",
+		]);
 		expect(first.exitCode).toBe(0);
 
-		const second = await executeCLI(
-			["-k", "dup-url", "save", "url", "https://two.com"],
-			TEST_DIR,
-		);
+		const second = await runCLIForTest([
+			"-k",
+			"dup-url",
+			"save",
+			"url",
+			"https://two.com",
+		]);
 		expect(second.exitCode).not.toBe(0);
 	});
 });

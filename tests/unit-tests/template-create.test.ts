@@ -13,16 +13,15 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
+	createFileTree,
 	createTestDir,
-	executeCLI,
-	seedSnapshot,
+	runCLIForTest,
 	TEST_DIR,
 } from "../helpers/index";
 
-describe("copy command", () => {
+describe("template create command", () => {
 	beforeEach(async () => {
 		await createTestDir();
 	});
@@ -32,35 +31,24 @@ describe("copy command", () => {
 	});
 
 	it("fails when key option is missing", async () => {
-		const result = await executeCLI(["copy"], TEST_DIR);
+		const sourceDir = path.join(TEST_DIR, "project-dir");
+		await createFileTree(sourceDir, {
+			"index.js": "console.log('test');",
+		});
+
+		const result = await runCLIForTest(["template", "create", sourceDir]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
-	it("fails when snapshot key does not exist", async () => {
-		const result = await executeCLI(
-			["-k", "missing-copy-key", "copy"],
-			TEST_DIR,
-		);
-		expect(result.exitCode).not.toBe(0);
-	});
-
-	it("fails when relative path specified does not exist in snapshot", async () => {
-		const homeDir = path.join(TEST_DIR, ".home");
-		await seedSnapshot(
-			homeDir,
-			{
-				key: "copy-sample",
-				type: SnapshotType.Files,
-			},
-			{
-				"actual.txt": "content",
-			},
-		);
-
-		const result = await executeCLI(
-			["-k", "copy-sample", "copy", "does-not-exist.txt"],
-			TEST_DIR,
-		);
+	it("fails when source directory does not exist", async () => {
+		const nonExistent = path.join(TEST_DIR, "missing-project");
+		const result = await runCLIForTest([
+			"-k",
+			"tmpl-from-dir",
+			"template",
+			"create",
+			nonExistent,
+		]);
 
 		expect(result.exitCode).not.toBe(0);
 	});

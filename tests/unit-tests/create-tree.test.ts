@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
 	TEST_DIR,
 } from "../helpers/index";
 
@@ -30,13 +30,13 @@ describe("create tree command", () => {
 	});
 
 	it("fails when destination path argument is missing", async () => {
-		const result = await executeCLI(["create", "tree"], TEST_DIR);
+		const result = await runCLIForTest(["create", "tree"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
 	it("fails gracefully when clipboard does not contain valid ASCII tree art", async () => {
 		const destDir = path.join(TEST_DIR, "scaffold-out");
-		const result = await executeCLI(["create", "tree", destDir], TEST_DIR);
+		const result = await runCLIForTest(["create", "tree", destDir]);
 		// Without valid clipboard ASCII tree, command should fail gracefully
 		expect(result.exitCode).not.toBe(0);
 	});

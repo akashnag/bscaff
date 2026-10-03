@@ -17,12 +17,12 @@ import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
-	executeCLI,
+	runCLIForTest,
 	seedSnapshot,
 	TEST_DIR,
 } from "../helpers/index";
 
-describe("template update command", () => {
+describe("copy command", () => {
 	beforeEach(async () => {
 		await createTestDir();
 	});
@@ -32,30 +32,35 @@ describe("template update command", () => {
 	});
 
 	it("fails when key option is missing", async () => {
-		const result = await executeCLI(["template", "update"], TEST_DIR);
+		const result = await runCLIForTest(["copy"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
-	it("fails when template key does not exist", async () => {
-		const result = await executeCLI(
-			["-k", "non-existent-template", "template", "update"],
-			TEST_DIR,
-		);
+	it("fails when snapshot key does not exist", async () => {
+		const result = await runCLIForTest(["-k", "missing-copy-key", "copy"]);
 		expect(result.exitCode).not.toBe(0);
 	});
 
-	it("fails when template was not saved from a Git source", async () => {
+	it("fails when relative path specified does not exist in snapshot", async () => {
 		const homeDir = path.join(TEST_DIR, ".home");
-		await seedSnapshot(homeDir, {
-			key: "dir-based-template",
-			type: SnapshotType.Template,
-			// No gitRepoSource property
-		});
-
-		const result = await executeCLI(
-			["-k", "dir-based-template", "template", "update"],
-			TEST_DIR,
+		await seedSnapshot(
+			homeDir,
+			{
+				key: "copy-sample",
+				type: SnapshotType.Files,
+			},
+			{
+				"actual.txt": "content",
+			},
 		);
+
+		const result = await runCLIForTest([
+			"-k",
+			"copy-sample",
+			"copy",
+			"does-not-exist.txt",
+		]);
+
 		expect(result.exitCode).not.toBe(0);
 	});
 });
