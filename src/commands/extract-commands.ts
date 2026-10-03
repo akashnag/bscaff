@@ -138,12 +138,19 @@ export async function copyToClipboard(
 // --------------------------------------------------------
 export async function openSnapshotReadOnly(
 	key: string | undefined,
+	forceEditor: boolean | undefined,
+	commandToExec: string | undefined,
 	relPath: string | undefined,
 ): Promise<boolean> {
 	const io = new OpenSnapshotIO();
 
 	if (!key) {
 		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (forceEditor && commandToExec) {
+		io.errorConflictingArgs("editor", "command");
 		return false;
 	}
 
@@ -161,7 +168,12 @@ export async function openSnapshotReadOnly(
 
 	switch (record.type) {
 		case SnapshotType.URL:
-			if (!(await MiscUtils.openURLInBrowser(record.urlContent!))) {
+			if (forceEditor) {
+				if (!MiscUtils.createRandomFile("txt", record.urlContent, true, true)) {
+					io.errorOpeningFileInEditor();
+					return false;
+				}
+			} else if (!(await MiscUtils.openURLInBrowser(record.urlContent!))) {
 				io.errorOpeningURL(Settings.get("browser"), record.urlContent);
 				return false;
 			}
@@ -179,12 +191,26 @@ export async function openSnapshotReadOnly(
 				return false;
 			}
 
-			// open editor in detached mode
-			MiscUtils.createRandomFile(
-				FileUtils.getFileType(snippetFile),
-				snippetContent,
-				true,
-			);
+			if (forceEditor) {
+				// open editor in detached mode
+				MiscUtils.createRandomFile(
+					FileUtils.getFileType(snippetFile),
+					snippetContent,
+					true,
+				);
+			} else {
+				const tempFile = MiscUtils.createRandomFile(
+					FileUtils.getFileType(snippetFile),
+					snippetContent,
+				);
+				if (tempFile) {
+					MiscUtils.openFileByOS(tempFile, true);
+				} else {
+					io.errorOpeningFile();
+					return false;
+				}
+			}
+
 			break;
 
 		case SnapshotType.Template:

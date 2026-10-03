@@ -22,7 +22,7 @@ import {
 	initLocalGitRepo,
 	readTestDB,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("save tree command", () => {
 	beforeEach(async () => {
@@ -88,7 +88,7 @@ describe("save tree command", () => {
 	it("saves a git repo tree when --git flag is provided", async () => {
 		const gitRepoDir = path.join(TEST_DIR, "git-source");
 		await initLocalGitRepo(gitRepoDir, {
-			"main.go": 'package main\nfunc main() {}\n',
+			"main.go": "package main\nfunc main() {}\n",
 		});
 
 		const result = await executeCLI(

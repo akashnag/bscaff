@@ -151,16 +151,6 @@ export function getCallerName(): string | null {
 	return match ? match[1] : "anonymous / global";
 }
 
-// Executes an arbitrary system command
-export async function executeCommand(command: string): Promise<boolean> {
-	try {
-		await execPromisified(command);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
 export async function openURLInBrowser(url: string): Promise<boolean> {
 	const browser = Settings.get("browser");
 	return await executeCommand(`${browser} ${url}`);
@@ -196,7 +186,7 @@ export function openFileInEditor(
 	detach: boolean = false,
 ): boolean {
 	const textEditor = Settings.get("textEditor");
-	const isAvailable = isCommandAvailable(textEditor!);
+	const isAvailable = textEditor && isCommandAvailable(textEditor!);
 
 	if (isAvailable) {
 		try {
@@ -220,7 +210,7 @@ export function openFileInEditor(
 			return false;
 		}
 	} else {
-		return openFileInGUIEditor(filePath, detach);
+		return false;
 	}
 }
 
@@ -250,23 +240,9 @@ export function deepClone<T>(obj: T): T {
 	return structuredClone(obj);
 }
 
-// ------------------------- [private] -------------------------
-
-function isCommandAvailable(command: string | null): boolean {
-	if (!command) return false;
-	const checkCmd =
-		getPlatform() === "win32" ? `where ${command}` : `which ${command}`;
-	try {
-		execSync(checkCmd, { stdio: "ignore" });
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-function openFileInGUIEditor(
+export function openFileByOS(
 	filePath: string,
-	detach: boolean = false,
+	detach: boolean = true,
 ): boolean {
 	let command: string | null;
 	let args: string[];
@@ -283,9 +259,7 @@ function openFileInGUIEditor(
 			break;
 
 		default: // Linux / BSD
-			command = isCommandAvailable(Settings.get("textEditor"))
-				? Settings.get("textEditor")
-				: "xdg-open";
+			command = "xdg-open";
 			args = [filePath];
 			break;
 	}
@@ -304,7 +278,44 @@ function openFileInGUIEditor(
 			return result.status === 0 && result.error === undefined;
 		}
 	} catch (err) {
-		console.error(`Failed to open GUI editor on ${process.platform}:`, err);
+		console.error(`Failed to open on ${process.platform}:`, err);
+		return false;
+	}
+}
+
+export function executeCommand(
+	command: string,
+	detach: boolean = true,
+): boolean {
+	if (!command) return false;
+
+	try {
+		let result;
+
+		if (detach) {
+			const child = spawn(command, [], { detached: true, stdio: "ignore" });
+			child.unref();
+			return true;
+		} else {
+			result = spawnSync(command, [], { stdio: "inherit" });
+			return result.status === 0 && result.error === undefined;
+		}
+	} catch (err) {
+		console.error(`Failed to execute on ${process.platform}:`, err);
+		return false;
+	}
+}
+
+// ------------------------- [private] -------------------------
+
+function isCommandAvailable(command: string | null): boolean {
+	if (!command) return false;
+	const checkCmd =
+		getPlatform() === "win32" ? `where ${command}` : `which ${command}`;
+	try {
+		execSync(checkCmd, { stdio: "ignore" });
+		return true;
+	} catch {
 		return false;
 	}
 }

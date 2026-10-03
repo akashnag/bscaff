@@ -22,7 +22,7 @@ import {
 	initLocalGitRepo,
 	readTestDB,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("template save command", () => {
 	beforeEach(async () => {
@@ -68,15 +68,7 @@ describe("template save command", () => {
 		await createTemplateZip(templateDir, zipPath, "tmpl-root");
 
 		const result = await executeCLI(
-			[
-				"-k",
-				"my-zip-template",
-				"template",
-				"save",
-				zipPath,
-				"--source",
-				"zip",
-			],
+			["-k", "my-zip-template", "template", "save", zipPath, "--source", "zip"],
 			TEST_DIR,
 		);
 
@@ -94,15 +86,7 @@ describe("template save command", () => {
 		await initLocalGitRepo(gitDir);
 
 		const result = await executeCLI(
-			[
-				"-k",
-				"my-git-template",
-				"template",
-				"save",
-				gitDir,
-				"--source",
-				"git",
-			],
+			["-k", "my-git-template", "template", "save", gitDir, "--source", "git"],
 			TEST_DIR,
 		);
 

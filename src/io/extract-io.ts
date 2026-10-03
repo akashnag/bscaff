@@ -78,6 +78,14 @@ export class OpenSnapshotIO extends ConsoleIO {
 			"Verify your system default browser or specified browser is installed\n",
 		);
 	}
+
+	errorOpeningFileInEditor(): void {
+		// TODO: add code
+	}
+
+	errorOpeningFile(): void {
+		// TODO: add code
+	}
 }
 
 export class ExtractSnapshotIO extends ConsoleIO {

@@ -13,7 +13,7 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SnapshotType } from "../src/types/types";
+import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
@@ -21,7 +21,7 @@ import {
 	seedSnapshot,
 	stripAnsi,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("list command", () => {
 	beforeEach(async () => {
@@ -50,7 +50,7 @@ describe("list command", () => {
 		const result = await executeCLI(["list"], TEST_DIR);
 		expect(result.exitCode).toBe(0);
 
-		const stdout = stripAnsi(result.stdout);
+		const stdout = stripAnsi(String(result.stdout));
 		expect(stdout).toContain("first-snapshot");
 		expect(stdout).toContain("second-snapshot");
 	});
@@ -70,7 +70,7 @@ describe("list command", () => {
 		const result = await executeCLI(["list", "--type", "url"], TEST_DIR);
 		expect(result.exitCode).toBe(0);
 
-		const stdout = stripAnsi(result.stdout);
+		const stdout = stripAnsi(String(result.stdout));
 		expect(stdout).toContain("url-one");
 		expect(stdout).not.toContain("files-one");
 	});
@@ -91,7 +91,7 @@ describe("list command", () => {
 		const result = await executeCLI(["list", "--tags", "react"], TEST_DIR);
 		expect(result.exitCode).toBe(0);
 
-		const stdout = stripAnsi(result.stdout);
+		const stdout = stripAnsi(String(result.stdout));
 		expect(stdout).toContain("react-app");
 		expect(stdout).not.toContain("node-api");
 	});
@@ -113,7 +113,7 @@ describe("list command", () => {
 		const result = await executeCLI(["-k", "my-package", "list"], TEST_DIR);
 		expect(result.exitCode).toBe(0);
 
-		const stdout = stripAnsi(result.stdout);
+		const stdout = stripAnsi(String(result.stdout));
 		expect(stdout).toContain("package.json");
 		expect(stdout).toContain("index.js");
 	});

@@ -19,7 +19,7 @@ import {
 	createTestDir,
 	executeCLI,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("template create command", () => {
 	beforeEach(async () => {

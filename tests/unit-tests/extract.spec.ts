@@ -13,7 +13,7 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type FileTreeNode, SnapshotType } from "../src/types/types.js";
+import { type FileTreeNode, SnapshotType } from "../../src/types/types.js";
 import {
 	cleanupTestDir,
 	createFileTree,
@@ -26,7 +26,7 @@ import {
 	readFileTree,
 	seedSnapshot,
 	TEST_DIR,
-} from "./helpers/index.js";
+} from "../helpers/index.js";
 
 describe("extract command", () => {
 	beforeEach(async () => {
@@ -566,15 +566,7 @@ describe("extract command", () => {
 			await createSampleTemplateFixture(templateDir);
 
 			await executeCLI(
-				[
-					"-k",
-					"tmpl-fail",
-					"template",
-					"save",
-					templateDir,
-					"--source",
-					"dir",
-				],
+				["-k", "tmpl-fail", "template", "save", templateDir, "--source", "dir"],
 				TEST_DIR,
 			);
 

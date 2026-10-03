@@ -13,7 +13,7 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SnapshotType } from "../src/types/types";
+import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
@@ -21,7 +21,7 @@ import {
 	readTestDB,
 	seedSnapshot,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("update commands", () => {
 	beforeEach(async () => {

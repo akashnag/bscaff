@@ -23,7 +23,7 @@ import {
 	readTestDB,
 	SAMPLE_SNIPPETS,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("save snippet command", () => {
 	beforeEach(async () => {

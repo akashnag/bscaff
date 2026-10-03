@@ -20,7 +20,7 @@ import {
 	createTestDir,
 	executeCLI,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("template verify command", () => {
 	beforeEach(async () => {

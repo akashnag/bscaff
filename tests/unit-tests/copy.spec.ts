@@ -13,14 +13,14 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SnapshotType } from "../src/types/types";
+import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
 	executeCLI,
 	seedSnapshot,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("copy command", () => {
 	beforeEach(async () => {

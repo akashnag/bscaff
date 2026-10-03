@@ -13,7 +13,7 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SnapshotType } from "../src/types/types.js";
+import { SnapshotType } from "../../src/types/types.js";
 import {
 	createFileTree,
 	createMockClipboard,
@@ -30,7 +30,7 @@ import {
 	seedSnapshot,
 	stripAnsi,
 	type TestWorkspace,
-} from "./helpers/index.js";
+} from "../helpers/index.js";
 
 describe("Test Helpers Suite", () => {
 	let ws: TestWorkspace;

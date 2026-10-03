@@ -19,7 +19,7 @@ import {
 	executeCLI,
 	readTestDB,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("save url command", () => {
 	beforeEach(async () => {

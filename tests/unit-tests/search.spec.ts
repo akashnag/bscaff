@@ -13,7 +13,7 @@
 
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { SnapshotType } from "../src/types/types";
+import { SnapshotType } from "../../src/types/types";
 import {
 	cleanupTestDir,
 	createTestDir,
@@ -21,7 +21,7 @@ import {
 	seedSnapshot,
 	stripAnsi,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("search command", () => {
 	beforeEach(async () => {
@@ -45,13 +45,10 @@ describe("search command", () => {
 			description: "Vue application boilerplate",
 		});
 
-		const result = await executeCLI(
-			["-k", "react", "search"],
-			TEST_DIR,
-		);
+		const result = await executeCLI(["-k", "react", "search"], TEST_DIR);
 
 		expect(result.exitCode).toBe(0);
-		const stdout = stripAnsi(result.stdout);
+		const stdout = stripAnsi(String(result.stdout));
 		expect(stdout).toContain("react-starter-kit");
 	});
 
@@ -73,7 +70,7 @@ describe("search command", () => {
 		);
 
 		expect(result.exitCode).toBe(0);
-		const stdout = stripAnsi(result.stdout);
+		const stdout = stripAnsi(String(result.stdout));
 		expect(stdout).toContain("my-url");
 		expect(stdout).not.toContain("my-files");
 	});

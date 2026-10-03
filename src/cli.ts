@@ -481,7 +481,15 @@ export class CLI {
 		const openCommand = this.program
 			.command("open [rel-path]")
 			.description(
-				"Opens a URL in the browser; a snippet or a file (from tree, template, files) in a text-editor (read-only)",
+				"Opens a URL in the browser; a snippet in a text-editor (read-only), or a file (from tree / template / files) in the default application (read-only)",
+			)
+			.option(
+				"--editor",
+				"Force file (from tree / template / files) to be open in the text-editor",
+			)
+			.option(
+				"-c, --command <command>",
+				"Use custom app to open file, use double-quotes",
 			)
 			.action(
 				async (
@@ -492,6 +500,8 @@ export class CLI {
 					const globalOpts = command.optsWithGlobals();
 					const retVal = await ExtractSnapshotCommands.openSnapshotReadOnly(
 						globalOpts.key,
+						options.editor,
+						options.command,
 						relPath,
 					);
 					if (!retVal) throw new Error();

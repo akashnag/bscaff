@@ -18,7 +18,7 @@ import {
 	createTestDir,
 	executeCLI,
 	TEST_DIR,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("create tree command", () => {
 	beforeEach(async () => {

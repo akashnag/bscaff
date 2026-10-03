@@ -21,7 +21,7 @@ import {
 	readTestSettings,
 	TEST_DIR,
 	writeTestSettings,
-} from "./helpers/index";
+} from "../helpers/index";
 
 describe("settings command", () => {
 	beforeEach(async () => {
