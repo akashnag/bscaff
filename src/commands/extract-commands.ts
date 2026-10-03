@@ -57,6 +57,8 @@ export async function copyToClipboard(
 		return false;
 	}
 
+	let previewContent = undefined;
+
 	switch (record.type) {
 		case SnapshotType.URL:
 			await cm.copy(record.urlContent!);
@@ -74,6 +76,7 @@ export async function copyToClipboard(
 				return false;
 			}
 
+			previewContent = snippetContent;
 			await cm.copy(snippetContent);
 			break;
 
@@ -106,6 +109,7 @@ export async function copyToClipboard(
 					return false;
 				}
 
+				previewContent = content;
 				await cm.copy(content);
 			} else {
 				if (!asTree || record.type == SnapshotType.Files) {
@@ -117,13 +121,14 @@ export async function copyToClipboard(
 				}
 
 				const tree = TreeUtils.drawFileTree(record.structure!);
+				previewContent = tree;
 				await cm.copy(tree);
 			}
 
 			break;
 	}
 
-	io.successSnapshotCopied(key, record.type);
+	await io.successSnapshotCopied(key, record.type, record, previewContent);
 	return true;
 }
 // --------------------------------------------------------

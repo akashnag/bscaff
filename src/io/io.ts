@@ -251,12 +251,27 @@ export function printCentered(
 	}
 }
 
+export async function printPreviewFile(
+	filePath: string,
+	indented: boolean = true,
+	width: number = 60,
+	lineCount: number = 10,
+): Promise<void> {
+	const content = await FileUtils.readTextFile(filePath);
+	if (!content) {
+		printCentered("<No preview available>", true);
+	} else {
+		const lines: string[] = MiscUtils.splitContentByLines(content);
+		printPreview(lines, indented, width, lineCount);
+	}
+}
+
 export function printPreview(
 	lines: string[],
 	indented: boolean = true,
 	width: number = 60,
 	lineCount: number = 10,
-) {
+): void {
 	if (lines.length > lineCount) {
 		let firstHalf = "";
 		let secondHalf = "";

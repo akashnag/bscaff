@@ -98,8 +98,8 @@ export class CLI {
 
 		/*
 		Examples:
-			[Save directory tree]							-->	bscaff -k react-snapshot --desc "My awesome react app" --tags=react,app save tree ~/projects/my-react-app
-			[Save git repo]									-->	bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
+			[Save directory tree]		-->	bscaff -k react-snapshot --desc "My awesome react app" --tags=react,app save tree ~/projects/my-react-app
+			[Save git repo]				-->	bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
 		*/
 		const saveTreeCommand = saveGroup
 			.command("tree [dir-path_or_repo-url]")
@@ -150,8 +150,8 @@ export class CLI {
 
 		/*
 		Examples:
-			[Save snippet from file]						--> bscaff -k react-create-component save snippet ./components/my-component.tsx
-			[Save snippet from memory]						--> bscaff -k react-create-component save snippet --type=tsx
+			[Save snippet from file]	--> bscaff -k react-create-component save snippet ./components/my-component.tsx
+			[Save snippet from memory]	--> bscaff -k react-create-component save snippet --type=tsx
 		*/
 		const saveSnippetCommand = saveGroup
 			.command("snippet [path/to/file]")
@@ -220,7 +220,7 @@ export class CLI {
 
 		/*
 		Examples:
-			[Save link]										--> bscaff -k go-docs save url https://go.dev/doc/
+			[Save link]		--> bscaff -k go-docs save url https://go.dev/doc/
 		*/
 		const saveURLCommand = saveGroup
 			.command("url [url]")

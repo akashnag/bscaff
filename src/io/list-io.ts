@@ -163,11 +163,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 			const row: any = { KEY: item.key };
 
 			if (sType === "url") {
-				const url = SnapshotUtils.readContentFromSnapshotFile(
-					item.key,
-					`${Config.SINGLE_FILE_NAME}.url`,
-				);
-				row["URL"] = url;
+				row["URL"] = item.urlContent;
 			} else {
 				const record = store.fetch(item.key);
 				if (record) {
