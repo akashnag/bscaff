@@ -155,7 +155,9 @@ export class CLI {
 		*/
 		const saveSnippetCommand = saveGroup
 			.command("snippet [path/to/file]")
-			.description("Save a text/code snippet from a file / clipboard")
+			.description(
+				"Save a text/code snippet from a file / clipboard. If flags and path omitted, opens a text-editor for content-input.",
+			)
 			.option("--memory", "Copy from clipboard")
 			.option(
 				"--type <file-type>",

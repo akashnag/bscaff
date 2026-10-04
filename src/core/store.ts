@@ -20,94 +20,109 @@ import { Config } from "./config.js";
 
 export class Store {
 	private list: SnapshotRecord[];
+	private keyMap: Map<string, number>;
 
 	private constructor(data: SnapshotRecord[] | null = null) {
 		this.list = data || [];
+		this.keyMap = new Map<string, number>();
+		this.__rebuildKeyMap();
+	}
+
+	private __rebuildKeyMap(): void {
+		this.keyMap.clear();
+		for (let i = 0; i < this.list.length; ++i) {
+			this.keyMap.set(this.list[i].key, i);
+		}
 	}
 
 	// Static factory method handles the async logic
-	static async create() {
+	static async create(): Promise<Store> {
 		const data = await Store.__read();
 		return new Store(data);
 	}
 
 	renameKey(oldKey: string, newKey: string): boolean {
 		if (this.doesKeyExist(newKey)) return false;
-		if (!this.doesKeyExist(oldKey)) return false;
 
-		if (SnapshotUtils.renameSnapshotDirectory(oldKey, newKey)) {
-			const record = this.fetch(oldKey);
-			if (!record) return false;
+		const index = this.fetchIndex(oldKey);
+		if (index < 0) return false;
 
-			record.key = newKey;
-			record.modifiedAt = new Date();
-			return true;
-		} else {
-			return false;
-		}
+		const record = this.list[index];
+		if (!record) return false;
+
+		this.list[index].key = newKey;
+		this.list[index].modifiedAt = new Date();
+
+		this.keyMap.delete(oldKey);
+		this.keyMap.set(newKey, index);
+
+		return SnapshotUtils.renameSnapshotDirectory(oldKey, newKey);
 	}
 
 	updateDescription(key: string, desc: string): boolean {
-		if (this.doesKeyExist(key)) return false;
-		const record = this.fetch(key);
+		const index = this.fetchIndex(key);
+		if (index < 0) return false;
+
+		const record = this.list[index];
 		if (!record) return false;
 
-		record.description = desc;
-		record.modifiedAt = new Date();
+		this.list[index].description = desc;
+		this.list[index].modifiedAt = new Date();
 		return true;
 	}
 
 	updateTags(key: string, tags: string | string[]): boolean {
-		if (this.doesKeyExist(key)) return false;
-		const record = this.fetch(key);
+		const index = this.fetchIndex(key);
+		if (index < 0) return false;
+
+		const record = this.list[index];
 		if (!record) return false;
 
 		if (!Array.isArray(tags)) tags = tags.split(",");
-		record.tags = tags;
-		record.modifiedAt = new Date();
+		this.list[index].tags = tags;
+		this.list[index].modifiedAt = new Date();
 		return true;
 	}
 
 	updateURL(key: string, url: string): boolean {
-		if (this.doesKeyExist(key)) return false;
-		const record = this.fetch(key);
-		if (!record) return false;
-		if (record.type != SnapshotType.URL) return false;
+		const index = this.fetchIndex(key);
+		if (index < 0) return false;
 
-		record.urlContent = url;
-		record.modifiedAt = new Date();
+		const record = this.list[index];
+		if (!record) return false;
+		if (record.type !== SnapshotType.URL) return false;
+
+		this.list[index].urlContent = url;
+		this.list[index].modifiedAt = new Date();
 		return true;
 	}
 
 	updateStructure(key: string, newStructure: FileTreeNode[]): boolean {
-		if (this.doesKeyExist(key)) return false;
-		const record = this.fetch(key);
+		const index = this.fetchIndex(key);
+		if (index < 0) return false;
+
+		const record = this.list[index];
 		if (!record) return false;
 
-		record.structure = newStructure;
-		record.modifiedAt = new Date();
-
-		const index = this.fetchIndex(key);
-		this.list[index] = record;
+		this.list[index].structure = newStructure;
+		this.list[index].modifiedAt = new Date();
 
 		return true;
 	}
 
 	updateCreationTime(key: string, cTime: Date): boolean {
-		if (this.doesKeyExist(key)) return false;
-		const record = this.fetch(key);
+		const index = this.fetchIndex(key);
+		if (index < 0) return false;
+
+		const record = this.list[index];
 		if (!record) return false;
 
-		record.createdAt = cTime;
-
-		const index = this.fetchIndex(key);
-		this.list[index] = record;
-
+		this.list[index].createdAt = cTime;
 		return true;
 	}
 
 	doesKeyExist(key: string): boolean {
-		return this.list.some((record) => record.key === key);
+		return this.keyMap.has(key);
 	}
 
 	save(info: SnapshotRecord, removeContent: boolean = false): boolean {
@@ -127,16 +142,18 @@ export class Store {
 		}
 
 		this.list.push(info);
+		this.keyMap.set(info.key, this.list.length - 1);
 		return true;
 	}
 
+	// WARNING: returns a copy, not reference to original record
 	fetch(key: string): SnapshotRecord | null {
-		const record = this.list.find((item) => item.key === key);
-		return record ? MiscUtils.deepClone(record) : null;
+		const index = this.keyMap.get(key);
+		return index !== undefined ? MiscUtils.deepClone(this.list[index]) : null;
 	}
 
 	fetchIndex(key: string): number {
-		return this.list.findIndex((item) => item.key === key);
+		return this.keyMap.get(key) ?? -1;
 	}
 
 	delete(key: string): boolean {
@@ -154,6 +171,7 @@ export class Store {
 				this.list.splice(index, 1);
 			}
 
+			this.__rebuildKeyMap();
 			return success;
 		}
 

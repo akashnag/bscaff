@@ -379,7 +379,7 @@ export class ConsoleIO {
 	): void {
 		if (QUIET_MODE) return;
 
-		printHeader(`Snapshot saved!`, IOHeaderType.SUCCESS);
+		printHeader(`Snapshot Saved!`, IOHeaderType.SUCCESS);
 		printField("Key", key);
 		printField("Type", type);
 

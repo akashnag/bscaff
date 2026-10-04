@@ -15,9 +15,9 @@
 		"lint": "eslint .",
 		"biome:format": "biome format --write .",
 		"dev": "tsc --watch & node --watch bin/index.js",
-		"test": "vitest",
-		"test:run": "vitest run",
-		"test:coverage": "vitest run --coverage",
+		"test": "npm run build && vitest",
+		"test:run": "npm run build && vitest run",
+		"test:coverage": "npm run build && vitest run --coverage",
 		"build:completions": "npm run build && tsx scripts/generate-completions.ts"
 	},
 	"keywords": [

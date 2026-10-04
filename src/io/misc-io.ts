@@ -12,20 +12,20 @@
  */
 
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
+import * as MiscUtils from "../utils/misc-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
 import {
 	ConsoleIO,
 	IOHeaderType,
 	printBullet,
 	printField,
 	printHeader,
-	QUIET_MODE,
-	quickConfirm,
 	printLinedHeader,
 	printPreview,
 	printSeparatorLine,
+	QUIET_MODE,
+	quickConfirm,
 } from "./io.js";
-import * as MiscUtils from "../utils/misc-utils.js";
-import * as TreeUtils from "../utils/tree-utils.js";
 
 export class EditSnapshotsIO extends ConsoleIO {
 	errorRenamingKey(oldKey: string, newKey: string): void {
@@ -44,7 +44,7 @@ export class EditSnapshotsIO extends ConsoleIO {
 	successKeyRenamed(oldKey: string, newKey: string): void {
 		if (QUIET_MODE) return;
 
-		printHeader("Key Renamed Successfully", IOHeaderType.SUCCESS);
+		printHeader("Key Renamed Successfully!", IOHeaderType.SUCCESS);
 		printField("Old Key", oldKey);
 		printField("New Key", newKey);
 		console.log("");
@@ -67,7 +67,7 @@ export class EditSnapshotsIO extends ConsoleIO {
 	successDescriptionUpdated(key: string, newDesc: string): void {
 		if (QUIET_MODE) return;
 
-		printHeader("Description Updated Successfully", IOHeaderType.SUCCESS);
+		printHeader("Description Updated Successfully!", IOHeaderType.SUCCESS);
 		printField("Key", key);
 		printField("New Desc.", newDesc);
 		console.log("");
@@ -90,7 +90,7 @@ export class EditSnapshotsIO extends ConsoleIO {
 	successTagsUpdated(key: string, newTags: string[]): void {
 		if (QUIET_MODE) return;
 
-		printHeader("Tags Updated Successfully", IOHeaderType.SUCCESS);
+		printHeader("Tags Updated Successfully!", IOHeaderType.SUCCESS);
 		printField("Key", key);
 		printField("New Tags", "#" + newTags.join(" #"));
 		console.log("");
@@ -113,7 +113,7 @@ export class EditSnapshotsIO extends ConsoleIO {
 	successURLUpdated(key: string, newURL: string): void {
 		if (QUIET_MODE) return;
 
-		printHeader("URL Updated Successfully", IOHeaderType.SUCCESS);
+		printHeader("URL Updated Successfully!", IOHeaderType.SUCCESS);
 		printField("Key", key);
 		printField("New URL", newURL);
 		console.log("");

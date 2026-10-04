@@ -269,7 +269,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 		console.log("\nQuick Actions:");
 		printBullet(`Extract template : bscaff -k ${key} extract <to/path>`);
 		printBullet(
-			`Inspect file     : bscaff -k ${key} open <relative-path-of-file>`,
+			`Inspect file     : bscaff -k ${key} open <relative-path-of-file>\n`,
 		);
 	}
 
@@ -300,7 +300,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 
 		console.log("\nQuick Actions:");
 		printBullet(`Open snippet in text-editor : bscaff -k ${key} open`);
-		printBullet(`Copy snippet to clipboard   : bscaff -k ${key} copy`);
+		printBullet(`Copy snippet to clipboard   : bscaff -k ${key} copy\n`);
 	}
 
 	async listTreeOrFilesInfo(
@@ -338,7 +338,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 			`Extract files                : bscaff -k ${key} extract <to/path>`,
 		);
 		printBullet(
-			`Open a file in a text-editor : bscaff -k ${key} open <relative-path>`,
+			`Open a file in a text-editor : bscaff -k ${key} open <relative-path>\n`,
 		);
 	}
 
@@ -359,7 +359,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 
 		console.log("\nQuick Actions:");
 		printBullet(`Open in default browser : bscaff -k ${key} open`);
-		printBullet(`Copy URL to clipboard   : bscaff -k ${key} copy`);
+		printBullet(`Copy URL to clipboard   : bscaff -k ${key} copy\n`);
 	}
 
 	displayFileFromSnapshot(
