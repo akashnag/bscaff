@@ -383,11 +383,22 @@ export async function saveSnippet(
 // --------------------------------------------------------
 export async function saveSnippetFromLiveInput(
 	key: string | undefined,
-	description: string | undefined,
-	tags: string | undefined,
-	fType: string | undefined,
+	description?: string,
+	tags?: string,
+	fType?: string,
 ): Promise<boolean> {
 	const io = new SaveSnippetIO();
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
 
 	if (!fType) fType = "txt";
 
@@ -405,6 +416,7 @@ export async function saveSnippetFromLiveInput(
 		false,
 		filePath,
 	);
+
 	if (success) return FileUtils.deleteFile(filePath);
 
 	return false;

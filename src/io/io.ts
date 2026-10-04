@@ -229,7 +229,7 @@ export function printLinedHeader(
 	indented: boolean = true,
 	width: number = 60,
 ): void {
-	const half = width - title.length - 2;
+	const half = (width - title.length - 2) / 2;
 	const text = `${SYMBOL_SEPARATOR.repeat(half)} ${title} ${SYMBOL_SEPARATOR.repeat(half)}`;
 	printIndented(text, indented);
 }
@@ -472,7 +472,7 @@ export class ConsoleIO {
 		printIndented(
 			"Ensure you have spelt the key correctly, or check the list of valid keys using the command: ",
 		);
-		printIndented("bscaff list");
+		printIndented("bscaff list\n");
 	}
 
 	errorInvalidFile(key: string, record: SnapshotRecord, relPath: string): void {
@@ -486,7 +486,7 @@ export class ConsoleIO {
 		printIndented(
 			"Check the snapshot structure to ensure you are requesting the correct file path:",
 		);
-		printIndented(`  bscaff list -k ${key}`);
+		printIndented(`  bscaff list -k ${key}\n`);
 	}
 
 	errorFetchingSnapshot(key: string): void {

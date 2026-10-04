@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		fileParallelism: false,
+
 		// Only search for test files inside the top-level /tests folder
 		include: ["tests/end-to-end-tests/*.spec.ts"],
 

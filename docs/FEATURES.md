@@ -9,6 +9,7 @@ For installation and a quick overview, see [README.md](../README.md).
 ## Contents
 
 - [Snapshots](#snapshots)
+- [Tags and Metadata](#tags-and-metadata)
 - [Project Scaffolding](#project-scaffolding)
 - [Directories](#directories)
 - [Multiple Files](#multiple-files)
@@ -22,16 +23,19 @@ For installation and a quick overview, see [README.md](../README.md).
 - [Variable Replacement](#variable-replacement)
 - [Displaying Saved Content](#displaying-saved-content)
 - [Extracting Snapshots](#extracting-snapshots)
-- [Clipboard](#clipboard)
-- [Editing](#editing)
+- [Clipboard Operations](#clipboard-operations)
+- [Editing Snapshots](#editing-snapshots)
 - [Opening Saved Content](#opening-saved-content)
-- [Appending and Prepending](#appending-and-prepending)
-- [Listing Snapshots](#listing-snapshots)
-- [Renaming and Deleting](#renaming-and-deleting)
-- [Overwrite Protection](#overwrite-protection)
-- [Pre- and Post-Extraction Scripts](#pre--and-post-extraction-scripts)
+<!-- - [Appending and Prepending](#appending-and-prepending) -->
+- [Searching and Listing Snapshots](#searching-and-listing-snapshots)
+- [Updating Snapshots](#updating-snapshots)
+- [Deleting Snapshots](#deleting-snapshots)
+- [Overwrite & Exist Protection](#overwrite--exist-protection)
+<!-- - [Pre- and Post-Extraction Scripts](#pre--and-post-extraction-scripts) -->
 - [Quiet Mode](#quiet-mode)
+- [Custom Storage Path](#custom-storage-path)
 - [Settings](#settings)
+- [Command Reference](#command-reference)
 
 ---
 
@@ -39,34 +43,50 @@ For installation and a quick overview, see [README.md](../README.md).
 
 The fundamental unit in bscaff is a **snapshot**.
 
-A snapshot is a named piece of reusable content stored by bscaff and identified by a unique key.
+A snapshot is a named piece of reusable content stored by bscaff and identified by a unique key specified via the global `-k` / `--key` flag.
 
 For example:
 
 ```bash
-bscaff --key my-project --save-dir ./my-project
+bscaff -k my-project save tree ~/projects/my-react-app
 ```
 
-creates a snapshot named:
+creates a snapshot named `my-project`.
 
-```
-my-project
-```
-
-The snapshot can subsequently be inspected, edited, copied, extracted, or otherwise manipulated.
+The snapshot can subsequently be inspected, edited, copied, extracted, updated, or deleted.
 
 A snapshot can represent different types of content, including:
 
-- directories
-- multiple files
-- individual files
-- text
-- URLs
-- Git repositories
-- project trees
-- templates
+- directory trees (`tree`)
+- multiple standalone files (`files`)
+- individual code/text snippets (`snippet`)
+- web URLs (`url`)
+- template packages (`template`)
 
 This allows bscaff to serve both as a project scaffolding system and as a general-purpose repository for reusable developer resources.
+
+---
+
+## Tags and Metadata
+
+Every snapshot in bscaff can be annotated with metadata to make organization, retrieval, and filtering fast and intuitive:
+
+- **Key (`-k, --key <key>`)**: The unique identifier for a snapshot.
+- **Description (`--desc "<description>"`)**: A brief double-quoted explanation of what the snapshot contains or does.
+- **Tags (`--tags <list-of-tags>`)**: A comma-separated list of tags (without spaces) used to categorize snapshots (e.g., `react,nextjs,typescript`).
+
+Metadata can be attached when saving a snapshot:
+
+```bash
+bscaff -k react-app --desc "Base React boilerplate" --tags react,app save tree ~/projects/my-react-app
+```
+
+Or updated later using the `update` command suite:
+
+```bash
+bscaff -k react-app update desc "Updated React 19 boilerplate"
+bscaff -k react-app update tags react,frontend,ts
+```
 
 ---
 
@@ -77,13 +97,13 @@ A complete project directory can be captured and later recreated.
 ### Save
 
 ```bash
-bscaff --key my-project --save-dir ./my-project
+bscaff -k my-project save tree ~/projects/my-react-app
 ```
 
 ### Extract
 
 ```bash
-bscaff --key my-project --extract ./new-project
+bscaff -k my-project extract ./new-project
 ```
 
 The extracted directory contains the saved project structure and files.
@@ -94,33 +114,22 @@ This is useful for maintaining reusable starting points for applications, librar
 
 ## Directories
 
-Save an entire directory:
+Save an entire directory tree specified by local path:
 
 ```bash
-bscaff --key web-project --save-dir ./web-project
+bscaff -k web-project --desc "Base structure for web projects" save tree ./web-project
 ```
 
 The directory structure and its files are stored as a snapshot.
-
-The source directory can optionally be accompanied by a description:
-
-```bash
-bscaff \
-  --key web-project \
-  --desc "Base structure for web projects" \
-  --save-dir ./web-project
-```
 
 ---
 
 ## Multiple Files
 
-Multiple files can be saved together as a single snapshot:
+Multiple files can be saved together as a single snapshot under one key:
 
 ```bash
-bscaff \
-  --key common-config \
-  --save-multi ./eslint.config.js ./tsconfig.json ./package.json
+bscaff -k common-config save files ./eslint.config.js ./tsconfig.json ./package.json
 ```
 
 This is useful when a group of files is normally reused together but does not require an entire project directory.
@@ -129,183 +138,302 @@ This is useful when a group of files is normally reused together but does not re
 
 ## Files and Text
 
-### Save a file
+### Save a file snippet
+
+Save code or text from an existing file on disk:
 
 ```bash
-bscaff --key dockerfile --save-file ./Dockerfile
+bscaff -k react-component save snippet ./components/my-component.tsx
 ```
 
-### Save text from a file
+### Save text from clipboard
+
+Copy text or code directly from the system clipboard into a snapshot using `--memory`:
 
 ```bash
-bscaff --key readme-template --save-text ./README.md
+bscaff -k react-component save snippet --memory --type tsx
 ```
 
-The distinction allows a file to either be treated as a reusable file artifact or its textual contents to be stored as reusable text.
+The `--type` option signals the file extension or code syntax (e.g., `tsx`, `py`, `json`), enabling appropriate syntax highlighting when editing or viewing.
 
 ---
 
 ## Live Input
 
-Text can be entered directly into bscaff:
+bscaff provides interactive terminal input for saving quick notes or code fragments.
 
 ```bash
-bscaff --key my-snippet --save-input
+bscaff -k my-snippet save snippet
 ```
 
-A file type can optionally be specified:
+If flags and path are omitted, bscaff opens a text editor for live content input.
+
+### Direct Global Shortcut
+
+Running `bscaff` with only a key flag acts as a quick shortcut for live text capture:
 
 ```bash
-bscaff --key my-snippet --save-input ts
+bscaff -k quick-note
 ```
 
-This is useful for small pieces of code or text that do not already exist in a file and you want to insert this later in a file. Mentioning the file-type will allow your text-editor to show syntax highlighting as you edit this snapshot.
+This immediately triggers live input mode to quickly store ideas or code without typing subcommands.
 
 ---
 
 ## URLs
 
-URLs can be stored as snapshots:
+Web links and URLs can be stored directly as snapshots:
 
 ```bash
-bscaff --key typescript-docs --save-url https://www.typescriptlang.org/docs/
+bscaff -k go-docs save url https://go.dev/doc/
 ```
 
-bscaff stores the URL itself rather than downloading the contents of the resource.
+If the URL parameter is omitted, bscaff automatically captures the URL currently in your system clipboard.
 
-A saved URL can later be opened directly in the browser:
+A saved URL can later be opened directly in your browser:
 
 ```bash
-bscaff --key typescript-docs --open
+bscaff -k go-docs open
 ```
 
 ---
 
 ## Git Repositories
 
-> **Note:** this requires git to be installed on your system
+> **Note:** Requires `git` to be installed on your system.
 
-A Git repository can be captured as a reusable snapshot:
+A Git repository can be captured directly as a directory tree snapshot using the `--git` flag:
 
 ```bash
-bscaff \
-  --key project-template \
-  --save-git https://github.com/example/project.git
+bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
 ```
 
 bscaff clones the repository contents into the snapshot.
-
-The .git directory is excluded, so the resulting snapshot represents the project itself rather than its Git history and metadata.
-
-Optional pre- and post-extraction scripts can also be associated with Git-based templates.
 
 ---
 
 ## Templates
 
-bscaff supports its own custom template format using the `.bs_template` extension.
+bscaff supports custom template packages with variable processing and configuration rules.
 
-### Create a template
+### Verify a Template Config
 
-```bash
-bscaff --key web-app --create-template ./web-app
-```
-
-A template can also preserve file contents:
+Verify if a template configuration file is syntactically valid:
 
 ```bash
-bscaff \
-  --key web-app \
-  --create-template-with-content ./web-app
+bscaff template verify ./template-config.yaml
 ```
 
-Templates provide a convenient way to package reusable project structures for later use.
+### Save a Template
+
+Save a template from a local directory, ZIP archive, or Git repo using the `--source` (`-s`) option:
+
+```bash
+# Save from local directory (default)
+bscaff -k my-template template save ./my-template-dir
+
+# Save from ZIP archive
+bscaff -k my-template template save ./bscaff-react-template.zip --source zip
+
+# Save from Git repository
+bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --source git
+```
+
+### Create a Template from an Existing Directory
+
+Automatically convert a directory into a saved bscaff template:
+
+```bash
+bscaff -k my-template template create projects/my-react-app
+```
+
+### Update a Saved Template
+
+Update a saved template from its upstream Git repository:
+
+```bash
+bscaff -k my-template template update
+```
+
+### Template Configuration (`bscaff-template.yml`)
+
+Every bscaff template requires a configuration file named `bscaff-template.yml` (or `.yaml`) at the root of the template directory[cite: 3].
+
+It defines template metadata, jinja/environment settings, pre/post-generation lifecycle tasks, migrations, and interactive user prompts (questions)[cite: 3].
+
+---
+
+#### Special Configuration Keys
+
+All internal bscaff control keys begin with an underscore (`_`)[cite: 3].
+
+| Key | Type | Description |
+|---|---|---|
+| `_min_bscaff_version` | `string` | Minimum required bscaff version required to execute this template[cite: 3]. |
+| `_subdirectory` | `string` | Relative path if the template files reside inside a sub-folder rather than the root[cite: 3]. |
+| `_answers_file` | `string` | Path where user answers are recorded for future template updates (default: `.bscaff-answers.yml`). |
+| `_message_after_copy` | `string` | Message displayed in the terminal upon successful project scaffolding[cite: 3]. |
+| `_templates_suffix` | `string` | File suffix used to identify template files (default: `.jinja`, customizable via `templatesSuffix` setting)[cite: 3]. |
+| `_exclude` | `string[]` | Glob patterns to exclude completely from template processing[cite: 3]. |
+| `_include` | `string[]` | Glob patterns to explicitly include even if matched by `_exclude`[cite: 3]. |
+| `_skip_if_exists` | `string[]` | Files generated on initial setup that should never be overwritten during updates[cite: 3]. |
+| `_pre_generation_tasks` | `string[]` | Shell commands executed before project generation[cite: 3]. |
+| `_post_generation_tasks` | `string[]` | Shell commands executed after project generation[cite: 3]. |
+| `_migrations` | `object[]` | List of version migration tasks executed sequentially during template updates[cite: 3]. |
+| `_envops` | `object` | Custom Jinja parser delimiter and syntax overrides[cite: 3]. |
+
+---
+
+#### Environment Parser Settings (`_envops`)
+
+Override default Jinja tag delimiters using `_envops`[cite: 3]:
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `block_start_string` | `string` | `{%` | Opening tag for control statements[cite: 3]. |
+| `block_end_string` | `string` | `%}` | Closing tag for control statements[cite: 3]. |
+| `variable_start_string` | `string` | `{{` | Opening tag for variable expressions[cite: 3]. |
+| `variable_end_string` | `string` | `}}` | Closing tag for variable expressions[cite: 3]. |
+| `comment_start_string` | `string` | `{#` | Opening tag for template comments[cite: 3]. |
+| `comment_end_string` | `string` | `#}` | Closing tag for template comments[cite: 3]. |
+| `autoescape` | `boolean` | `false` | Enables automatic HTML escaping[cite: 3]. |
+
+---
+
+#### User Prompts & Questions
+
+Any top-level YAML key that **does not** start with an underscore (`_`) is treated as a user prompt definition[cite: 3].
+
+##### Question Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `type` | `str` \| `int` \| `float` \| `bool` \| `json` \| `yaml` | Variable data type (default: `str`)[cite: 3]. |
+| `prompt` | `string` | Question text displayed to the user during prompting[cite: 3]. |
+| `default` | `any` | Default value if the user presses Enter[cite: 3]. |
+| `choices` | `array` \| `object` | Allowed choices presented as a list or a map of key-value choices[cite: 3]. |
+| `when` | `boolean` \| `string` | Condition evaluated to determine if this question should be asked[cite: 3]. |
+| `validator` | `string` | Regex or expression used to validate user input[cite: 3]. |
+| `validator_error` | `string` | Error message displayed when validation fails[cite: 3]. |
+| `secret` | `boolean` | Hides input characters in the terminal (useful for API keys/passwords)[cite: 3]. |
+| `multiline` | `boolean` | Enables multi-line input in the terminal[cite: 3]. |
+| `placeholder` | `string` | Placeholder text shown in the prompt field[cite: 3]. |
+
+---
+
+#### Example `bscaff-template.yml`
+
+```yaml
+_min_bscaff_version: "1.0.0"
+_answers_file: ".bscaff-answers.yml"
+_templates_suffix: ".jinja"
+_message_after_copy: "Project successfully initialized! Run `npm install` to get started."
+_exclude:
+  - ".git/*"
+  - "node_modules/*"
+
+_pre_generation_tasks:
+  - "echo 'Preparing scaffolding...'"
+
+_post_generation_tasks:
+  - "git init"
+  - "npm install"
+
+project_name:
+  type: str
+  prompt: "What is the name of your project?"
+  default: "my-app"
+
+author_name:
+  type: str
+  prompt: "Author Name:"
+
+use_typescript:
+  type: bool
+  prompt: "Use TypeScript?"
+  default: true
+
+database_driver:
+  type: str
+  prompt: "Select Database Engine:"
+  choices:
+    PostgreSQL: "pg"
+    SQLite: "sqlite3"
+    MySQL: "mysql2"
+  when: "{{ use_typescript }}"
+
+api_key:
+  type: str
+  prompt: "Enter Third-Party API Key:"
+  secret: true
+```
 
 ---
 
 ## Project Trees
 
-bscaff can create project structures from a textual directory tree.
+bscaff can capture and create project directory structures using ASCII tree diagrams.
 
-For example:
+### Save ASCII Tree from Clipboard
 
-```
-my-app/
-├── src/
-│   ├── index.ts
-│   └── utils.ts
-├── package.json
-└── README.md
-```
-
-The tree can be supplied through the clipboard.
-
-This makes it possible to take a project structure produced elsewhere and turn it directly into a directory structure.
-
-### Create a tree
+Save an ASCII tree diagram copied to your clipboard directly into a snapshot:
 
 ```bash
-bscaff --create-tree ./my-app
+bscaff -k ascii-scaffold save tree
 ```
 
-bscaff reads the tree from the clipboard and creates the corresponding directories and files.
+Add `--prompt-for-content` to interactively input file contents for each file in the ASCII tree upon saving.
+
+### Create Project Tree directly on Disk
+
+Construct directories and files directly on disk from an ASCII tree on your clipboard without saving it as a snapshot first:
+
+```bash
+bscaff create tree ./my-app --prompt-for-content
+```
 
 ### AI-Assisted Scaffolding
 
-Project trees are particularly useful when working with AI coding assistants.
+Project trees are exceptionally useful when working with AI coding assistants.
 
-An AI tool can produce a structure such as:
+When an AI model generates an application structure:
 
 ```
 weather-service/
 ├── src/
 │   ├── api/
 │   │   └── weather.ts
-│   ├── config/
-│   │   └── index.ts
 │   └── index.ts
 ├── tests/
 │   └── weather.test.ts
-├── package.json
-└── README.md
+└── package.json
 ```
 
-The tree can be copied to the clipboard and passed directly to bscaff.
+Copy the text block to your clipboard and run:
 
 ```bash
-bscaff --create-tree ./weather-service
+bscaff create tree ./weather-service --prompt-for-content
 ```
 
-For workflows where file contents should also be generated interactively:
-
-```bash
-bscaff --create-tree-with-content ./weather-service
-```
-
-In this mode, bscaff prompts for the contents of the files while creating the structure.
-
-This provides a simple bridge between a generated project outline and an actual filesystem structure.
+bscaff parses the clipboard diagram, builds the folder hierarchy, and prompts you for content for each file.
 
 ---
 
 ## Variable Replacement
 
-bscaff supports variable replacement using: `{{ variable }}`
+bscaff supports variable replacement using mustache syntax: `{{ variable }}`.
 
-Variables can occur in both paths and file contents.
-
-For example:
+Variables can occur in both folder/file paths and file contents:
 
 ```
 {{ projectName }}/
 ├── src/
 │   ├── {{ projectName }}.ts
 │   └── utils.ts
-├── package.json
-└── README.md
+└── package.json
 ```
 
-A variable can also appear inside a file:
+Inside files:
 
 ```ts
 export class {{ className }} {
@@ -313,99 +441,112 @@ export class {{ className }} {
 }
 ```
 
-During extraction or template creation, bscaff resolves the variables and creates the resulting paths and contents.
-
-This allows a single snapshot to serve as the basis for multiple projects.
-
-### Excluding files from content replacement
-
-Variable replacement in file contents can be controlled through:
-
-```json
-{
-  "excludePatternReplacementInFileContent": []
-}
-```
-
-Patterns placed in this setting can be used to exclude matching files from content replacement.
-
-Path and file-name replacement remains available independently.
+During extraction, bscaff prompts for variable values and substitutes them across paths and contents.
 
 ---
 
 ## Displaying Saved Content
 
-Saved snapshots can be displayed without extracting them.
+Inspect snapshot contents without extracting them to disk.
+
+### Read-Only View in Default Application or Editor
+
+Open a saved snippet or file read-only in your editor:
 
 ```bash
-bscaff --key my-snippet --display
+bscaff -k copyright-text open
 ```
 
-For saved text or files, this provides a convenient way to inspect the stored content.
+Open a specific file within a saved tree snapshot:
+
+```bash
+bscaff -k react-project open docs/CONTRIBUTING.md
+```
+
+Force a file to open in a text editor or custom command:
+
+```bash
+bscaff -k react-project open docs/CONTRIBUTING.md --editor
+bscaff -k react-project open docs/CONTRIBUTING.md --command "code"
+```
 
 ---
 
 ## Extracting Snapshots
 
-A snapshot can be extracted to any destination path:
+Extract saved tree, files, or template snapshots to a destination directory:
 
 ```bash
-bscaff --key my-project --extract ./new-project
+bscaff -k my-project extract ./new-project
 ```
 
-If the destination already exists, bscaff protects it from accidental overwriting.
+### Partial Extraction
 
-To explicitly allow overwriting:
+Extract only a specific subfolder or single file from a large tree snapshot using `--partial`:
 
 ```bash
-bscaff \
-  --key my-project \
-  --extract ./new-project \
-  --overwrite
+bscaff -k my-project extract ./output-folder --partial src/components
+```
+
+### Dry Run
+
+Preview what files and directories will be created without making actual filesystem changes:
+
+```bash
+bscaff -k my-project extract ./new-project --dry-run
 ```
 
 ---
 
-## Clipboard
+## Clipboard Operations
 
-Saved snapshots can be copied directly to the system clipboard:
+Copy snapshot contents or file structures directly to the system clipboard:
 
 ```bash
-bscaff --key my-snippet --copy
+# Copy a text snippet to clipboard
+bscaff -k header-snippet copy
+
+# Copy a specific file's content from a tree snapshot
+bscaff -k my-project copy src/index.ts
+
+# Copy directory structure of a snapshot as an ASCII tree diagram
+bscaff -k my-project copy --as-tree
 ```
 
-This is useful for code, configuration, documentation, commands, and other text-based resources.
+You can also write content directly from the clipboard to a file on disk:
+
+```bash
+bscaff create file ./src/index.ts --overwrite
+```
 
 ---
 
-## Editing
+## Editing Snapshots
 
-A saved snapshot can be opened for editing:
+Update content stored within an existing snapshot using your configured editor:
 
 ```bash
-bscaff --key my-snippet --edit
-```
+# Edit a text snippet snapshot
+bscaff -k copyright-text update content
 
-The editor used is determined by the configured editor preferences.
+# Edit a specific file inside a tree/files snapshot
+bscaff -k react-project update content docs/CONTRIBUTING.md
+```
 
 ---
 
 ## Opening Saved Content
 
-The `--open` option provides a convenient way to open saved resources.
+The `open` command provides contextual resource launching:
 
-For saved URLs:
+- **URLs**: Opened in your default system web browser.
+- **Snippets / Files**: Opened in read-only mode in your preferred text editor or default viewer.
 
 ```bash
-bscaff --key documentation --open
+bscaff -k my-docs open
 ```
 
-the URL is opened in the configured browser.
-
-For saved files or text, the content is opened in the configured editor in read-only mode.
-
----
-
+<!--
 ## Appending and Prepending
 
 Saved text can be inserted into existing files.
@@ -429,61 +570,109 @@ bscaff --key header --prepend ./README.md ./docs/README.md
 ```
 
 This makes bscaff useful for maintaining reusable headers (e.g. copyright notices), footers, configuration blocks, documentation sections, and other text fragments.
+-->
 
 ---
 
-## Listing Snapshots
+## Searching and Listing Snapshots
 
-List all saved snapshots:
+### List Snapshots
+
+List all saved snapshots or inspect internal files of a specific snapshot:
 
 ```bash
-bscaff --list
+# List all saved snapshots
+bscaff list
+
+# List contents of a specific snapshot key
+bscaff -k react-project list
+
+# List files in a subpath of a snapshot
+bscaff -k react-project list src/components
+
+# Filter listing by snapshot type or tags
+bscaff list --type tree --tags react,frontend
 ```
 
-List the contents of a specific snapshot:
+### Search Snapshots
+
+Search for snapshots using fuzzy key matching, description matching, type filtering, or tag filtering:
 
 ```bash
-bscaff --key my-project --list
-```
-
-This provides a quick way to inspect the structure of a stored project without extracting it.
-
----
-
-## Renaming and Deleting
-
-### Rename
-
-```bash
-bscaff --key old-name --rename new-name
-```
-
-### Delete
-
-```bash
-bscaff --key old-name --delete
+bscaff -k react search --desc "boilerplate" --type tree --tags frontend
 ```
 
 ---
 
-## Overwrite Protection
+## Updating Snapshots
 
-bscaff does not overwrite an existing destination by default.
-
-When an operation would replace an existing file or directory, use `--overwrite` to explicitly permit the operation.
-
-For example:
+bscaff provides subcommands under `update` to modify individual snapshot properties without resaving:
 
 ```bash
-bscaff --key my-project --extract ./existing-project --overwrite
+# Rename snapshot key
+bscaff -k old-key update key new-key
+
+# Update description
+bscaff -k react-project update desc "Updated project description"
+
+# Update tags
+bscaff -k react-project update tags react,nextjs,typescript
+
+# Update stored URL
+bscaff -k google update url https://google.com
+
+# Edit content of a snippet or file inside snapshot
+bscaff -k react-project update content src/App.tsx
 ```
-
-This provides an additional safeguard when using scaffolding commands in existing workspaces.
-
-These operations modify the stored snapshot rather than the original source files from which it was created.
 
 ---
 
+## Deleting Snapshots
+
+Delete an entire snapshot or delete a specific file within a saved snapshot:
+
+```bash
+# Delete entire snapshot
+bscaff -k copyright-text delete
+
+# Force deletion without confirmation prompt
+bscaff -k copyright-text delete --force
+
+# Delete a specific file under a snapshot
+bscaff -k react-project delete docs/OLD_NOTES.md
+```
+
+---
+
+## Overwrite & Exist Protection
+
+When writing or extracting files to disk, bscaff provides configurable protection modes to prevent accidental data loss.
+
+### Multi-File & Directory Operations (`extract` and `create tree`)
+
+For commands that extract or construct entire file trees, bscaff supports the `-e, --if-exists <behaviour>` option with four distinct choices:
+
+- `prompt` *(default)*: Interactively ask what to do when a collision occurs.
+- `overwrite`: Replace existing destination files.
+- `skip`: Skip existing destination files and keep original disk content.
+- `fail`: Instantly abort the operation if any target file exists.
+
+```bash
+bscaff -k my-project extract ./existing-dir --if-exists skip
+bscaff create tree ./my-app --if-exists overwrite
+```
+
+### Single-File Operations (`create file`)
+
+For single-file creation operations, destination handling is straightforward—use `-o, --overwrite` to explicitly allow replacing an existing file:
+
+```bash
+bscaff create file ./src/index.ts --overwrite
+```
+
+---
+
+<!--
 ## Pre- and Post-Extraction Scripts
 
 Directory and Git-based templates can have scripts executed before and after extraction.
@@ -512,173 +701,171 @@ For example:
 
 - shell scripts on Unix-like systems
 - `.bat` or other appropriate command scripts on Windows
-
----
+-->
 
 ## Quiet Mode
 
-bscaff can operate without printing normal output:
+Suppress all normal console logging using `-q` / `--quiet` for silent execution:
 
 ```bash
-bscaff --key my-project --extract ./new-project --quiet
+bscaff -k my-project -q extract ./new-project
 ```
 
-This is useful when bscaff is being incorporated into other scripts or automated workflows.
+This is useful when embedding bscaff into shell scripts, CI/CD pipelines, or automated workflows.
 
---
+---
+
+## Custom Storage Path
+
+By default, bscaff stores all snapshot data and settings in `~/.bscaff`.
+
+You can override the storage root for any command using the global `--data-dir <path>` option:
+
+```bash
+bscaff --data-dir /Volumes/ExternalDrive -k my-project save tree ./my-app
+```
+
+This causes bscaff to save and read snapshots under `/Volumes/ExternalDrive/.bscaff`. If the specified path does not exist, bscaff logs an error and safely falls back to default storage.
+
+---
 
 ## Settings
 
-bscaff stores its data and configuration under:
+bscaff configuration is managed in `~/.bscaff/settings.json`.
 
-```
-~/.bscaff/
-```
-
-The main settings file is:
-
-```
-~/.bscaff/settings.json
-```
-
-The settings file can be opened directly:
+To open settings for interactive editing in your text editor:
 
 ```bash
-bscaff --settings
+bscaff settings
 ```
 
-A typical configuration is:
+Example `settings.yml`:
 
-```json
-{
-  "editorPreference": "terminal",
-  "terminalEditor": "nano",
-  "guiEditor": "gedit",
-  "browser": "google-chrome",
-  "excludePatternReplacementInFileContent": []
-}
+```yaml
+textEditor: nano
+browser: google-chrome
+exclude:
+  - .git
+  - .vscode
+  - node_modules
+  - __pycache__
+  - .pytest_cache
+include: []
+templatesSuffix: .jinja
 ```
 
-
-#### `editorPreference`
-
-Controls whether bscaff prefers the terminal editor or GUI editor.
-
-Example:
-
-```json
-"editorPreference": "terminal"
-```
-
-#### `terminalEditor`
-
-Specifies the terminal editor used by bscaff.
-
-Example:
-
-```json
-"terminalEditor": "nano"
-```
-
-#### `guiEditor`
-
-Specifies the GUI editor used by bscaff.
-
-Example:
-
-```json
-"guiEditor": "gedit"
-```
-
-#### `browser`
-
-Specifies the browser used when opening saved URLs.
-
-Example:
-
-```json
-"browser": "google-chrome"
-```
-
-#### `excludePatternReplacementInFileContent`
-
-Specifies patterns for files that should be excluded from `{{ variable }}` replacement inside file contents.
-
-Example:
-
-```json
-"excludePatternReplacementInFileContent": [
-  "*.lock",
-  "*.min.js"
-]
-```
+- **`textEditor`**: Name/Command of the text editor to use for editing and creating snapshots.
+- **`browser`**: Default browser for opening saved URLs.
+- **`exclude`**: Glob patterns excluded from `{{ variable }}` processing during extraction.
+- **`include`**: Glob patterns explicitly included (even if excluded by `exclude`) in `{{ variable }}` processing during extraction.
 
 ---
 
 ## Command Reference
 
-The following options are available through the CLI.
+This document provides a concise reference for all commands and options available in `bscaff`.
 
-### General
+---
 
-```
--k, --key <key>
---desc <description>
--q, --quiet
--s, --settings
--h, --help
--V, --version
-```
+### Global Flags
 
-### Saving
+| Command / Flag | Description |
+| :--- | :--- |
+| `-k, --key <key>` | Key identifying the snapshot. |
+| `-q, --quiet` | Suppresses all normal console output for silent execution. |
+| `--data-dir <path>` | Path to use for saving all data (stored under `<path>/.bscaff`). |
+| `-h, --help` | Display help information for commands and options. |
+| `-V, --version` | Output the version number of `bscaff`. |
 
-```
---save-dir <path>
---create-template <path>
---create-template-with-content <path>
---save-multi <files...>
---save-text <file>
---save-file <file>
---save-input [file_type]
---save-url <url>
---save-git <repo_url>
---save-tree [template_file]
-```
+---
 
-### Retrieving and using snapshots
+### Save Commands (`bscaff save` / `bscaff -k <key> save`)
 
-```
--d, --display [relative_path]
--x, --extract <path>
--c, --copy
--e, --edit
--o, --open
--a, --append <path...>
--p, --prepend <path...>
-```
+> **Options for the `save` group:**  
+> `--desc "<description>"` — Set snapshot description  
+> `--tags <tag1,tag2>` — Set comma-separated snapshot tags  
 
-### Project tree creation
+| Command | Description |
+| :--- | :--- |
+| `bscaff -k <key> save tree [dir-path]` | Save a local directory tree structure and its contents into a snapshot. |
+| `bscaff -k <key> save tree <repo-url> --git` | Clone a Git repository and save it as a directory tree snapshot. |
+| `bscaff -k <key> save tree` | Parse an ASCII tree diagram from clipboard and save as a snapshot. |
+| `bscaff -k <key> save snippet [path/to/file]` | Save a code or text snippet from an existing file on disk. |
+| `bscaff -k <key> save snippet --memory [--type <ext>]` | Save snippet text directly from system clipboard. |
+| `bscaff -k <key> save snippet` | Open interactive text editor to input snippet text directly in terminal. |
+| `bscaff -k <key> save files <file1> <file2> ...` | Save one or more standalone files into a single snapshot. |
+| `bscaff -k <key> save url [url]` | Save a web URL as a snapshot (captures URL from clipboard if parameter is omitted). |
 
-```
---create-tree <path>
---create-tree-with-content <path>
-```
+---
 
-### Snapshot management
+### Extract & Output Commands
 
-```
--l, --list
--r, --rename <new_key>
---delete
-```
+| Command | Description |
+| :--- | :--- |
+| `bscaff -k <key> extract <dest-path>` | Extract tree, files, or template snapshot into a target directory. |
+| `bscaff -k <key> extract <dest-path> --partial <subpath>` | Extract only a specific subfolder or single file from a snapshot. |
+| `bscaff -k <key> extract <dest-path> --dry-run` | Preview files and directories that would be created without making changes to disk. |
+| `bscaff -k <key> extract <dest-path> -e <behaviour>` | Set collision strategy (`prompt`, `overwrite`, `skip`, or `fail`). |
+| `bscaff -k <key> copy` | Copy snapshot content directly to the system clipboard. |
+| `bscaff -k <key> copy <rel-path>` | Copy specific file content within a tree snapshot to clipboard. |
+| `bscaff -k <key> copy --as-tree` | Copy directory structure of a snapshot as an ASCII tree diagram to clipboard. |
+| `bscaff -k <key> open` | Open saved URL in web browser or snippet/file in default viewer (read-only). |
+| `bscaff -k <key> open <rel-path>` | Open specific file within a saved tree snapshot (read-only). |
 
-### Extraction options
+---
 
-```
---overwrite
---pre-extract <path-to-script-file>
---post-extract <path-to-script-file>
-```
+### Create Commands (`bscaff create`)
+
+| Command | Description |
+| :--- | :--- |
+| `bscaff create tree <dest-path>` | Construct directories and files on disk directly from an ASCII tree on system clipboard. |
+| `bscaff create tree <dest-path> --prompt-for-content` | Prompt interactively for content of each file created from the ASCII tree. |
+| `bscaff create tree <dest-path> -e <behaviour>` | Handle existing file collisions (`prompt`, `overwrite`, `skip`, or `fail`). |
+| `bscaff create file <dest-path>` | Write clipboard content directly into a file on disk. |
+| `bscaff create file <dest-path> -o, --overwrite` | Overwrite existing destination file when creating from clipboard content. |
+
+---
+
+### Template Commands (`bscaff template`)
+
+| Command | Description |
+| :--- | :--- |
+| `bscaff template verify <path>` | Validate the syntax and configuration of a template configuration file. |
+| `bscaff -k <key> template save <path>` | Save a template package from a local directory. |
+| `bscaff -k <key> template save <path> -s, --source <dir\|zip\|git>` | Save a template from a local directory, ZIP archive, or Git repository. |
+| `bscaff -k <key> template create <dir-path>` | Automatically convert an existing local directory into a saved template. |
+| `bscaff -k <key> template update` | Pull and update a saved template from its upstream Git repository. |
+
+---
+
+### List & Search Commands
+
+| Command | Description |
+| :--- | :--- |
+| `bscaff list` | List all saved snapshots with metadata. |
+| `bscaff -k <key> list` | List all files inside a specific saved snapshot. |
+| `bscaff -k <key> list <rel-path>` | List files within a specific subpath of a tree snapshot. |
+| `bscaff list --type <type> --tags <tags>` | Filter list of snapshots by content type (`tree`, `files`, `snippet`, `url`, `template`) or tags. |
+| `bscaff search` | Interactively search snapshots using fuzzy matching. |
+| `bscaff -k <query> search` | Search snapshots matching key query string. |
+| `bscaff search --desc <query> --tags <tags> --type <type>` | Perform targeted search across description, tags, or type filters. |
+
+---
+
+### Management & Update Commands
+
+| Command | Description |
+| :--- | :--- |
+| `bscaff -k <old-key> update key <new-key>` | Rename a snapshot key identifier. |
+| `bscaff -k <key> update desc "<description>"` | Update the description metadata of a snapshot. |
+| `bscaff -k <key> update tags <tag1,tag2>` | Update the tags associated with a snapshot. |
+| `bscaff -k <key> update url <new-url>` | Update the web URL stored under a URL snapshot. |
+| `bscaff -k <key> update content` | Open interactive text editor to modify the content of a snippet snapshot. |
+| `bscaff -k <key> update content <rel-path>` | Open interactive text editor to modify a specific file inside a tree or files snapshot. |
+| `bscaff -k <key> delete` | Delete an entire snapshot key from storage. |
+| `bscaff -k <key> delete <rel-path>` | Delete a specific file from within a saved tree snapshot. |
+| `bscaff -k <key> delete --force` | Delete snapshot without prompting for confirmation. |
+| `bscaff settings` | Open user configuration (`~/.bscaff/settings.json`) in system editor. |
 
 ---
 
@@ -690,9 +877,9 @@ bscaff maintains its local data under:
 ~/.bscaff/
 ```
 
-The directory contains the saved snapshots and configuration required by bscaff.
+(or `<data-dir>/.bscaff` when `--data-dir` is passed).
 
-The storage location and internal representation are implementation details of bscaff; users should interact with stored resources through the CLI wherever possible.
+The directory contains saved snapshots and configuration settings. User interaction should be conducted through the CLI tool.
 
 ---
 
@@ -704,43 +891,4 @@ bscaff is designed as a cross-platform CLI and supports:
 - macOS
 - Windows
 
-Some operations, particularly editors, browsers, and extraction scripts, naturally depend on the tools available on the host operating system.
-
-These platform-specific preferences can be configured through `settings.json`.
-
----
-
-## Summary
-
-bscaff provides a single workflow for capturing and reusing developer resources:
-
-```
-                  ┌─────────────────┐
-                  │   Existing      │
-                  │   resources     │
-                  └────────┬────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │    Save     │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   bscaff    │
-                    │   snapshot  │
-                    └──────┬──────┘
-                           │
-             ┌─────────────┼─────────────┐
-             │             │             │
-             ▼             ▼             ▼
-          Extract        Copy          Edit
-             │             │             │
-             ▼             ▼             ▼
-         Project        Clipboard     Modified
-         structure       content      resource
-```
-
-The same system can be used for complete projects, individual files, reusable text, templates, Git repositories, URLs, and AI-generated project structures.
-
-For the project overview and installation instructions, see [README.md](../README.md)
+Platform tools (editors, web browsers) can be customized via `bscaff settings`.

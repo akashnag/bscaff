@@ -13,20 +13,14 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-} from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ClipboardManager } from "../../src/core/clipboard.js";
 import { runCLIForTest } from "../helpers/cli-runner.js";
 import { cleanupTestDir, createTestDir } from "../helpers/data-mgmt.js";
 
 describe("URL management", () => {
+	const cm = new ClipboardManager();
+
 	beforeAll(async () => {
 		await createTestDir();
 	});
@@ -71,11 +65,24 @@ describe("URL management", () => {
 		expect(result.exitCode).toBe(0);
 	});
 
-	it("List URLs by tag - unhappy path", async () => {
-		const result = await runCLIForTest(["list", "--tags", "xyz"]);
+	it("List URLs by tag - unhappy path (wrong tags)", async () => {
+		const result = await runCLIForTest([
+			"list",
+			"--tags",
+			"xyz",
+			"--type",
+			"url",
+		]);
 
 		expect(result.rawStdout).toContain("No items found");
 		expect(result.exitCode).toBe(0);
+	});
+
+	it("Fetch URL details - unhappy path (wrong key)", async () => {
+		const result = await runCLIForTest(["-k", "git-hub", "list"]);
+
+		expect(result.rawStdout).toContain("Key Not Found");
+		expect(result.exitCode).toBe(1);
 	});
 
 	it("Fetch URL details - before tag update", async () => {
@@ -129,7 +136,6 @@ describe("URL management", () => {
 	});
 
 	it("Copy URL to Clipboard", async () => {
-		const cm = new ClipboardManager();
 		await cm.copy("");
 
 		const result = await runCLIForTest(["-k", "github", "copy"]);
@@ -139,6 +145,14 @@ describe("URL management", () => {
 		expect(result.rawStdout).toContain("github");
 		expect(result.rawStdout).toContain("https://test.com/");
 		expect(copiedContent).toBe("https://test.com/");
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("Delete URL", async () => {
+		const result = await runCLIForTest(["-k", "github", "delete", "--force"]);
+
+		expect(result.rawStdout).toContain("Snapshot Deleted Successfully");
+		expect(result.rawStdout).toContain("github");
 		expect(result.exitCode).toBe(0);
 	});
 });

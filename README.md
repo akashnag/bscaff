@@ -39,6 +39,80 @@ View available commands:
 bscaff --help
 ```
 
+## Building from Source
+
+Follow these steps to build and run the CLI locally from the source code.
+
+### Prerequisites
+
+Ensure you have the following installed on your system:
+* **Node.js**: `v22.11.0` or higher
+* **npm** (or `pnpm` / `yarn`)
+
+### 1. Clone the Repository
+
+Clone the project repository to your local machine:
+
+```bash
+git clone https://github.com/akashnag/bscaff.git
+cd bscaff
+```
+
+### 2. Install Dependencies
+
+Install the required package dependencies:
+
+```bash
+npm install
+```
+
+### 3. Build the Project
+
+Compile the TypeScript source files into executable JavaScript:
+
+```bash
+npm run build
+```
+
+This will output the compiled code into the target distribution directory (`dist`).
+
+---
+
+### Running and Testing Locally
+
+#### Option A: Link the CLI Globally (Recommended)
+To run your built CLI command from anywhere in your terminal, create a global symlink:
+
+```bash
+npm link
+```
+
+Now you can run your CLI directly using its command name:
+
+```bash
+bscaff --help
+```
+
+To remove the link after testing, run:
+
+```bash
+npm unlink -g bscaff
+```
+
+#### Option B: Run Directly with Node
+If you do not wish to link the package globally, execute the compiled entry point directly:
+
+```bash
+node dist/index.js --help
+```
+
+#### Option C: Development Mode (Hot Reloading)
+For active development without building repeatedly:
+
+```bash
+npm run dev
+```
+
 ## Quick Start
 
 ### Save a project

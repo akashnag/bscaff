@@ -54,6 +54,7 @@ export class CLI {
 			// pre-hook
 			.hook("preAction", (thisCommand, actionCommand) => {
 				const options = thisCommand.opts();
+
 				if (options.quiet) {
 					ConsoleIO.setSilentMode();
 				}
@@ -70,6 +71,14 @@ export class CLI {
 						);
 					}
 				}
+			})
+
+			.action(async (options: Record<string, any>, command: Command) => {
+				const retVal = await SaveSnapshotCommands.saveSnippetFromLiveInput(
+					options.key,
+				);
+
+				if (!retVal) throw new Error();
 			});
 
 		this.defineSaveGroup();
@@ -156,7 +165,7 @@ export class CLI {
 		const saveSnippetCommand = saveGroup
 			.command("snippet [path/to/file]")
 			.description(
-				"Save a text/code snippet from a file / clipboard. If flags and path omitted, opens a text-editor for content-input.",
+				"Save a text/code snippet from a file/clipboard. If flags and path omitted, opens a text-editor for content-input.",
 			)
 			.option("--memory", "Copy from clipboard")
 			.option(
