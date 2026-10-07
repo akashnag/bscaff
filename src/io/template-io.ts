@@ -18,6 +18,7 @@ import { Config } from "../core/config.js";
 import { YAMLParseError } from "../types/errors.js";
 import { Template, TemplateQuestion } from "../types/template-types.js";
 import * as FileUtils from "../utils/file-utils.js";
+import { ExtractSnapshotIO } from "./extract-io.js";
 import {
 	ConsoleIO,
 	IOHeaderType,
@@ -204,7 +205,7 @@ export class VerifyTemplateIO extends ConsoleIO {
 	}
 }
 
-export class ExtractTemplateIO extends ConsoleIO {
+export class ExtractTemplateIO extends ExtractSnapshotIO {
 	private activeSpinner: Ora | null = null;
 
 	private _evaluateWhenCondition(
@@ -428,14 +429,6 @@ export class ExtractTemplateIO extends ConsoleIO {
 
 		const tag = chalk.green.bold(" CREATE ");
 		printIndented(`${tag} ${fPath}`);
-	}
-
-	successTemplateExtracted(key: string): void {
-		if (QUIET_MODE) return;
-
-		printHeader("Template Extracted Successfully", IOHeaderType.SUCCESS);
-		printField("Key", key);
-		console.log("");
 	}
 
 	infoInitiatingAllGenerationTasks(eventType: "Pre" | "Post"): void {

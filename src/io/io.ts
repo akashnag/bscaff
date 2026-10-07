@@ -294,9 +294,7 @@ export function printPreview(
 		}
 
 		printIndented(firstHalf.substring(1), indented);
-		console.log("\n");
-		printCentered(`<${lines.length - lineCount} more lines...>`);
-		console.log("\n");
+		printCentered(chalk.yellow(`<${lines.length - lineCount} more lines...>`));
 		printIndented(secondHalf.substring(1), indented);
 	} else {
 		printIndented(lines.join("\n"), indented);
@@ -405,6 +403,7 @@ export class ConsoleIO {
 
 		if (type === "Snippet" && data) {
 			const lines = MiscUtils.splitContentByLines(data);
+			console.log("");
 			printLinedHeader("Snippet Preview", true);
 			printPreview(lines, true);
 			printSeparatorLine(true);
@@ -475,16 +474,20 @@ export class ConsoleIO {
 		printIndented("bscaff list\n");
 	}
 
-	errorInvalidFile(key: string, record: SnapshotRecord, relPath: string): void {
-		printHeader("File Does Not Exist");
+	errorInvalidFileOrDirectory(
+		key: string,
+		record: SnapshotRecord,
+		relPath: string,
+	): void {
+		printHeader(`File/Directory Does Not Exist`);
 
-		printField("Error", "The requested file does not exist");
+		printField("Error", `The requested file/directory does not exist`);
 		printField("Key", key);
-		printField("File", relPath);
+		printField("Path", relPath);
 
 		console.log("\nTo resolve:");
 		printIndented(
-			"Check the snapshot structure to ensure you are requesting the correct file path:",
+			`Check the snapshot structure to ensure you are requesting the correct path:`,
 		);
 		printIndented(`  bscaff list -k ${key}\n`);
 	}

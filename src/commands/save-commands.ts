@@ -258,7 +258,16 @@ export async function saveDirectory(
 		return false;
 	}
 
-	if (!(await TreeUtils.copyTree(dirPath, destPath, result.structure))) {
+	if (
+		!(await TreeUtils.copyTree(
+			dirPath,
+			destPath,
+			result.structure,
+			"overwrite",
+			undefined,
+			false,
+		))
+	) {
 		io.errorCopyingDirectoryTree(dirPath, destPath);
 		return false;
 	}

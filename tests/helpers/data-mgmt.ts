@@ -15,9 +15,18 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import * as FileUtils from "../../src/utils/file-utils.js";
+
 // Set of tracked test directories for cleanup
 const trackedDirs: Set<string> = new Set();
 export const TEST_DIR = path.join(os.tmpdir(), "bscaff-test-sandbox");
+export const TEST_HOME_DIR_NAME = ".home";
+export const TEST_HOME_DIR = path.join(TEST_DIR, TEST_HOME_DIR_NAME);
+export const TEST_DB_FILE = path.join(
+	TEST_DIR,
+	TEST_HOME_DIR_NAME,
+	".bscaff/db.json",
+);
 
 /**
  * Recursively cleans up a directory with retry logic to avoid file lock issues.
@@ -44,7 +53,7 @@ export async function cleanupDir(dirPath: string): Promise<void> {
  *
  * @returns The absolute path of the created directory
  */
-export async function createTestDir(): Promise<string> {
+async function createTestDir(): Promise<string> {
 	await cleanupDir(TEST_DIR);
 	await fs.mkdir(TEST_DIR, { recursive: true });
 	const homeDir = path.join(TEST_DIR, ".home");
@@ -56,10 +65,82 @@ export async function createTestDir(): Promise<string> {
 /**
  * Cleans up all tracked temporary directories.
  */
-export async function cleanupTestDir(): Promise<void> {
+async function cleanupTestDir(): Promise<void> {
 	await cleanupDir(TEST_DIR);
 	for (const dir of trackedDirs) {
 		await cleanupDir(dir);
 	}
 	trackedDirs.clear();
+}
+
+export async function teardownTestEnvironment(): Promise<void> {
+	await cleanupTestDir();
+}
+
+export async function setupTestEnvironment(): Promise<{
+	sourceTreeDir: string;
+	sourceFilesDir: string;
+	extractTargetDir: string;
+	partialExtractTargetDir: string;
+}> {
+	await teardownTestEnvironment();
+	await createTestDir();
+
+	const sourceTreeDir: string = path.join(TEST_DIR, "sample-tree");
+	const sourceFilesDir: string = path.join(TEST_DIR, "sample-files");
+	const extractTargetDir: string = path.join(TEST_DIR, "extracted-output");
+	const partialExtractTargetDir: string = path.join(
+		TEST_DIR,
+		"partial-extract",
+	);
+
+	await fs.mkdir(path.join(sourceTreeDir, "src"), { recursive: true });
+	await fs.writeFile(
+		path.join(sourceTreeDir, "src", "index.ts"),
+		'console.log("Hello Tree");',
+	);
+	await fs.writeFile(path.join(sourceTreeDir, "README.md"), "# Tree Project");
+
+	await fs.mkdir(sourceFilesDir, { recursive: true });
+	await fs.writeFile(
+		path.join(sourceFilesDir, "config.json"),
+		'{"env": "test"}',
+	);
+	await fs.writeFile(
+		path.join(sourceFilesDir, "logger.ts"),
+		"export const log = console.log;",
+	);
+
+	return {
+		sourceTreeDir,
+		sourceFilesDir,
+		extractTargetDir,
+		partialExtractTargetDir,
+	};
+}
+
+export function doFilesExist(rootDir: string, relPaths: string[]): boolean {
+	for (let i = 0; i < relPaths.length; ++i) {
+		const p = FileUtils.formPath([rootDir, relPaths[i]]);
+		if (!FileUtils.doesFileExist(p)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+export function doNoneOfTheFilesExist(
+	rootDir: string,
+	relPaths: string[],
+): boolean {
+	for (let i = 0; i < relPaths.length; ++i) {
+		const p = FileUtils.formPath([rootDir, relPaths[i]]);
+		if (FileUtils.doesFileExist(p)) {
+			console.log(`File exists: ${p}`);
+			return false;
+		}
+	}
+
+	return true;
 }

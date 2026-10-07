@@ -17,7 +17,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa, type Options } from "execa";
-import { TEST_DIR } from "./data-mgmt";
+import { TEST_DIR, TEST_HOME_DIR_NAME } from "./data-mgmt";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,7 +102,7 @@ function executeCLI(
 	options: Options = {},
 ): ReturnType<typeof execa> {
 	const { command, argsPrefix } = getCLICommand();
-	const defaultHome = path.join(cwd, ".home");
+	const defaultHome = path.join(cwd, TEST_HOME_DIR_NAME);
 	const env: Record<string, string> = {
 		...(process.env as Record<string, string>),
 		HOME: defaultHome,
@@ -122,7 +122,7 @@ export async function runCLIForTest(
 	args: string[],
 ): Promise<CLIExecutionResult> {
 	return await runCLI(args, {
-		homeDir: path.join(TEST_DIR, ".home"),
+		homeDir: path.join(TEST_DIR, TEST_HOME_DIR_NAME),
 		cwd: TEST_DIR,
 	});
 }

@@ -302,16 +302,19 @@ export function getRelativePath(
 // Given a path to a file, returns the extension of that file
 export function getFileType(
 	filePath: string,
-	includeDot: boolean = true,
+	includeDot: boolean = false,
 	defaultExtension: string = "txt",
 ): string {
 	const pos = filePath.lastIndexOf(".");
-	if (pos < 0) {
-		return (
-			(includeDot && defaultExtension.trim().length > 0 ? "." : "") +
-			defaultExtension
+	if (defaultExtension.startsWith("."))
+		defaultExtension = defaultExtension.substring(
+			0,
+			defaultExtension.length - 1,
 		);
+
+	if (pos < 0) {
+		return (includeDot ? "." : "") + defaultExtension;
 	} else {
-		return filePath.substring(pos);
+		return filePath.substring(includeDot ? pos : pos + 1);
 	}
 }

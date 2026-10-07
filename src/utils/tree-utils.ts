@@ -13,9 +13,9 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Settings } from "../core/settings.js";
-import { ConsoleIO } from "../io/io.js";
 import { CreateFileIO } from "../io/create-io.js";
 import { ExtractSnapshotIO } from "../io/extract-io.js";
+import { ConsoleIO } from "../io/io.js";
 import { SaveASCIITreeIO } from "../io/save-io.js";
 import { ExtractTemplateIO } from "../io/template-io.js";
 import { FileTreeNode } from "../types/types.js";
@@ -391,41 +391,6 @@ export async function extractStructureFromDirectory(
 	};
 }
 
-export function drawFileTree(nodes: FileTreeNode[]): string {
-	if (nodes.length === 0) return "";
-
-	const lines: string[] = [];
-
-	for (let i = 0; i < nodes.length; i++) {
-		const node = nodes[i];
-		const currentLevel = node.level;
-
-		// Determine if the current node is the last sibling at its depth/parent context
-		const isLastChild = isLastSibling(nodes, i);
-
-		if (currentLevel === 0) {
-			// Root items do not need leading vertical lines or branches
-			lines.push(node.name);
-		} else {
-			let indent = "";
-
-			// Build vertical guidelines for ancestor levels (from level 1 up to level - 1)
-			for (let depth = 1; depth < currentLevel; depth++) {
-				const hasMoreSiblingsAtDepth = hasSiblingBelow(nodes, i, depth);
-				indent += hasMoreSiblingsAtDepth ? "│   " : "    ";
-			}
-
-			// Append appropriate branch symbol
-			const branch = isLastChild ? "└── " : "├── ";
-			lines.push(
-				`${indent}${branch}${node.name}${node.type == "dir" ? "/" : ""}`,
-			);
-		}
-	}
-
-	return lines.join("\n");
-}
-
 export function getFileListFromStructure(nodes: FileTreeNode[]): string {
 	const list = [];
 	for (let i = 0; i < nodes.length; ++i) {
@@ -539,23 +504,6 @@ export async function createTree(
 	return true;
 }
 
-export function sortTreeStructure(nodes: FileTreeNode[]): FileTreeNode[] {
-	return [...nodes].sort((a, b) => {
-		// Sort by hierarchy level ascending (root/higher order first)
-		if (a.level !== b.level) {
-			return a.level - b.level;
-		}
-
-		// Sort directories before files at the same level
-		if (a.type !== b.type) {
-			return a.type === "dir" ? -1 : 1;
-		}
-
-		// Optional: Sort alphabetically by name for deterministic ordering
-		return a.name.localeCompare(b.name);
-	});
-}
-
 // WARNING: use this function only for saving snapshots, never for extracting them
 export async function copyTree(
 	sourceDir: string,
@@ -563,15 +511,24 @@ export async function copyTree(
 	nodes: FileTreeNode[],
 	overwriteBehaviour: "fail" | "prompt" | "skip" | "overwrite" = "prompt",
 	io?: ExtractTemplateIO,
+	nestSourceDir: boolean = true,
 ): Promise<boolean> {
 	try {
-		// Resolve source and derive target directory name (e.g., "my-app")
+		// Resolve source path
 		const absSourceDir = FileUtils.resolvePath(sourceDir);
-		const sourceDirName =
-			absSourceDir.split(/[/\\]/).filter(Boolean).pop() || "";
-		const targetBaseDir = FileUtils.resolvePath(`${destPath}/${sourceDirName}`);
 
-		// Create the target parent directory
+		// Target base directory depends on nestSourceDir flag
+		let targetBaseDir: string;
+
+		if (nestSourceDir) {
+			const sourceDirName =
+				absSourceDir.split(/[/\\]/).filter(Boolean).pop() || "";
+			targetBaseDir = FileUtils.resolvePath(`${destPath}/${sourceDirName}`);
+		} else {
+			targetBaseDir = FileUtils.resolvePath(destPath);
+		}
+
+		// Create the target directory
 		FileUtils.createDirectory(targetBaseDir);
 
 		// Sort nodes by level/path depth to ensure parent directories are created before files
@@ -591,7 +548,6 @@ export async function copyTree(
 			// Check if file already exists at destination
 			let destExists = false;
 			try {
-				// If resolve/access check reveals file exists
 				destExists = FileUtils.doesFileExist(destNodePath);
 			} catch {
 				destExists = false;
@@ -632,6 +588,104 @@ export async function copyTree(
 	}
 }
 
+export function getSubTreeInfo(
+	nodes: FileTreeNode[],
+	relPath: string,
+): {
+	size: { dirCount: number; fileCount: number };
+	tree: string;
+	nodes: FileTreeNode[];
+} {
+	let fileCount = 0,
+		dirCount = 0;
+	const subNodes = [];
+
+	for (let i = 0; i < nodes.length; ++i) {
+		if (FileUtils.isPathChild(relPath, nodes[i].path, nodes[i].type)) {
+			subNodes.push(nodes[i]);
+			if (nodes[i].type === "dir") ++dirCount;
+			else ++fileCount;
+		}
+	}
+
+	return {
+		size: { fileCount, dirCount },
+		tree: drawFileTree(subNodes),
+		nodes: subNodes,
+	};
+}
+
+// ---------------------- Tree ordering and drawing ---------------------
+
+export function sortTreeStructure(nodes: FileTreeNode[]): FileTreeNode[] {
+	return [...nodes].sort((a, b) => {
+		// Normalize paths: remove leading slashes and split by '/'
+		const segsA = a.path.replace(/^\//, "").split("/").filter(Boolean);
+		const segsB = b.path.replace(/^\//, "").split("/").filter(Boolean);
+
+		const minLen = Math.min(segsA.length, segsB.length);
+
+		for (let i = 0; i < minLen; i++) {
+			const segA = segsA[i];
+			const segB = segsB[i];
+
+			if (segA !== segB) {
+				// If we are at the end of A's path, A is the parent folder of B -> A comes first
+				const isEndOfA = i === segsA.length - 1;
+				const isEndOfB = i === segsB.length - 1;
+
+				// Determine if segA / segB represent directories at this depth level
+				const isDirA = !isEndOfA || a.type === "dir";
+				const isDirB = !isEndOfB || b.type === "dir";
+
+				// Directories come before files at the same level
+				if (isDirA !== isDirB) {
+					return isDirA ? -1 : 1;
+				}
+
+				// Otherwise sort alphabetically by segment name
+				return segA.localeCompare(segB);
+			}
+		}
+
+		// Parent path comes before child path (e.g. /src before /src/index.ts)
+		return segsA.length - segsB.length;
+	});
+}
+
+export function drawFileTree(rawNodes: FileTreeNode[]): string {
+	if (rawNodes.length === 0) return "";
+
+	const nodes = sortTreeStructure(rawNodes);
+	const lines: string[] = [];
+
+	for (let i = 0; i < nodes.length; i++) {
+		const node = nodes[i];
+		const currentLevel = node.level;
+
+		// Append trailing slash for directories
+		const suffix = node.type === "dir" ? "/" : "";
+
+		if (currentLevel === 0) {
+			lines.push(`${node.name}${suffix}`);
+		} else {
+			let indent = "";
+
+			// Build vertical guidelines for ancestor levels (from level 1 up to level - 1)
+			for (let depth = 1; depth < currentLevel; depth++) {
+				const hasMoreSiblingsAtDepth = hasSiblingBelow(nodes, i, depth);
+				indent += hasMoreSiblingsAtDepth ? "│   " : "    ";
+			}
+
+			const isLastChild = isLastSibling(nodes, i);
+			const branch = isLastChild ? "└── " : "├── ";
+			lines.push(`${indent}${branch}${node.name}${suffix}`);
+		}
+	}
+
+	return lines.join("\n");
+}
+
 // ------------------------- [private] --------------------------
 
 function isLastSibling(nodes: FileTreeNode[], currentIndex: number): boolean {
@@ -640,14 +694,14 @@ function isLastSibling(nodes: FileTreeNode[], currentIndex: number): boolean {
 	for (let j = currentIndex + 1; j < nodes.length; j++) {
 		const nextLevel = nodes[j].level;
 
-		// Higher level (numerically smaller) means we exited this parent's scope
+		// Ascended to a parent or higher level ancestor -> no more siblings at currentLevel
 		if (nextLevel < currentLevel) return true;
 
-		// Same level found means another sibling exists
+		// Found another item at the exact same depth -> sibling exists
 		if (nextLevel === currentLevel) return false;
 	}
 
-	return true; // Reached end of tree without finding another sibling
+	return true;
 }
 
 function hasSiblingBelow(
@@ -658,8 +712,14 @@ function hasSiblingBelow(
 	for (let j = currentIndex + 1; j < nodes.length; j++) {
 		const level = nodes[j].level;
 
-		if (level < targetDepth) return false;
+		// Skip deeper items nested within the current ancestor scope
+		if (level > targetDepth) continue;
+
+		// Exact match at target depth means a sibling/continuation exists below
 		if (level === targetDepth) return true;
+
+		// Ascended above the target depth -> current target ancestor tree has ended
+		if (level < targetDepth) return false;
 	}
 
 	return false;

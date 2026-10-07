@@ -3,9 +3,14 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	test: {
 		fileParallelism: false,
+		silent: false,
 
 		// Only search for test files inside the top-level /tests folder
-		include: ["tests/end-to-end-tests/*.spec.ts"],
+		include: [
+			"tests/end-to-end-tests/url-mgmt.spec.ts",
+			"tests/end-to-end-tests/snippet-mgmt.spec.ts",
+			"tests/end-to-end-tests/tree-and-files-mgmt.spec.ts",
+		],
 
 		// Expressly exclude build folders, node_modules, or fixtures
 		exclude: ["**/node_modules/**", "**/dist/**", "tests/helpers/**"],

@@ -187,25 +187,24 @@ export class Store {
 			return false;
 		}
 
-		const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
+		const index =
+			SnapshotUtils.getRecordStructureIndexOfFileOrDirectoryFromRelativePath(
+				record,
+				relPath,
+			);
+		if (index < 0) return false;
 
-		const hasDir = SnapshotUtils.doesSnapshotContainDirectory(record, relPath);
+		const item = record.structure[index];
 
-		if (!hasFile && !hasDir) {
-			return false;
-		}
-
-		const structure = MiscUtils.deepClone(record.structure);
-		if (
-			!SnapshotUtils.deleteFileOrDirectoryUnderSnapshot(
+		const { structure, delFileCount, delDirCount } =
+			SnapshotUtils.deleteFileOrDirectoryUnderSnapshot(
 				key,
 				relPath,
-				hasFile ? "file" : "dir",
-				structure,
-			)
-		) {
-			return false;
-		}
+				item.type,
+				record.structure,
+			);
+
+		if (delFileCount + delDirCount === 0) return false;
 
 		return this.updateStructure(key, structure);
 	}

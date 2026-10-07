@@ -30,7 +30,7 @@ import * as TreeUtils from "../utils/tree-utils.js";
 import * as TemplateCommands from "./template-commands.js";
 
 // --------------------------------------------------------
-// copy [path] [--as-tree]
+// copy [rel-path] [--as-tree]
 // --------------------------------------------------------
 export async function copyToClipboard(
 	key: string | undefined,
@@ -84,42 +84,62 @@ export async function copyToClipboard(
 		case SnapshotType.Files:
 		case SnapshotType.Tree:
 			if (relPath) {
-				if (asTree) {
-					io.warnOptionIgnored("--as-tree");
-				}
-
-				const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
-				if (!hasFile) {
-					io.errorInvalidFile(key, record, relPath);
+				if (!record.structure) {
+					io.errorGeneric("copyToClipboard::1");
 					return false;
 				}
 
-				const file = SnapshotUtils.getFileUnderSnapshot(key, relPath);
-				if (!FileUtils.doesFileExist(file)) {
-					io.errorInvalidFile(key, record, relPath);
+				const index =
+					SnapshotUtils.getRecordStructureIndexOfFileOrDirectoryFromRelativePath(
+						record,
+						relPath,
+					);
+
+				if (index < 0) {
+					io.errorInvalidFileOrDirectory(key, record, relPath);
 					return false;
 				}
 
-				const content = await FileUtils.readTextFile(file);
-				if (!content) {
-					io.errorReadingSnapshotFile(key, record.type, relPath);
-					return false;
-				}
+				if (record.structure[index].type === "file") {
+					const file = SnapshotUtils.getFileUnderSnapshot(key, relPath);
+					if (!FileUtils.doesFileExist(file)) {
+						io.errorInvalidFileOrDirectory(key, record, relPath);
+						return false;
+					}
 
-				previewContent = content;
-				await cm.copy(content);
+					const content = await FileUtils.readTextFile(file);
+					if (!content) {
+						io.errorReadingSnapshotFile(key, record.type, relPath);
+						return false;
+					}
+
+					previewContent = content;
+					await cm.copy(content);
+				} else {
+					const { tree, nodes } = TreeUtils.getSubTreeInfo(
+						record.structure,
+						relPath,
+					);
+
+					if (asTree) {
+						previewContent = tree;
+						await cm.copy(tree);
+					} else {
+						const fileList = TreeUtils.getFileListFromStructure(nodes);
+						await cm.copy(fileList);
+					}
+				}
 			} else {
 				if (!asTree || record.type == SnapshotType.Files) {
 					const fileList = TreeUtils.getFileListFromStructure(
 						record.structure!,
 					);
 					await cm.copy(fileList);
-					break;
+				} else {
+					const tree = TreeUtils.drawFileTree(record.structure!);
+					previewContent = tree;
+					await cm.copy(tree);
 				}
-
-				const tree = TreeUtils.drawFileTree(record.structure!);
-				previewContent = tree;
-				await cm.copy(tree);
 			}
 
 			break;
@@ -246,13 +266,13 @@ export async function openSnapshotReadOnly(
 			const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
 
 			if (!hasFile) {
-				io.errorInvalidFile(key, record, relPath);
+				io.errorInvalidFileOrDirectory(key, record, relPath);
 				return false;
 			}
 
 			const file = SnapshotUtils.getFileUnderSnapshot(key, relPath);
 			if (!FileUtils.doesFileExist(file)) {
-				io.errorInvalidFile(key, record, relPath);
+				io.errorInvalidFileOrDirectory(key, record, relPath);
 				return false;
 			}
 
@@ -360,9 +380,15 @@ export async function extract(
 		parameterValues = io.promptForParameters(record.parameters);
 	}
 
+	// create target root directory
+	if (!FileUtils.doesDirectoryExist(toPath)) {
+		FileUtils.createDirectory(toPath);
+		io.infoDirectoryCreate(toPath);
+	}
+
 	switch (record.type) {
 		case SnapshotType.Files:
-			return await extractFiles(
+			return extractFiles(
 				key,
 				record,
 				dryRun,
@@ -371,9 +397,10 @@ export async function extract(
 				toPath,
 				parameterValues!,
 			);
+			break;
 
 		case SnapshotType.Tree:
-			return await extractTree(
+			return extractTree(
 				key,
 				record,
 				dryRun,
@@ -382,15 +409,17 @@ export async function extract(
 				toPath,
 				parameterValues!,
 			);
+			break;
 
 		case SnapshotType.Template:
-			return await TemplateCommands.extractTemplate(
+			return TemplateCommands.extractTemplate(
 				key,
 				record,
 				dryRun,
 				overwriteBehaviour,
 				toPath,
 			);
+			break;
 
 		default:
 			io.errorExtractionUnsupported(record.type);
@@ -522,6 +551,7 @@ async function extractFiles(
 			return false;
 	}
 
+	io.successExtractionCompleted(SnapshotType.Files);
 	return true;
 }
 
@@ -589,5 +619,6 @@ async function extractTree(
 		}
 	}
 
+	io.successExtractionCompleted(SnapshotType.Tree);
 	return true;
 }

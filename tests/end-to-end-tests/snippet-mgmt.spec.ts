@@ -18,9 +18,9 @@ import { ClipboardManager } from "../../src/core/clipboard.js";
 import * as FileUtils from "../../src/utils/file-utils.js";
 import { runCLIForTest } from "../helpers/cli-runner.js";
 import {
-	cleanupTestDir,
-	createTestDir,
+	setupTestEnvironment,
 	TEST_DIR,
+	teardownTestEnvironment,
 } from "../helpers/data-mgmt.js";
 
 describe("Snippet management", () => {
@@ -29,11 +29,11 @@ describe("Snippet management", () => {
 	const RANDOM_CODE = `print("Hello World!")`;
 
 	beforeAll(async () => {
-		await createTestDir();
+		await setupTestEnvironment();
 	});
 
 	afterAll(async () => {
-		await cleanupTestDir();
+		await teardownTestEnvironment();
 	});
 
 	it("Save Snippet from clipboard", async () => {
@@ -46,7 +46,7 @@ describe("Snippet management", () => {
 			"--tags",
 			"latin",
 			"snippet",
-			"--memory",
+			"--clipboard",
 		]);
 
 		await cm.copy("");

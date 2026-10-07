@@ -93,7 +93,7 @@ export function createTempFile(
 		(+new Date()).toString() +
 		"_" +
 		getRandomInt(1000, 9999).toString() +
-		(fileType.startsWith(".") ? "" : ".") +
+		"." +
 		fileType;
 	const path = Config.getStoragePath([Config.TEMP_DIRECTORY, fileName]);
 	if (content) {

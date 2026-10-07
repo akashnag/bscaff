@@ -15,8 +15,11 @@ import chalk from "chalk";
 import { Config } from "../core/config.js";
 import { Store } from "../core/store.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
+import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
+import * as TreeUtils from "../utils/tree-utils.js";
+
 import { drawFileTree } from "../utils/tree-utils.js";
 import {
 	ConsoleIO,
@@ -73,7 +76,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 		printErrorFooter();
 	}
 
-	errorFileFetchingNotPermittedForSnapshotType(
+	errorFileOrDirectoryFetchingNotPermittedForSnapshotType(
 		key: string,
 		sType: SnapshotType,
 		relPath: string,
@@ -84,14 +87,14 @@ export class ListSnapshotsIO extends ConsoleIO {
 			"Error",
 			"The requested operation is not permitted for this snapshot",
 		);
-		printField("Operation", "Read file under snapshot");
+		printField("Operation", "Read file/directory under snapshot");
 		printField("Key", key);
 		printField("Type", sType.toString());
 		printField("File", relPath);
 
 		console.log("\nDetails:");
 		printIndented(
-			`Reading file under snapshot is only permitted for: ${SnapshotType.Template} | ${SnapshotType.Tree} | ${SnapshotType.Files}`,
+			`Reading file/directory under snapshot is only permitted for: ${SnapshotType.Template} | ${SnapshotType.Tree} | ${SnapshotType.Files}`,
 		);
 	}
 
@@ -320,14 +323,15 @@ export class ListSnapshotsIO extends ConsoleIO {
 		const stats = SnapshotUtils.getStatsFromStructure(record.structure!);
 		printField(
 			"Size",
-			`${stats.fileCount} files, ${stats.dirCount} directories (${stats.sizeInBytes} total)`,
+			`${stats.fileCount} files, ${stats.dirCount} directories (${MiscUtils.formatFileSize(stats.sizeInBytes)} total)`,
 		);
 
 		if (record.description) {
 			printField("Desc.", record.description);
 		}
 
-		printLinedHeader("Files");
+		console.log("");
+		printLinedHeader("Contents");
 		printPreview(
 			MiscUtils.splitContentByLines(drawFileTree(record.structure!)),
 		);
@@ -400,6 +404,47 @@ export class ListSnapshotsIO extends ConsoleIO {
 		);
 		printIndented(
 			`\nOr, extract this file to a path:\n  bscaff -k ${key} \\\n    extract <to/path>\\\n    --partial ${relPath}`,
+		);
+	}
+
+	displaySubTreeFromSnapshot(
+		key: string,
+		record: SnapshotRecord,
+		relPath: string,
+	): void {
+		printHeader("Snapshot Directory Contents", IOHeaderType.INFO);
+
+		printField("Key", key);
+		printField("Type", record.type.toString());
+		printField("Updated", record.modifiedAt!.toLocaleString());
+
+		if (record.tags && record.tags.length > 0) {
+			printField("Tags", "#" + record.tags.join(" #"));
+		}
+
+		printField("Directory", relPath);
+
+		const { size, tree } = TreeUtils.getSubTreeInfo(record.structure!, relPath);
+
+		printField(
+			"Size",
+			`${size.fileCount} files, ${size.dirCount} sub-directories`,
+		);
+
+		if (record.description) {
+			printField("Desc.", record.description);
+		}
+
+		printLinedHeader("Structure");
+		printPreview(MiscUtils.splitContentByLines(tree));
+		printSeparatorLine();
+
+		console.log("\nQuick Actions:");
+		printBullet(
+			`Copy dir structure to clipboard : bscaff -k ${key} copy ${relPath}`,
+		);
+		printIndented(
+			`\nOr, extract this file to a path :\n  bscaff -k ${key} \\\n    extract <to/path>\\\n    --partial ${relPath}`,
 		);
 	}
 }

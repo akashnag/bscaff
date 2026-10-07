@@ -186,62 +186,6 @@ export async function readContentFromSnapshotFile(
 	return await FileUtils.readTextFile(getFileUnderSnapshot(key, filePath));
 }
 
-export function copyTriggerScripts(
-	key: string,
-	preExtractScriptPath: string | null = null,
-	postExtractScriptPath: string | null = null,
-): {
-	type: "path" | "content";
-	preScript: string | null;
-	postScript: string | null;
-} {
-	const snippetDir = getSnapshotDirectory(key);
-	const retVal: {
-		type: "path" | "content";
-		preScript: string | null;
-		postScript: string | null;
-	} = {
-		type: "path",
-		preScript: null,
-		postScript: null,
-	};
-
-	// resolve file paths to absolute paths
-	if (preExtractScriptPath) {
-		preExtractScriptPath = FileUtils.resolvePath(preExtractScriptPath);
-		if (!FileUtils.doesFileExist(preExtractScriptPath)) {
-			throw new ScriptMissingError("pre", preExtractScriptPath);
-		}
-	}
-
-	if (postExtractScriptPath) {
-		postExtractScriptPath = FileUtils.resolvePath(postExtractScriptPath);
-		if (!FileUtils.doesFileExist(postExtractScriptPath)) {
-			throw new ScriptMissingError("post", postExtractScriptPath);
-		}
-	}
-
-	if (preExtractScriptPath) {
-		const fileType = FileUtils.getFileType(preExtractScriptPath, true, "");
-		FileUtils.copyFile(
-			preExtractScriptPath,
-			FileUtils.formPath([snippetDir, `pre-script${fileType}`]),
-		);
-		retVal.preScript = `pre-script${fileType}`;
-	}
-
-	if (postExtractScriptPath) {
-		const fileType = FileUtils.getFileType(postExtractScriptPath, true, "");
-		FileUtils.copyFile(
-			postExtractScriptPath,
-			FileUtils.formPath([snippetDir, `post-script${fileType}`]),
-		);
-		retVal.postScript = `post-script${fileType}`;
-	}
-
-	return retVal;
-}
-
 export async function computeSnapshotSize(
 	key: string,
 	record: SnapshotRecord,
@@ -320,27 +264,49 @@ export function deleteFileOrDirectoryUnderSnapshot(
 	relPath: string,
 	pType: "file" | "dir",
 	structure: FileTreeNode[],
-): boolean {
+): { structure: FileTreeNode[]; delFileCount: number; delDirCount: number } {
 	const item = getFileUnderSnapshot(key, relPath);
 
+	// assume the file/dir exists
 	if (pType === "file") {
-		if (!FileUtils.doesFileExist(item)) return false;
 		FileUtils.deleteFile(item);
 	} else {
-		if (!FileUtils.doesDirectoryExist(item)) return false;
 		FileUtils.deleteDirectory(item);
 	}
 
+	const newStruct = [];
+	let fileCount = 0,
+		dirCount = 0;
+
 	for (let i = 0; i < structure.length; ++i) {
-		if (FileUtils.areRelativePathsSame(relPath, structure[i].path)) {
-			if (structure[i].type === pType) {
-				structure.splice(i, 1);
-				return true;
-			}
+		let skip = false;
+
+		if (
+			pType === "file" &&
+			structure[i].type === "file" &&
+			FileUtils.areRelativePathsSame(relPath, structure[i].path)
+		) {
+			skip = true;
+		} else if (
+			pType === "dir" &&
+			FileUtils.isPathChild(relPath, structure[i].path, structure[i].type)
+		) {
+			skip = true;
+		}
+
+		if (!skip) {
+			newStruct.push(structure[i]);
+		} else {
+			if (structure[i].type === "file") ++fileCount;
+			else ++dirCount;
 		}
 	}
 
-	return false;
+	return {
+		structure: newStruct,
+		delFileCount: fileCount,
+		delDirCount: dirCount,
+	};
 }
 
 export function getStatsFromStructure(nodes: FileTreeNode[]): {
@@ -429,4 +395,18 @@ export async function copyFilesToSnapshotDirectory(
 		parameters: Array.from(parameters),
 		stats,
 	};
+}
+
+export function getRecordStructureIndexOfFileOrDirectoryFromRelativePath(
+	record: SnapshotRecord,
+	relPath: string,
+): number {
+	if (!record.structure) return -1;
+	for (let i = 0; i < record.structure.length; ++i) {
+		const node = record.structure[i];
+		if (FileUtils.areRelativePathsSame(node.path, relPath)) {
+			return i;
+		}
+	}
+	return -1;
 }

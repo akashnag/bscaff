@@ -191,4 +191,10 @@ export class ExtractSnapshotIO extends ConsoleIO {
 		const tag = chalk.bgYellow.black.bold(" SKIP ");
 		printIndented(`${tag} ${tPath}/`);
 	}
+
+	successExtractionCompleted(sType: SnapshotType): void {
+		if (QUIET_MODE) return;
+
+		printHeader(`${sType} Extracted Successfully!\n`, IOHeaderType.SUCCESS);
+	}
 }

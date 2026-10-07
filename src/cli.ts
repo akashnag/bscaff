@@ -72,7 +72,6 @@ export class CLI {
 					}
 				}
 			})
-
 			.action(async (options: Record<string, any>, command: Command) => {
 				const retVal = await SaveSnapshotCommands.saveSnippetFromLiveInput(
 					options.key,
@@ -163,11 +162,11 @@ export class CLI {
 			[Save snippet from memory]	--> bscaff -k react-create-component save snippet --type=tsx
 		*/
 		const saveSnippetCommand = saveGroup
-			.command("snippet [path/to/file]")
+			.command("snippet [path]")
 			.description(
 				"Save a text/code snippet from a file/clipboard. If flags and path omitted, opens a text-editor for content-input.",
 			)
-			.option("--memory", "Copy from clipboard")
+			.option("-c, --clipboard", "Copy from clipboard")
 			.option(
 				"--type <file-type>",
 				"If to be copied from clipboard, this signals the type of the code/text",
@@ -182,13 +181,13 @@ export class CLI {
 					const parentOpts = command.parent?.opts();
 
 					let retVal: boolean = false;
-					if (options.memory || path) {
+					if (options.clipboard || path) {
 						retVal = await SaveSnapshotCommands.saveSnippet(
 							globalOpts.key,
 							parentOpts?.desc,
 							parentOpts?.tags,
 							options.type,
-							options.memory,
+							options.clipboard,
 							path,
 						);
 					} else {

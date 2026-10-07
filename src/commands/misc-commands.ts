@@ -217,7 +217,7 @@ export async function updateFileContent(
 
 	const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
 	if (!hasFile) {
-		io.errorInvalidFile(key, record, relPath);
+		io.errorInvalidFileOrDirectory(key, record, relPath);
 		return false;
 	}
 
@@ -285,13 +285,17 @@ export async function deleteSnapshotOrFile(
 		case SnapshotType.Tree:
 			let success = false;
 			if (relPath) {
-				const hasFile = SnapshotUtils.doesSnapshotContainFile(record, relPath);
-				const hasDirectory = SnapshotUtils.doesSnapshotContainDirectory(
-					record,
-					relPath,
-				);
+				if (!record.structure) {
+					io.errorGeneric("deleteSnapshotOrFile::1");
+					return false;
+				}
 
-				if (!hasFile && !hasDirectory) {
+				const index =
+					SnapshotUtils.getRecordStructureIndexOfFileOrDirectoryFromRelativePath(
+						record,
+						relPath,
+					);
+				if (index < 0) {
 					io.errorInvalidFileOrDirectory(key, record, relPath);
 					return false;
 				}

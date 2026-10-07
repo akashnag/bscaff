@@ -16,17 +16,20 @@ import * as path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ClipboardManager } from "../../src/core/clipboard.js";
 import { runCLIForTest } from "../helpers/cli-runner.js";
-import { cleanupTestDir, createTestDir } from "../helpers/data-mgmt.js";
+import {
+	setupTestEnvironment,
+	teardownTestEnvironment,
+} from "../helpers/data-mgmt.js";
 
 describe("URL management", () => {
 	const cm = new ClipboardManager();
 
 	beforeAll(async () => {
-		await createTestDir();
+		await setupTestEnvironment();
 	});
 
 	afterAll(async () => {
-		await cleanupTestDir();
+		await teardownTestEnvironment();
 	});
 
 	it("Save URL", async () => {

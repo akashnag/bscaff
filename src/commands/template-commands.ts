@@ -424,14 +424,14 @@ export async function extractTemplate(
 				io,
 			)
 		) {
-			io.successTemplateExtracted(key);
+			io.successExtractionCompleted(SnapshotType.Template);
 			return true;
 		} else {
 			io.errorTemplateExtractionFailed("POST_GENERATION_TASKS_FAILED");
 			return false;
 		}
 	} else {
-		io.successTemplateExtracted(key);
+		io.successExtractionCompleted(SnapshotType.Template);
 		return true;
 	}
 }

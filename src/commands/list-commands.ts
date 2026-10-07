@@ -86,7 +86,7 @@ export async function list(
 		}
 
 		if (relPath) {
-			return await displaySnapshotFile(io, key, record, relPath);
+			return await displaySnapshotFileOrDirectory(io, key, record, relPath);
 		} else {
 			return await displaySnapshotInfo(io, key, record);
 		}
@@ -154,7 +154,7 @@ export async function search(
 
 // -------------------------- [private] -------------------------------
 
-async function displaySnapshotFile(
+async function displaySnapshotFileOrDirectory(
 	io: ListSnapshotsIO,
 	key: string,
 	record: SnapshotRecord,
@@ -165,25 +165,47 @@ async function displaySnapshotFile(
 		record.type == SnapshotType.Template ||
 		record.type == SnapshotType.Tree
 	) {
-		if (!SnapshotUtils.doesSnapshotContainFile(record, relPath)) {
-			io.errorInvalidFile(key, record, relPath);
+		if (!record.structure) {
+			io.errorGeneric("displaySnapshotFileOrDirectory::1");
 			return false;
 		}
 
-		const content = await SnapshotUtils.readContentFromSnapshotFile(
-			key,
-			relPath,
-		);
+		const index =
+			SnapshotUtils.getRecordStructureIndexOfFileOrDirectoryFromRelativePath(
+				record,
+				relPath,
+			);
 
-		if (content) {
-			io.displayFileFromSnapshot(key, record, relPath, content);
-			return true;
-		} else {
-			io.errorReadingSnapshotFile(key, relPath);
+		if (index < 0) {
+			io.errorInvalidFileOrDirectory(key, record, relPath);
 			return false;
+		}
+
+		const item = record.structure[index];
+
+		if (item.type === "file") {
+			const content = await SnapshotUtils.readContentFromSnapshotFile(
+				key,
+				relPath,
+			);
+
+			if (content) {
+				io.displayFileFromSnapshot(key, record, relPath, content);
+				return true;
+			} else {
+				io.errorReadingSnapshotFile(key, relPath);
+				return false;
+			}
+		} else {
+			io.displaySubTreeFromSnapshot(key, record, relPath);
+			return true;
 		}
 	} else {
-		io.errorFileFetchingNotPermittedForSnapshotType(key, record.type, relPath);
+		io.errorFileOrDirectoryFetchingNotPermittedForSnapshotType(
+			key,
+			record.type,
+			relPath,
+		);
 		return false;
 	}
 }
