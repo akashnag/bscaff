@@ -151,7 +151,7 @@ export async function isTextFile(filePath: string): Promise<boolean> {
 }
 
 export function writeTextFile(filePath: string, content: string): boolean {
-	if (!content) return false;
+	if (content === null || content === undefined) return false;
 	try {
 		fs.writeFileSync(filePath, content, "utf-8");
 		return true;

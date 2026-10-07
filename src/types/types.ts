@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { TemplateSourceType } from "./template-types.js";
+
 export type UUID = string & { readonly __brand: unique symbol };
 
 export enum SnapshotType {
@@ -51,9 +53,10 @@ export interface SnapshotRecord {
 	modifiedAt?: Date;
 
 	// valid only for Template (and only for those with source=git)
-	gitRepoSource?: {
-		url: string;
-		version: string | undefined;
+	templateSource?: {
+		sourceType: TemplateSourceType;
+		url?: string;
+		version?: string;
 	};
 
 	/* structure is valid only Tree|Template|Files

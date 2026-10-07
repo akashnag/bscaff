@@ -18,6 +18,8 @@ import { ClipboardManager } from "../../src/core/clipboard.js";
 import * as FileUtils from "../../src/utils/file-utils.js";
 import { runCLIForTest } from "../helpers/cli-runner.js";
 import {
+	cleanDir,
+	doFilesExist,
 	setupTestEnvironment,
 	TEST_DIR,
 	teardownTestEnvironment,
@@ -25,19 +27,21 @@ import {
 
 describe("Disk Creation from Clipboard", () => {
 	const cm = new ClipboardManager();
+	let extractTargetDir: string;
 
 	beforeAll(async () => {
-		await setupTestEnvironment();
+		({ extractTargetDir } = await setupTestEnvironment());
 	});
 
 	afterAll(async () => {
 		await teardownTestEnvironment();
 	});
 
-	/*
 	it("Create file on disk from clipboard content", async () => {
+		cleanDir(extractTargetDir);
+
 		const fileContent = 'export const APP_NAME = "BScaff";';
-		const targetFilePath = path.join(TEST_DIR, "constants.ts");
+		const targetFilePath = path.join(extractTargetDir, "constants.ts");
 
 		await cm.copy(fileContent);
 
@@ -53,20 +57,21 @@ describe("Disk Creation from Clipboard", () => {
 	});
 
 	it("Create directory tree on disk from ASCII clipboard content", async () => {
+		cleanDir(extractTargetDir);
+
 		const asciiTree = `
 my-app/
 ├── src/
 │   └── main.ts
 └── README.md
 `;
-		const targetTreePath = path.join(TEST_DIR, "scaffolded-app");
 
 		await cm.copy(asciiTree);
 
 		const result = await runCLIForTest([
 			"create",
 			"tree",
-			targetTreePath,
+			extractTargetDir,
 			"-e",
 			"overwrite",
 		]);
@@ -75,16 +80,11 @@ my-app/
 
 		expect(result.rawStdout).toContain("Tree Created Successfully");
 		expect(result.exitCode).toBe(0);
-
-		const readmeExists = await FileUtils.doesFileExist(
-			path.join(targetTreePath, "README.md"),
-		);
-		const mainExists = await FileUtils.doesFileExist(
-			path.join(targetTreePath, "src", "main.ts"),
-		);
-
-		expect(readmeExists).toBe(true);
-		expect(mainExists).toBe(true);
+		expect(
+			doFilesExist(extractTargetDir, [
+				"/my-app/README.md",
+				"/my-app/src/main.ts",
+			]),
+		).toBe(true);
 	});
-	*/
 });

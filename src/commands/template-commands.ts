@@ -25,7 +25,7 @@ import {
 	VerifyTemplateIO,
 } from "../io/template-io.js";
 import { YAMLParseError } from "../types/errors.js";
-import { Template } from "../types/template-types.js";
+import { Template, TemplateSourceType } from "../types/template-types.js";
 import { SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
@@ -67,7 +67,7 @@ export async function saveTemplate(
 	SnapshotUtils.createSnapshotDirectory(key);
 	const snapshotDir = SnapshotUtils.getSnapshotDirectory(key);
 	let localDir: string | undefined = undefined;
-	let gitRepoSource = undefined;
+	let templateSource = undefined;
 
 	if (source === "git") {
 		// filePath is a Git URL
@@ -87,16 +87,17 @@ export async function saveTemplate(
 			gitIO.cloneStart(localDir);
 
 			// fetch latest tag
-			gitRepoSource = {
+			templateSource = {
+				sourceType: "git" as TemplateSourceType,
 				url: filePath,
 				version: await getLatestRemoteTag(git, filePath),
 			};
 
 			// clone the latest tag if exists
-			if (gitRepoSource.version) {
+			if (templateSource.version) {
 				await git.clone(filePath, localDir, [
 					"--branch",
-					gitRepoSource.version,
+					templateSource.version,
 					"--single-branch",
 				]);
 			} else {
@@ -174,6 +175,10 @@ export async function saveTemplate(
 		}
 
 		localDir = FileUtils.formPath([snapshotDir, zipRootDir]);
+
+		templateSource = {
+			sourceType: "zip" as TemplateSourceType,
+		};
 	} else if (!source || source == "dir") {
 		filePath = FileUtils.resolvePath(filePath);
 
@@ -196,6 +201,10 @@ export async function saveTemplate(
 		const dirName = FileUtils.getContainingDirectoryOfFile(filePath);
 		FileUtils.copyDirectory(filePath, snapshotDir);
 		localDir = FileUtils.formPath([snapshotDir, dirName]);
+
+		templateSource = {
+			sourceType: "dir" as TemplateSourceType,
+		};
 	} else {
 		// handled by Commander
 		return false;
@@ -247,9 +256,7 @@ export async function saveTemplate(
 		parameters: parameters ?? undefined,
 	};
 
-	if (source === "git") {
-		info.gitRepoSource = gitRepoSource;
-	}
+	info.templateSource = templateSource;
 
 	store.save(info);
 
@@ -354,6 +361,8 @@ export async function extractTemplate(
 			return false;
 		}
 	}
+
+	// TODO: add code to create answers file in generated project
 
 	const excludedDirs: string[] = [];
 
@@ -599,7 +608,7 @@ export async function updateTemplate(
 		return false;
 	}
 
-	if (!record.gitRepoSource || !record.gitRepoSource.url) {
+	if (!record.templateSource || !record.templateSource.url) {
 		io.errorCannotUpdateNonGitTemplate(key);
 		return false;
 	}
@@ -607,24 +616,27 @@ export async function updateTemplate(
 	const git: SimpleGit = simpleGit.simpleGit();
 	const gitIO = new SaveGitRepoIO();
 
-	gitIO.startFetchGitTag(record.gitRepoSource.url);
-	const remoteVersion = await getLatestRemoteTag(git, record.gitRepoSource.url);
+	gitIO.startFetchGitTag(record.templateSource.url);
+	const remoteVersion = await getLatestRemoteTag(
+		git,
+		record.templateSource.url,
+	);
 
 	if (!remoteVersion) {
-		gitIO.errorFetchingGitTag(record.gitRepoSource.url);
+		gitIO.errorFetchingGitTag(record.templateSource.url);
 		return false;
 	}
 
 	gitIO.doneFetchingGitTag();
 
 	if (
-		record.gitRepoSource.version &&
-		remoteVersion === record.gitRepoSource.version
+		record.templateSource.version &&
+		remoteVersion === record.templateSource.version
 	) {
 		io.successTemplateGitRepoAlreadyLatest(
 			key,
-			record.gitRepoSource.url,
-			record.gitRepoSource.version,
+			record.templateSource.url,
+			record.templateSource.version,
 		);
 		return true;
 	}
@@ -636,7 +648,7 @@ export async function updateTemplate(
 		record.description,
 		record.tags ? record.tags.join(",") : undefined,
 		"git",
-		record.gitRepoSource!.url,
+		record.templateSource!.url,
 	);
 
 	if (retVal) {

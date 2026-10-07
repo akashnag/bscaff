@@ -39,11 +39,11 @@ async function main(): Promise<void> {
 
 function log(args: string[], success: boolean, error?: any) {
 	const now = new Date();
-	let logEntry = `[${now.toISOString()}] ${args.join(" ")} --> `;
+	let logEntry = `[${now.toISOString()}] bscaff ${args.slice(2).join(" ")} --> `;
 	logEntry += success
 		? "SUCCESS"
 		: `FAILED (${MiscUtils.asSingleLineString(error)})`;
-	FileUtils.appendToTextFile(Config.LOG_FILE_PATH, logEntry);
+	FileUtils.appendToTextFile(Config.LOG_FILE_PATH, logEntry + "\n");
 }
 
 main();

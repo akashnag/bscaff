@@ -19,12 +19,11 @@ import * as MiscUtils from "../utils/misc-utils.js";
 import { Settings } from "./settings.js";
 
 export class Config {
+	// -------------- storage config --------------------------
 	static readonly DIRECTORY_NAME: string = ".bscaff";
 	static readonly SNAPSHOT_DB_FILE: string = "db.json";
 	static readonly SINGLE_FILE_NAME: string = "data";
 	static readonly SETTINGS_FILE: string = "settings.yml";
-	static readonly TEMPLATE_CONFIG_FILE: string = "bscaff-template.yml";
-	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
 	static readonly BSCAFF_USER_DIR_ENV_VARIABLE: string = "BSCAFF_USER_DIR";
 	static readonly TEMP_DIRECTORY: string = ".temp";
 	static readonly LOG_FILE_PATH: string = FileUtils.formPath([
@@ -32,8 +31,16 @@ export class Config {
 		"bscaff-logs.log",
 	]);
 
+	// --------------- template constants ---------------------
+	static readonly TEMPLATE_CONFIG_FILE: string = "bscaff-template.config.yml";
+	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
+	static readonly TEMPLATE_PROJECT_CONFIG_FILE: string =
+		"bscaff-project.config.yml";
+
+	// --------------- global vars ----------------------------
 	private static storagePath: string | null = null;
 
+	// --------------- utility functions ----------------------
 	static setStoragePath(sPath: string): void {
 		Config.storagePath = FileUtils.resolvePath(sPath);
 	}

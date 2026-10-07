@@ -10,6 +10,9 @@ export default defineConfig({
 			"tests/end-to-end-tests/url-mgmt.spec.ts",
 			"tests/end-to-end-tests/snippet-mgmt.spec.ts",
 			"tests/end-to-end-tests/tree-and-files-mgmt.spec.ts",
+			"tests/end-to-end-tests/create-from-clipboard.spec.ts",
+			"tests/end-to-end-tests/search-and-misc.spec.ts",
+			//"tests/end-to-end-tests/template-mgmt.spec.ts",
 		],
 
 		// Expressly exclude build folders, node_modules, or fixtures

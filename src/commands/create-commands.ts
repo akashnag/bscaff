@@ -87,11 +87,11 @@ export async function createFileOnDiskFromClipboard(
 
 	if (hasFile && !overwrite) {
 		overwrite = await io.promptForFileOverwrite(toPath);
-	}
 
-	if (!overwrite) {
-		io.warnOperationAborted(toPath);
-		return true; // not an error
+		if (!overwrite) {
+			io.warnOperationAborted(toPath);
+			return true; // not an error
+		}
 	}
 
 	const retVal = FileUtils.writeTextFile(toPath, content);

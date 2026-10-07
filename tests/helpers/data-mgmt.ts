@@ -73,6 +73,11 @@ async function cleanupTestDir(): Promise<void> {
 	trackedDirs.clear();
 }
 
+export function cleanDir(dirPath: string): void {
+	FileUtils.deleteDirectory(dirPath);
+	FileUtils.createDirectory(dirPath);
+}
+
 export async function teardownTestEnvironment(): Promise<void> {
 	await cleanupTestDir();
 }
@@ -81,7 +86,6 @@ export async function setupTestEnvironment(): Promise<{
 	sourceTreeDir: string;
 	sourceFilesDir: string;
 	extractTargetDir: string;
-	partialExtractTargetDir: string;
 }> {
 	await teardownTestEnvironment();
 	await createTestDir();
@@ -89,10 +93,6 @@ export async function setupTestEnvironment(): Promise<{
 	const sourceTreeDir: string = path.join(TEST_DIR, "sample-tree");
 	const sourceFilesDir: string = path.join(TEST_DIR, "sample-files");
 	const extractTargetDir: string = path.join(TEST_DIR, "extracted-output");
-	const partialExtractTargetDir: string = path.join(
-		TEST_DIR,
-		"partial-extract",
-	);
 
 	await fs.mkdir(path.join(sourceTreeDir, "src"), { recursive: true });
 	await fs.writeFile(
@@ -115,7 +115,6 @@ export async function setupTestEnvironment(): Promise<{
 		sourceTreeDir,
 		sourceFilesDir,
 		extractTargetDir,
-		partialExtractTargetDir,
 	};
 }
 

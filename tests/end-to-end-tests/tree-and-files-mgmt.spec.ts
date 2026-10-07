@@ -19,8 +19,7 @@ import { Config } from "../../src/core/config.js";
 import * as FileUtils from "../../src/utils/file-utils.js";
 import { runCLIForTest } from "../helpers/cli-runner.js";
 import {
-	cleanupTestDir,
-	createTestDir,
+	cleanDir,
 	doFilesExist,
 	doNoneOfTheFilesExist,
 	setupTestEnvironment,
@@ -36,19 +35,14 @@ describe("Tree and Files management", () => {
 	let sourceTreeDir: string;
 	let sourceFilesDir: string;
 	let extractTargetDir: string;
-	let partialExtractTargetDir: string;
 
 	beforeAll(async () => {
-		({
-			sourceTreeDir,
-			sourceFilesDir,
-			extractTargetDir,
-			partialExtractTargetDir,
-		} = await setupTestEnvironment());
+		({ sourceTreeDir, sourceFilesDir, extractTargetDir } =
+			await setupTestEnvironment());
 	});
 
 	afterAll(async () => {
-		//await teardownTestEnvironment();
+		await teardownTestEnvironment();
 	});
 
 	it("Save directory tree", async () => {
@@ -133,6 +127,8 @@ describe("Tree and Files management", () => {
 	});
 
 	it("Extract full tree snapshot to target path", async () => {
+		cleanDir(extractTargetDir);
+
 		FileUtils.copyDirectory(
 			FileUtils.formPath([TEST_HOME_DIR, Config.DIRECTORY_NAME]),
 			"/home/akash/.bscaff/",
@@ -156,11 +152,13 @@ describe("Tree and Files management", () => {
 	});
 
 	it("Extract tree snapshot partially using --partial flag", async () => {
+		cleanDir(extractTargetDir);
+
 		const result = await runCLIForTest([
 			"-k",
 			"react-tree",
 			"extract",
-			partialExtractTargetDir,
+			extractTargetDir,
 			"--partial",
 			"src",
 		]);
@@ -168,10 +166,8 @@ describe("Tree and Files management", () => {
 		expect(result.rawStdout).toContain("Extracted Successfully");
 		expect(result.exitCode).toBe(0);
 
-		expect(doFilesExist(partialExtractTargetDir, ["src/index.ts"])).toBe(true);
-		expect(doNoneOfTheFilesExist(partialExtractTargetDir, ["/README.md"])).toBe(
-			true,
-		);
+		expect(doFilesExist(extractTargetDir, ["src/index.ts"])).toBe(true);
+		expect(doNoneOfTheFilesExist(extractTargetDir, ["/README.md"])).toBe(true);
 	});
 
 	it("Delete specific file inside saved tree snapshot", async () => {

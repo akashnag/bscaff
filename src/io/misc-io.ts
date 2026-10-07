@@ -44,7 +44,7 @@ export class EditSnapshotsIO extends ConsoleIO {
 	successKeyRenamed(oldKey: string, newKey: string): void {
 		if (QUIET_MODE) return;
 
-		printHeader("Key Renamed Successfully!", IOHeaderType.SUCCESS);
+		printHeader("Key Updated Successfully!", IOHeaderType.SUCCESS);
 		printField("Old Key", oldKey);
 		printField("New Key", newKey);
 		console.log("");

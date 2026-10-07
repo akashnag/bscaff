@@ -18,7 +18,7 @@ import {
 	teardownTestEnvironment,
 } from "../helpers/data-mgmt.js";
 
-describe("Search and Metadata Management", () => {
+describe("Search", () => {
 	beforeAll(async () => {
 		await setupTestEnvironment();
 
@@ -52,6 +52,36 @@ describe("Search and Metadata Management", () => {
 		expect(result.exitCode).toBe(0);
 	});
 
+	it("Search snapshot by key approximation", async () => {
+		const result = await runCLIForTest(["-k", "api", "search"]);
+
+		expect(result.rawStdout).toContain("Found 1 item(s)");
+		expect(result.rawStdout).toContain("api-docs");
+		expect(result.exitCode).toBe(0);
+	});
+});
+
+describe("Snapshot Updates", () => {
+	beforeAll(async () => {
+		await setupTestEnvironment();
+
+		await runCLIForTest([
+			"-k",
+			"api-docs",
+			"save",
+			"--desc",
+			"Documentation endpoint link",
+			"--tags",
+			"docs,api",
+			"url",
+			"https://api.example.com/docs",
+		]);
+	});
+
+	afterAll(async () => {
+		await teardownTestEnvironment();
+	});
+
 	it("Update snapshot description", async () => {
 		const result = await runCLIForTest([
 			"-k",
@@ -65,16 +95,6 @@ describe("Search and Metadata Management", () => {
 		expect(result.exitCode).toBe(0);
 	});
 
-	/*
-	it("Search snapshot by key approximation", async () => {
-		const result = await runCLIForTest(["-k", "api", "search"]);
-
-		expect(result.rawStdout).toContain("Found Matches");
-		expect(result.rawStdout).toContain("api-docs");
-		expect(result.exitCode).toBe(0);
-	});
-
-	
 	it("Update snapshot key", async () => {
 		const result = await runCLIForTest([
 			"-k",
@@ -97,5 +117,4 @@ describe("Search and Metadata Management", () => {
 		);
 		expect(checkNewKey.exitCode).toBe(0);
 	});
-	*/
 });

@@ -285,7 +285,7 @@ export class CLI {
 					const globalOpts = command.optsWithGlobals();
 					const retVal = await SnapshotManagementCommands.updateSnapshotKey(
 						globalOpts.key,
-						options.key,
+						newKey,
 					);
 					if (!retVal) throw new Error();
 				},

@@ -56,7 +56,11 @@ export class Store {
 		this.keyMap.delete(oldKey);
 		this.keyMap.set(newKey, index);
 
-		return SnapshotUtils.renameSnapshotDirectory(oldKey, newKey);
+		if (record.type !== SnapshotType.URL) {
+			return SnapshotUtils.renameSnapshotDirectory(oldKey, newKey);
+		}
+
+		return true;
 	}
 
 	updateDescription(key: string, desc: string): boolean {

@@ -61,9 +61,6 @@ export interface Template {
 	// source template from specific sub-directory instead of root
 	_subdirectory?: string;
 
-	// location of answers file (default: bscaff-answers.yml)
-	_answers_file?: string;
-
 	// message to display after project generation is done
 	_message_after_copy?: string;
 
@@ -97,8 +94,28 @@ export interface Template {
 	// Migration tasks executed sequentially during template version updates
 	_migrations?: TemplateMigrationTask[];
 
-	//_questions?: Record<string, TemplateQuestion>;
-
 	// Top-level prompts/variables or additional metadata keys. Any key not starting with `_` is treated as a user prompt definition or plain default variable.
 	[key: string]: unknown | TemplateQuestion;
 }
+
+export type TemplateSourceType = "git" | "dir" | "zip";
+
+export interface TemplateAnswers {
+	_src_type: TemplateSourceType;
+
+	// The source path, URL, or repository reference from which the template was applied.
+	_src_path: string;
+
+	// The specific git commit hash, tag, or version string of the template applied.
+	_version?: string;
+
+	[key: string]: unknown | TemplateAnswerValue;
+}
+
+export type TemplateAnswerValue =
+	| string
+	| number
+	| boolean
+	| Record<string, unknown>
+	| Array<unknown>
+	| null;

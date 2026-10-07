@@ -18,6 +18,7 @@ import { ClipboardManager } from "../../src/core/clipboard.js";
 import * as FileUtils from "../../src/utils/file-utils.js";
 import { runCLIForTest } from "../helpers/cli-runner.js";
 import {
+	cleanDir,
 	setupTestEnvironment,
 	TEST_DIR,
 	teardownTestEnvironment,
@@ -27,9 +28,10 @@ describe("Snippet management", () => {
 	const cm = new ClipboardManager();
 	const RANDOM_TEXT = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla tincidunt enim non porttitor sollicitudin. Ut sed venenatis nunc. Aliquam at velit rhoncus, molestie purus sed, ultrices magna. Donec sagittis nunc ac eleifend vestibulum. Donec sit amet ex ex. Morbi ultricies, elit quis sagittis finibus, nisi felis venenatis eros, eu blandit augue ante accumsan est. Phasellus pharetra, purus in iaculis vulputate, nunc risus mattis risus, eget egestas massa tortor in tellus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Etiam dignissim odio quis lorem cursus, eget ultrices turpis blandit. Donec varius, ipsum at placerat fringilla, ligula magna imperdiet enim, quis eleifend orci diam et diam. Nam bibendum tellus mauris, a pellentesque augue facilisis eget. Maecenas turpis magna, fringilla quis orci condimentum, iaculis malesuada lacus. Interdum et malesuada fames ac ante ipsum primis in faucibus. Proin lobortis viverra lorem ac suscipit. Ut nec accumsan enim.`;
 	const RANDOM_CODE = `print("Hello World!")`;
+	let sourceFilesDir: string;
 
 	beforeAll(async () => {
-		await setupTestEnvironment();
+		({ sourceFilesDir } = await setupTestEnvironment());
 	});
 
 	afterAll(async () => {
@@ -59,10 +61,8 @@ describe("Snippet management", () => {
 	});
 
 	it("Save Snippet from file", async () => {
-		FileUtils.writeTextFile(
-			FileUtils.formPath([TEST_DIR, "test_file.py"]),
-			RANDOM_CODE,
-		);
+		const pathToFile = FileUtils.formPath([sourceFilesDir, "test_file.py"]);
+		FileUtils.writeTextFile(pathToFile, RANDOM_CODE);
 
 		const result = await runCLIForTest([
 			"-k",
@@ -71,7 +71,7 @@ describe("Snippet management", () => {
 			"--tags",
 			"python",
 			"snippet",
-			"./test_file.py",
+			pathToFile,
 		]);
 
 		expect(result.rawStdout).toContain("Snapshot Saved!");
@@ -79,6 +79,8 @@ describe("Snippet management", () => {
 		expect(result.rawStdout).toContain("Snippet"); // Type = Snippet
 		expect(result.rawStdout).toContain("#python"); // Tags
 		expect(result.exitCode).toBe(0);
+
+		cleanDir(sourceFilesDir);
 	});
 
 	it("Copy Snippet to clipboard", async () => {
