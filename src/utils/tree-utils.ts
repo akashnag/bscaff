@@ -13,11 +13,8 @@
 
 import { ClipboardManager } from "../core/clipboard.js";
 import { Settings } from "../core/settings.js";
-import { CreateFileIO } from "../io/create-io.js";
 import { ExtractSnapshotIO } from "../io/extract-io.js";
-import { ConsoleIO } from "../io/io.js";
 import { SaveASCIITreeIO } from "../io/save-io.js";
-import { ExtractTemplateIO } from "../io/template-io.js";
 import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
@@ -401,193 +398,6 @@ export function getFileListFromStructure(nodes: FileTreeNode[]): string {
 	return list.join("\n");
 }
 
-// creates the file structure on disk (include content if available)
-// WARNING: only to be used for Tree snapshot type (not Files, Templates)
-export async function createTree(
-	path: string | null,
-	structure: FileTreeNode[],
-	parameters: Record<string, any> | undefined = undefined,
-	overwriteBehaviour: "overwrite" | "fail" | "skip" | "prompt" = "prompt",
-	promptForFileContent: boolean = false,
-	ignorePromptWhereContentExistsInStructure: boolean = false,
-): Promise<boolean> {
-	const ioHandler = new SaveASCIITreeIO();
-	const extIO = new ExtractSnapshotIO();
-
-	if (!path) return false;
-	if (promptForFileContent && !ioHandler) return false;
-	if (overwriteBehaviour === "prompt" && !ioHandler) return false;
-
-	const cm = new ClipboardManager();
-	const engine = ParamUtils.createTemplateEngine();
-	const options = {
-		exclude: Settings.get("exclude") ?? [],
-		include: Settings.get("include") ?? [],
-		templatesSuffix: Settings.get("templatesSuffix") ?? "",
-	};
-
-	for (let i = 0; i < structure.length; ++i) {
-		const node = structure[i];
-
-		const subPath = parameters
-			? ParamUtils.replacePlaceholdersInFileName(
-					node.path,
-					parameters,
-					options,
-					engine,
-				)
-			: node.path;
-
-		// Skip files/folders that match exclude rules or don't match include rules
-		if (ParamUtils.shouldFileOrDirectoryBeExcluded(subPath, options)) {
-			continue;
-		}
-
-		const fullPath = FileUtils.formPath([path, subPath]);
-
-		if (node.type === "file") {
-			const dir = FileUtils.getPathAndFileName(fullPath).path;
-			if (!FileUtils.doesDirectoryExist(dir)) {
-				FileUtils.createDirectory(dir, true);
-			}
-
-			if (FileUtils.doesFileExist(fullPath)) {
-				switch (overwriteBehaviour) {
-					case "skip":
-						if (ioHandler) extIO.infoFileCreateSkip(fullPath);
-						continue;
-
-					case "fail":
-						if (ioHandler) extIO.infoFileCreateFail(fullPath);
-						return false;
-
-					case "prompt":
-						if (!(await ioHandler!.promptForFileOverwrite(fullPath))) {
-							extIO.infoFileCreateSkipPostPrompt();
-							continue;
-						}
-						break;
-
-					case "overwrite":
-						break;
-				}
-			}
-
-			if (promptForFileContent) {
-				let content: string | null = null;
-				if (ignorePromptWhereContentExistsInStructure && node.content) {
-					content = node.content;
-				} else {
-					content = await ioHandler!.promptForFileContent(fullPath, cm);
-					if (parameters && content) {
-						content = await ParamUtils.replacePlaceholdersInFileContent(
-							fullPath,
-							parameters,
-							options,
-							engine,
-						);
-					}
-				}
-
-				FileUtils.writeTextFile(fullPath, content ?? "");
-			} else {
-				// Create file with existing node content or blank
-				FileUtils.writeTextFile(fullPath, node.content ?? "");
-			}
-		} else {
-			if (!FileUtils.doesDirectoryExist(fullPath)) {
-				FileUtils.createDirectory(fullPath, true);
-			}
-		}
-	}
-
-	return true;
-}
-
-// WARNING: use this function only for saving snapshots, never for extracting them
-export async function copyTree(
-	sourceDir: string,
-	destPath: string,
-	nodes: FileTreeNode[],
-	overwriteBehaviour: "fail" | "prompt" | "skip" | "overwrite" = "prompt",
-	io?: ExtractTemplateIO,
-	nestSourceDir: boolean = true,
-): Promise<boolean> {
-	try {
-		// Resolve source path
-		const absSourceDir = FileUtils.resolvePath(sourceDir);
-
-		// Target base directory depends on nestSourceDir flag
-		let targetBaseDir: string;
-
-		if (nestSourceDir) {
-			const sourceDirName =
-				absSourceDir.split(/[/\\]/).filter(Boolean).pop() || "";
-			targetBaseDir = FileUtils.resolvePath(`${destPath}/${sourceDirName}`);
-		} else {
-			targetBaseDir = FileUtils.resolvePath(destPath);
-		}
-
-		// Create the target directory
-		FileUtils.createDirectory(targetBaseDir);
-
-		// Sort nodes by level/path depth to ensure parent directories are created before files
-		const sortedNodes = [...nodes].sort((a, b) => a.level - b.level);
-
-		for (const node of sortedNodes) {
-			// Build absolute source and destination paths
-			const srcNodePath = FileUtils.formPath([absSourceDir, node.path]);
-			const destNodePath = FileUtils.formPath([targetBaseDir, node.path]);
-
-			if (node.type === "dir") {
-				io?.infoCreateDirectory(destNodePath);
-				FileUtils.createDirectory(destNodePath);
-				continue;
-			}
-
-			// Check if file already exists at destination
-			let destExists = false;
-			try {
-				destExists = FileUtils.doesFileExist(destNodePath);
-			} catch {
-				destExists = false;
-			}
-
-			if (destExists) {
-				switch (overwriteBehaviour) {
-					case "fail":
-						return false;
-
-					case "skip":
-						continue;
-
-					case "prompt": {
-						const shouldOverwrite =
-							await io?.promptForFileOverwrite(destNodePath);
-
-						if (!shouldOverwrite) {
-							continue; // Skip copying if user answers false
-						}
-
-						break;
-					}
-
-					case "overwrite":
-						// Proceed to copy over existing file
-						break;
-				}
-			}
-
-			io?.infoCreateFile(destNodePath);
-			FileUtils.copyFile(srcNodePath, destNodePath);
-		}
-
-		return true;
-	} catch (error) {
-		return false;
-	}
-}
-
 export function getSubTreeInfo(
 	nodes: FileTreeNode[],
 	relPath: string,
@@ -653,7 +463,11 @@ export function sortTreeStructure(nodes: FileTreeNode[]): FileTreeNode[] {
 	});
 }
 
-export function drawFileTree(rawNodes: FileTreeNode[]): string {
+export function drawFileTree(
+	rawNodes: FileTreeNode[],
+	colored?: boolean,
+): string {
+	// TODO: add support for colors
 	if (rawNodes.length === 0) return "";
 
 	const nodes = sortTreeStructure(rawNodes);

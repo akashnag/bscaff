@@ -21,7 +21,7 @@ import {
 	ExtractSnapshotIO,
 	OpenSnapshotIO,
 } from "../io/extract-io.js";
-import { SnapshotRecord, SnapshotType } from "../types/types.js";
+import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as ParamUtils from "../utils/param-utils.js";
@@ -57,17 +57,18 @@ export async function copyToClipboard(
 		return false;
 	}
 
-	let previewContent = undefined;
+	let previewContent: string | FileTreeNode[] | undefined = undefined;
 
 	switch (record.type) {
 		case SnapshotType.URL:
+			previewContent = record.urlContent!;
 			await cm.copy(record.urlContent!);
 			break;
 
 		case SnapshotType.Snippet:
 			const snippetFile = SnapshotUtils.getFileUnderSnapshot(
 				key,
-				record.fileName!,
+				record.snippetFileName!,
 			);
 			const snippetContent = await FileUtils.readTextFile(snippetFile);
 
@@ -122,7 +123,7 @@ export async function copyToClipboard(
 					);
 
 					if (asTree) {
-						previewContent = tree;
+						previewContent = record.structure;
 						await cm.copy(tree);
 					} else {
 						const fileList = TreeUtils.getFileListFromStructure(nodes);
@@ -134,10 +135,11 @@ export async function copyToClipboard(
 					const fileList = TreeUtils.getFileListFromStructure(
 						record.structure!,
 					);
+					previewContent = fileList;
 					await cm.copy(fileList);
 				} else {
 					const tree = TreeUtils.drawFileTree(record.structure!);
-					previewContent = tree;
+					previewContent = record.structure!;
 					await cm.copy(tree);
 				}
 			}
@@ -209,7 +211,7 @@ export async function openSnapshotReadOnly(
 		case SnapshotType.Snippet:
 			const snippetFile = SnapshotUtils.getFileUnderSnapshot(
 				key,
-				record.fileName!,
+				record.snippetFileName!,
 			);
 			const snippetContent = await FileUtils.readTextFile(snippetFile);
 
@@ -412,14 +414,8 @@ export async function extract(
 			break;
 
 		case SnapshotType.Template:
-			return TemplateCommands.extractTemplate(
-				key,
-				record,
-				dryRun,
-				overwriteBehaviour,
-				toPath,
-			);
-			break;
+			io.errorUseGenerateFromTemplateInstead(key, toPath);
+			return false;
 
 		default:
 			io.errorExtractionUnsupported(record.type);
@@ -498,7 +494,7 @@ export async function extractFile(
 
 // --------------------- [private] ----------------------
 
-// (WARNING: not to be used for templates)
+// called from extract-commands::extract()
 async function extractFiles(
 	key: string,
 	record: SnapshotRecord,
@@ -555,7 +551,7 @@ async function extractFiles(
 	return true;
 }
 
-// (WARNING: not to be used for templates)
+// called from extract-commands::extract()
 async function extractTree(
 	key: string,
 	record: SnapshotRecord,

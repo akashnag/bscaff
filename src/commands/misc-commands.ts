@@ -188,18 +188,21 @@ export async function updateFileContent(
 		return false;
 	}
 
-	if (record.type == SnapshotType.URL) {
+	if (record.type === SnapshotType.URL) {
 		io.errorCannotUpdateURLWithContent(key);
 		return false;
 	}
 
-	if (record.type == SnapshotType.Snippet) {
+	if (record.type === SnapshotType.Snippet) {
 		if (relPath) {
 			io.warnPathIgnoredForUpdatingSnippet();
 		}
 
 		io.warnAboutToEditFileDirectly(key);
-		const filePath = SnapshotUtils.getFileUnderSnapshot(key, record.fileName!);
+		const filePath = SnapshotUtils.getFileUnderSnapshot(
+			key,
+			record.snippetFileName!,
+		);
 		const retVal = MiscUtils.openFileInEditor(filePath);
 
 		if (!retVal) {

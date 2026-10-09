@@ -231,7 +231,19 @@ export async function readTextFile(filePath: string): Promise<string | null> {
 	}
 }
 
+/*
+	Creates the directory at src inside dest.
+	E.g. if src = /abc/def/xyz
+	    and dest = /pqr/mno/
+		Then: new tree will be rooted at: /pqr/mno/xyz
+*/
 export function copyDirectory(src: string, dest: string): string {
+	const targetDir = path.join(dest, path.basename(src));
+	copyDirectoryContents(src, targetDir);
+	return targetDir;
+}
+
+function copyDirectoryContents(src: string, dest: string): string {
 	// Ensure target directory exists
 	if (!fs.existsSync(dest)) {
 		fs.mkdirSync(dest, { recursive: true });
@@ -247,7 +259,7 @@ export function copyDirectory(src: string, dest: string): string {
 
 		if (entry.isDirectory()) {
 			// Recursively copy subfolder
-			copyDirectory(srcPath, destPath);
+			copyDirectoryContents(srcPath, destPath);
 		} else {
 			// Copy file (preserves timestamps/mode flags when possible)
 			fs.copyFileSync(srcPath, destPath);

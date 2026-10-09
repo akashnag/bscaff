@@ -31,6 +31,7 @@ import {
 	printIndented,
 	printLinedHeader,
 	printPreview,
+	printPreviewFileTree,
 	printSeparatorLine,
 	printTable,
 	QUIET_MODE,
@@ -258,15 +259,19 @@ export class ListSnapshotsIO extends ConsoleIO {
 		}
 
 		if (record.parameters) {
-			printIndented("\nDetected Variables:");
-			for (let i = 0; i < record.parameters.length; ++i) {
-				printBullet(`{{ ${record.parameters[i]} }}`);
+			if (record.parameters.length === 0) {
+				printField("Variables", "<none>");
+			} else {
+				printIndented("\nVariables:");
+				for (let i = 0; i < record.parameters.length; ++i) {
+					printBullet(`{{ ${record.parameters[i]} }}`);
+				}
 			}
 		}
 
 		if (record.structure) {
-			printIndented("\nFile Tree:");
-			printIndented(drawFileTree(record.structure));
+			console.log();
+			printPreviewFileTree("File Tree", record.structure);
 		}
 
 		console.log("\nQuick Actions:");
@@ -331,11 +336,7 @@ export class ListSnapshotsIO extends ConsoleIO {
 		}
 
 		console.log("");
-		printLinedHeader("Contents");
-		printPreview(
-			MiscUtils.splitContentByLines(drawFileTree(record.structure!)),
-		);
-		printSeparatorLine();
+		printPreviewFileTree("Contents", record.structure!);
 
 		console.log("\nQuick Actions:");
 		printBullet(

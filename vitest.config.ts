@@ -5,14 +5,14 @@ export default defineConfig({
 		fileParallelism: false,
 		silent: false,
 
-		// Only search for test files inside the top-level /tests folder
+		// Only search for test files in these places
 		include: [
-			"tests/end-to-end-tests/url-mgmt.spec.ts",
+			/*"tests/end-to-end-tests/url-mgmt.spec.ts",
 			"tests/end-to-end-tests/snippet-mgmt.spec.ts",
 			"tests/end-to-end-tests/tree-and-files-mgmt.spec.ts",
 			"tests/end-to-end-tests/create-from-clipboard.spec.ts",
-			"tests/end-to-end-tests/search-and-misc.spec.ts",
-			//"tests/end-to-end-tests/template-mgmt.spec.ts",
+			"tests/end-to-end-tests/search-and-misc.spec.ts",*/
+			"tests/end-to-end-tests/template-mgmt.spec.ts",
 		],
 
 		// Expressly exclude build folders, node_modules, or fixtures

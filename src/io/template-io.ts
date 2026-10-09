@@ -203,6 +203,31 @@ export class VerifyTemplateIO extends ConsoleIO {
 			"The specified template subdirectory does not exist within the source structure.\n",
 		);
 	}
+
+	errorTemplateFileNameInvalid(fileName: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Invalid Template Configuration Filename");
+		printField(
+			"Error",
+			`Template file-name is invalid, must be: '${Config.TEMPLATE_CONFIG_FILE}'`,
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			`Rename the file '${fileName}' to '${Config.TEMPLATE_CONFIG_FILE}'\n`,
+		);
+	}
+
+	errorTemplateConfigFileMissing(filePath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Missing Template Configuration File");
+		printField("Error", `Template config-file is missing`);
+		printField("Path", filePath);
+
+		console.log("");
+	}
 }
 
 export class ExtractTemplateIO extends ExtractSnapshotIO {
@@ -507,5 +532,19 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 			"Error",
 			`One or more ${eventType.toLowerCase()}-generation tasks failed to complete successfully.\n`,
 		);
+	}
+
+	successTemplateProjectGenerated(
+		key: string,
+		tPath: string,
+		message?: string,
+	): void {
+		if (message) {
+			printHeader(message, IOHeaderType.SUCCESS);
+		} else {
+			printHeader("Project Generated Successfully!", IOHeaderType.SUCCESS);
+			printField("Key", key);
+			printField("Location", tPath);
+		}
 	}
 }

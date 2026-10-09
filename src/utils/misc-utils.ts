@@ -54,35 +54,6 @@ export function indentLines(str: string, n: number = 0): string {
 	return lines.join("\n");
 }
 
-export function countLOC(codeString: string): number {
-	const lines = codeString.split(/\r?\n/);
-
-	// Filter out blank lines or lines that are just comments
-	const codeLines = lines.filter((line) => {
-		const trimmed = line.trim();
-
-		// Skip empty lines and single-line comments
-		if (trimmed === "" || trimmed.startsWith("//")) {
-			return false;
-		}
-
-		return true;
-	});
-
-	return codeLines.length;
-}
-
-export async function countLOCFromFile(
-	filePath: string,
-): Promise<number | null> {
-	if (!(await FileUtils.isTextFile(filePath))) return null;
-
-	const data = await FileUtils.readTextFile(filePath);
-	if (!data) return null;
-
-	return countLOC(data);
-}
-
 export function createTempFile(
 	fileType: string = "txt",
 	content: string | null = null,

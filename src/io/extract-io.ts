@@ -13,7 +13,7 @@
 
 import * as inquirer from "@inquirer/prompts";
 import chalk from "chalk";
-import { SnapshotRecord, SnapshotType } from "../types/types.js";
+import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
 import {
@@ -23,8 +23,11 @@ import {
 	printField,
 	printHeader,
 	printIndented,
+	printLinedHeader,
 	printPreview,
 	printPreviewFile,
+	printPreviewFileTree,
+	printSeparatorLine,
 	QUIET_MODE,
 } from "./io.js";
 
@@ -33,7 +36,7 @@ export class CopySnapshotIO extends ConsoleIO {
 		key: string,
 		sType: SnapshotType,
 		record: SnapshotRecord,
-		content?: string,
+		content?: string | FileTreeNode[],
 	): Promise<void> {
 		if (QUIET_MODE) return;
 
@@ -45,14 +48,20 @@ export class CopySnapshotIO extends ConsoleIO {
 			printField("URL", record.urlContent!);
 		}
 
-		printField(
-			"Status",
-			"Snapshot content successfully copied to clipboard.\n",
-		);
+		printField("Status", "Snapshot content successfully copied to clipboard.");
 
 		if (content) {
-			await printPreview(MiscUtils.splitContentByLines(content));
+			console.log();
+			if (typeof content === "string") {
+				printLinedHeader("Preview", true);
+				printPreview(MiscUtils.splitContentByLines(content), true);
+				printSeparatorLine(true);
+			} else {
+				printPreviewFileTree("File Tree", content);
+			}
 		}
+
+		console.log();
 	}
 }
 
@@ -196,5 +205,17 @@ export class ExtractSnapshotIO extends ConsoleIO {
 		if (QUIET_MODE) return;
 
 		printHeader(`${sType} Extracted Successfully!\n`, IOHeaderType.SUCCESS);
+	}
+
+	errorUseGenerateFromTemplateInstead(key: string, tPath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Extraction Not Supported");
+		printField("Error", `Extraction is not supported for Templates.`);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			`Use generate-project command, run: bscaff -k ${key} template generate ${tPath}\n`,
+		);
 	}
 }

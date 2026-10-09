@@ -30,6 +30,7 @@ import {
 	printHeader,
 	printIndented,
 	printLinedHeader,
+	printPreviewFileTree,
 	printSeparatorLine,
 	QUIET_MODE,
 } from "./io.js";
@@ -237,9 +238,8 @@ export class SaveASCIITreeIO extends SaveDirectoryIO {
 			sType,
 		);
 
-		printLinedHeader("TREE");
-		TreeUtils.drawFileTree(structure!);
-		printSeparatorLine();
+		printPreviewFileTree("File Tree", structure!);
+		console.log();
 	}
 }
 // --------------------------------------------------------

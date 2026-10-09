@@ -62,7 +62,7 @@ export interface Template {
 	_subdirectory?: string;
 
 	// message to display after project generation is done
-	_message_after_copy?: string;
+	_post_generation_message?: string;
 
 	// Glob patterns to exclude completely from template processing
 	_exclude?: string[];
@@ -104,7 +104,7 @@ export interface TemplateAnswers {
 	_src_type: TemplateSourceType;
 
 	// The source path, URL, or repository reference from which the template was applied.
-	_src_path: string;
+	_url?: string;
 
 	// The specific git commit hash, tag, or version string of the template applied.
 	_version?: string;

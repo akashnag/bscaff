@@ -226,7 +226,7 @@ async function displaySnapshotInfo(
 		case SnapshotType.Snippet:
 			content = await SnapshotUtils.readContentFromSnapshotFile(
 				key,
-				record.fileName!,
+				record.snippetFileName!,
 			);
 			if (content) await io.listSnippetInfo(key, record, content);
 			break;

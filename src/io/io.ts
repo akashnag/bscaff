@@ -275,7 +275,7 @@ export function printPreview(
 	width: number = 60,
 	lineCount: number = 10,
 ): void {
-	if (lines.length > lineCount) {
+	if (lineCount > 0 && lines.length > lineCount) {
 		let firstHalf = "";
 		let secondHalf = "";
 
@@ -299,6 +299,18 @@ export function printPreview(
 	} else {
 		printIndented(lines.join("\n"), indented);
 	}
+}
+
+export function printPreviewFileTree(
+	title: string,
+	struct: FileTreeNode[],
+): void {
+	printLinedHeader(title, true);
+	printPreview(
+		MiscUtils.splitContentByLines(TreeUtils.drawFileTree(struct, true)),
+		true,
+	);
+	printSeparatorLine(true);
 }
 
 export class ConsoleIO {
@@ -413,11 +425,15 @@ export class ConsoleIO {
 	}
 
 	errorGeneric(info: string): void {
+		if (QUIET_MODE) return;
+
 		printHeader("Unknown Error Encountered");
 		printField("Error", info + "\n");
 	}
 
 	errorConflictingArgs(arg1: string, arg2: string): void {
+		if (QUIET_MODE) return;
+
 		printHeader("Conflicting Arguments Specified");
 		printField("Error", `<${arg1}> and <${arg2}> can not be used together\n`);
 	}
@@ -465,6 +481,8 @@ export class ConsoleIO {
 	}
 
 	errorKeyNotFound(key: string): void {
+		if (QUIET_MODE) return;
+
 		printHeader("Key Not Found");
 		printField("Error", `The given key '${key}' was not found in records`);
 		console.log(`\nTo resolve:`);
@@ -479,6 +497,8 @@ export class ConsoleIO {
 		record: SnapshotRecord,
 		relPath: string,
 	): void {
+		if (QUIET_MODE) return;
+
 		printHeader(`File/Directory Does Not Exist`);
 
 		printField("Error", `The requested file/directory does not exist`);
@@ -800,11 +820,23 @@ export class ConsoleIO {
 	}
 
 	errorInvalidOption(option: string): void {
+		if (QUIET_MODE) return;
+
 		printHeader("Invalid Option Specified");
 		printField("Option", option);
 		printField("Error", "Invalid option specified for the current operation.");
 
 		console.log("\nTo resolve:");
 		printBullet("Retry the operation without this option.\n");
+	}
+
+	errorPossibleDataCorruption(error: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Possible Data Corruption");
+		printField("Error", "Possible data corruption detected in cache.");
+		printField("Details", error);
+
+		console.log("");
 	}
 }

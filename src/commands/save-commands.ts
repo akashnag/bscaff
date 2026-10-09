@@ -25,6 +25,7 @@ import {
 	SaveSnippetIO,
 	SaveURLIO,
 } from "../io/save-io.js";
+import { ExtractTemplateIO } from "../io/template-io.js";
 import { ScriptMissingError } from "../types/errors.js";
 import { FileTreeNode, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
@@ -32,6 +33,7 @@ import * as MiscUtils from "../utils/misc-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
 import * as TemplateUtils from "../utils/template-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
+import * as CreateCommands from "./create-commands.js";
 
 // --------------------------------------------------------
 // save tree [path] [--git]
@@ -169,7 +171,7 @@ export async function saveASCIITreeFromClipboard(
 		));
 	}
 
-	await TreeUtils.createTree(
+	await CreateCommands.createTree(
 		SnapshotUtils.getSnapshotDirectory(key),
 		structure,
 	);
@@ -259,7 +261,7 @@ export async function saveDirectory(
 	}
 
 	if (
-		!(await TreeUtils.copyTree(
+		!(await copyTree(
 			dirPath,
 			destPath,
 			result.structure,
@@ -370,7 +372,7 @@ export async function saveSnippet(
 		description: description,
 		type: SnapshotType.Snippet,
 		tags: tagList,
-		fileName: localFilePath,
+		snippetFileName: localFilePath,
 	});
 
 	store.update();
@@ -552,3 +554,89 @@ export async function saveFiles(
 	return true;
 }
 // --------------------------------------------------------
+
+// -------------------- [private] -------------------------
+
+// WARNING: use this function only for saving snapshots, never for extracting them
+export async function copyTree(
+	sourceDir: string,
+	destPath: string,
+	nodes: FileTreeNode[],
+	overwriteBehaviour: "fail" | "prompt" | "skip" | "overwrite" = "prompt",
+	io?: ExtractTemplateIO,
+	nestSourceDir: boolean = true,
+): Promise<boolean> {
+	try {
+		// Resolve source path
+		const absSourceDir = FileUtils.resolvePath(sourceDir);
+
+		// Target base directory depends on nestSourceDir flag
+		let targetBaseDir: string;
+
+		if (nestSourceDir) {
+			const sourceDirName =
+				absSourceDir.split(/[/\\]/).filter(Boolean).pop() || "";
+			targetBaseDir = FileUtils.resolvePath(`${destPath}/${sourceDirName}`);
+		} else {
+			targetBaseDir = FileUtils.resolvePath(destPath);
+		}
+
+		// Create the target directory
+		FileUtils.createDirectory(targetBaseDir);
+
+		// Sort nodes by level/path depth to ensure parent directories are created before files
+		const sortedNodes = [...nodes].sort((a, b) => a.level - b.level);
+
+		for (const node of sortedNodes) {
+			// Build absolute source and destination paths
+			const srcNodePath = FileUtils.formPath([absSourceDir, node.path]);
+			const destNodePath = FileUtils.formPath([targetBaseDir, node.path]);
+
+			if (node.type === "dir") {
+				io?.infoCreateDirectory(destNodePath);
+				FileUtils.createDirectory(destNodePath);
+				continue;
+			}
+
+			// Check if file already exists at destination
+			let destExists = false;
+			try {
+				destExists = FileUtils.doesFileExist(destNodePath);
+			} catch {
+				destExists = false;
+			}
+
+			if (destExists) {
+				switch (overwriteBehaviour) {
+					case "fail":
+						return false;
+
+					case "skip":
+						continue;
+
+					case "prompt": {
+						const shouldOverwrite =
+							await io?.promptForFileOverwrite(destNodePath);
+
+						if (!shouldOverwrite) {
+							continue; // Skip copying if user answers false
+						}
+
+						break;
+					}
+
+					case "overwrite":
+						// Proceed to copy over existing file
+						break;
+				}
+			}
+
+			io?.infoCreateFile(destNodePath);
+			FileUtils.copyFile(srcNodePath, destNodePath);
+		}
+
+		return true;
+	} catch (error) {
+		return false;
+	}
+}

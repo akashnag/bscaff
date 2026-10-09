@@ -619,16 +619,50 @@ export class CLI {
 	private defineTemplateGroup(): void {
 		const templateGroup = this.program
 			.command("template")
-			.description("Save/create/execute templates");
+			.description("Save/create/generate templates");
+
+		/*
+		Examples:
+			[Verify template file]			--> bscaff template verify <path-to-yaml-file>
+		*/
+		const generateProjectCommand = templateGroup
+			.command("generate-project <project-directory>")
+			.description("Generates a project directory from a template.")
+			.option(
+				"--dry-run",
+				"Test generate the project without actually creating files",
+			)
+			.addOption(
+				new Option(
+					"-e, --if-exists <behaviour>",
+					"Behaviour if destination file exists",
+				).choices(["overwrite", "fail", "skip", "prompt"]),
+			)
+			.action(
+				async (
+					path: string,
+					options: Record<string, any>,
+					command: Command,
+				) => {
+					const globalOpts = command.optsWithGlobals();
+					const retVal = await TemplateCommands.generateProjectFromTemplate(
+						globalOpts.key,
+						options.dryRun,
+						options.ifExists,
+						path,
+					);
+					if (!retVal) throw new Error();
+				},
+			);
 
 		/*
 		Examples:
 			[Verify template file]			--> bscaff template verify <path-to-yaml-file>
 		*/
 		const verifyTemplateCommand = templateGroup
-			.command("verify <path-to-template-config-file>")
+			.command("verify <path-to-template-directory>")
 			.description(
-				"Verifies if a template-config file is syntactically correct",
+				"Verifies if a template directory and its config file is syntactically correct.",
 			)
 			.action(
 				async (
@@ -649,6 +683,14 @@ export class CLI {
 		*/
 		const saveTemplateCommand = templateGroup
 			.command("save <path-to-template>")
+			.option(
+				"--desc <description>",
+				"Brief description of the snapshot (in double-quotes)",
+			)
+			.option(
+				"--tags <list-of-tags>",
+				"List of tags (comma-separated, no spaces) associated with this snapshot",
+			)
 			.addOption(
 				new Option("-s, --source <source>", "Type of the path specified")
 					.choices(["zip", "git", "dir"])
@@ -662,11 +704,10 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const parentOpts = command.parent?.opts();
 					const retVal = await TemplateCommands.saveTemplate(
 						globalOpts.key,
-						parentOpts?.desc,
-						parentOpts?.tags,
+						options.desc,
+						options.tags,
 						options.source,
 						path,
 					);
@@ -683,6 +724,15 @@ export class CLI {
 			.description(
 				"Create a new bscaff template from a directory (and saves it)",
 			)
+			.option(
+				"--desc <description>",
+				"Brief description of the snapshot (in double-quotes)",
+			)
+			.option(
+				"--tags <list-of-tags>",
+				"List of tags (comma-separated, no spaces) associated with this snapshot",
+			)
+			.option("--edit", "Edit the template config file before saving")
 			.action(
 				async (
 					path: string,
@@ -690,11 +740,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const parentOpts = command.parent?.opts();
 					const retVal = await TemplateCommands.createTemplateFromDirectory(
 						globalOpts.key,
-						parentOpts?.desc,
-						parentOpts?.tags,
+						options.desc,
+						options.tags,
+						options.edit,
 						path,
 					);
 					if (!retVal) throw new Error();

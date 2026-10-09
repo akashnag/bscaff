@@ -14,108 +14,243 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import pkg from "../../package.json" with { type: "json" };
+import { Config } from "../../src/core/config.js";
 import { runCLIForTest } from "../helpers/cli-runner.js";
 import {
 	setupTestEnvironment,
-	TEST_DIR,
 	teardownTestEnvironment,
 } from "../helpers/data-mgmt.js";
 
 describe("Template management", () => {
-	let validConfigPath: string;
-	let invalidConfigPath: string;
-	let templateSourceDir: string;
+	let sourceTreeDir: string;
+	let extractTargetDir: string;
+
+	let testDir: string;
+	let testDirAlternate1: string;
+	let testDirAlternate2: string;
 
 	beforeAll(async () => {
-		await setupTestEnvironment();
+		({ sourceTreeDir, extractTargetDir } = await setupTestEnvironment());
 
-		validConfigPath = path.join(TEST_DIR, "valid-template.yaml");
-		invalidConfigPath = path.join(TEST_DIR, "invalid-template.yaml");
-		templateSourceDir = path.join(TEST_DIR, "template-src");
+		testDir = path.join(sourceTreeDir, "test-temp-template-dir");
+		testDirAlternate1 = path.join(sourceTreeDir, "test-temp-template-dir1");
+		testDirAlternate2 = path.join(sourceTreeDir, "test-temp-template-dir2");
 
-		const validYaml = `
-name: my-app-template
-version: 1.0.0
-prompts:
-  - name: projectName
-    type: input
-    message: Project Name?
+		const validConfigFile = path.join(testDir, Config.TEMPLATE_CONFIG_FILE);
+		const invalidConfigFileAlternate1 = path.join(
+			testDirAlternate1,
+			"invalid-bscaff.yaml",
+		);
+
+		const invalidConfigFileAlternate2 = path.join(
+			testDirAlternate2,
+			Config.TEMPLATE_CONFIG_FILE,
+		);
+
+		// Set up fixture directory with nested files, folders, and variable placeholders
+		await fs.mkdir(testDir, { recursive: true });
+		await fs.mkdir(testDirAlternate1, { recursive: true });
+		await fs.mkdir(testDirAlternate2, { recursive: true });
+
+		const validYamlContent = `
+_min_bscaff_version: "1.0.0"
+_post_generation_message: "Project generated successfully!"
+project_name:
+  type: str
+  prompt: "What is your project name?"
+  default: "my-app"
+module_name:
+  type: str
+  prompt: "What is your module name?"
+  default: "core"
 `;
-		await fs.writeFile(validConfigPath, validYaml);
-		await fs.writeFile(invalidConfigPath, "name: [invalid yaml structure: :");
 
-		await fs.mkdir(templateSourceDir, { recursive: true });
-		await fs.writeFile(path.join(templateSourceDir, "bscaff.yaml"), validYaml);
+		const invalidYamlContent = `
+_min_bscaff_version: 1.0.0
+_exclude: [ unclosed_array
+`;
+
+		await fs.writeFile(validConfigFile, validYamlContent, "utf-8");
 		await fs.writeFile(
-			path.join(templateSourceDir, "package.json"),
-			'{"name": "{{projectName}}"}',
+			invalidConfigFileAlternate1,
+			invalidYamlContent,
+			"utf-8",
+		);
+		await fs.writeFile(
+			invalidConfigFileAlternate2,
+			invalidYamlContent,
+			"utf-8",
+		);
+
+		// Create root-level templated file
+		await fs.writeFile(
+			path.join(testDir, "README.md.jinja"),
+			"# {{ project_name }}\nModule: {{ module_name }}",
+			"utf-8",
+		);
+
+		// Create a nested directory with templated folder name and file name
+		const nestedDirPath = path.join(testDir, "src", "{{ module_name }}");
+		await fs.mkdir(nestedDirPath, { recursive: true });
+
+		await fs.writeFile(
+			path.join(nestedDirPath, "{{ module_name }}-service.ts.jinja"),
+			"export const {{ module_name }}Service = () => '{{ project_name }}';",
+			"utf-8",
+		);
+
+		// Create a static non-templated asset file
+		await fs.writeFile(
+			path.join(testDir, "src", "config.json"),
+			'{\n  "version": "1.0.0"\n}',
+			"utf-8",
 		);
 	});
 
 	afterAll(async () => {
-		await teardownTestEnvironment();
+		//await teardownTestEnvironment();
 	});
 
-	/*
 	it("Verify template config file - happy path", async () => {
-		const result = await runCLIForTest(["template", "verify", validConfigPath]);
+		const result = await runCLIForTest(["template", "verify", testDir]);
 
-		expect(result.rawStdout).toContain("Template Valid");
+		expect(result.rawStdout).toContain("Template Verification Passed");
 		expect(result.exitCode).toBe(0);
 	});
 
-	it("Verify template config file - unhappy path", async () => {
-		const result = await runCLIForTest([
+	it("Verify template config file - unhappy path (invalid config)", async () => {
+		const result1 = await runCLIForTest([
 			"template",
 			"verify",
-			invalidConfigPath,
+			testDirAlternate1,
 		]);
 
-		expect(result.rawStdout).toContain("Validation Error");
-		expect(result.exitCode).toBe(1);
-	});
+		expect(result1.rawStdout).toContain("Missing Template Configuration File");
+		expect(result1.exitCode).not.toBe(0);
 
-	it("Create template from directory", async () => {
-		const result = await runCLIForTest([
-			"-k",
-			"react-template",
-			"--desc",
-			"React Scaffolding Template",
-			"--tags",
-			"template,react",
+		const result2 = await runCLIForTest([
 			"template",
-			"create",
-			templateSourceDir,
+			"verify",
+			testDirAlternate2,
 		]);
 
-		expect(result.rawStdout).toContain("Template Created!");
-		expect(result.rawStdout).toContain("react-template");
-		expect(result.exitCode).toBe(0);
+		expect(result2.rawStdout).toContain("Template Verification Failed");
+		expect(result2.exitCode).not.toBe(0);
 	});
 
-	it("Save template from directory with source flag", async () => {
+	it("Save template from directory", async () => {
 		const result = await runCLIForTest([
 			"-k",
-			"dir-template",
+			"my-template",
 			"template",
 			"save",
-			templateSourceDir,
+			"--desc",
+			"Sample app template",
+			"--tags",
+			"node,template",
 			"--source",
 			"dir",
+			testDir,
 		]);
 
-		expect(result.rawStdout).toContain("Template Saved!");
-		expect(result.rawStdout).toContain("dir-template");
+		expect(result.rawStdout).toContain("Snapshot Saved!");
+		expect(result.rawStdout).toContain("my-template");
 		expect(result.exitCode).toBe(0);
 	});
 
-	it("List templates by type", async () => {
+	it("Ensure template is listed", async () => {
 		const result = await runCLIForTest(["list", "--type", "template"]);
 
-		expect(result.rawStdout).toContain("Found 2 item(s)");
-		expect(result.rawStdout).toContain("react-template");
-		expect(result.rawStdout).toContain("dir-template");
+		expect(result.rawStdout).toContain("Found 1 item(s)");
+		expect(result.rawStdout).toContain("my-template");
+		expect(result.rawStdout).toContain("#node #template");
 		expect(result.exitCode).toBe(0);
 	});
-	*/
+
+	it("List templates by tag", async () => {
+		const result = await runCLIForTest(["list", "--tags", "template"]);
+
+		expect(result.rawStdout).toContain("Found 1 item(s)");
+		expect(result.rawStdout).toContain("my-template");
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("Fetch template details", async () => {
+		const result = await runCLIForTest(["-k", "my-template", "list"]);
+
+		expect(result.rawStdout).toContain("Snapshot Details [Template]");
+		expect(result.rawStdout).toContain("my-template");
+		expect(result.rawStdout).toContain("Sample app template");
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("Create template directly from a directory", async () => {
+		const result = await runCLIForTest([
+			"-k",
+			"created-template",
+			"template",
+			"create",
+			"--desc",
+			"Directly created template",
+			testDir,
+		]);
+
+		expect(result.rawStdout).toContain("Snapshot Saved");
+		expect(result.rawStdout).toContain("created-template");
+		expect(result.exitCode).toBe(0);
+	});
+
+	it("Extract project from template with prompt inputs", async () => {
+		// Inputs passed for: project_name -> "awesome-app", module_name -> "auth"
+		const inputAnswers = ["awesome-app", "auth"];
+
+		const result = await runCLIForTest(
+			["-k", "my-template", "template", "generate-project", extractTargetDir],
+			inputAnswers,
+		);
+
+		expect(result.rawStdout).toContain("Project generated successfully!");
+		expect(result.exitCode).toBe(0);
+
+		// 1. Verify root file variable replacement
+		const generatedReadme = await fs.readFile(
+			path.join(extractTargetDir, "README.md"),
+			"utf-8",
+		);
+		expect(generatedReadme).toContain("# awesome-app");
+		expect(generatedReadme).toContain("Module: auth");
+
+		// 2. Verify directory tree creation with rendered folder name
+		const renderedModuleDir = path.join(extractTargetDir, "src", "auth");
+		const dirStats = await fs.stat(renderedModuleDir);
+		expect(dirStats.isDirectory()).toBe(true);
+
+		// 3. Verify rendered file name and contents inside the dynamic directory
+		const renderedFilePath = path.join(renderedModuleDir, "auth-service.ts");
+		const generatedService = await fs.readFile(renderedFilePath, "utf-8");
+		expect(generatedService).toBe(
+			"export const authService = () => 'awesome-app';",
+		);
+
+		// 4. Verify static file was copied intact
+		const staticConfig = await fs.readFile(
+			path.join(extractTargetDir, "src", "config.json"),
+			"utf-8",
+		);
+		expect(JSON.parse(staticConfig)).toEqual({ version: "1.0.0" });
+	});
+
+	it("Delete template", async () => {
+		const result = await runCLIForTest([
+			"-k",
+			"my-template",
+			"delete",
+			"--force",
+		]);
+
+		expect(result.rawStdout).toContain("Snapshot Deleted Successfully");
+		expect(result.rawStdout).toContain("my-template");
+		expect(result.exitCode).toBe(0);
+	});
 });

@@ -131,7 +131,7 @@ describe("Tree and Files management", () => {
 
 		FileUtils.copyDirectory(
 			FileUtils.formPath([TEST_HOME_DIR, Config.DIRECTORY_NAME]),
-			"/home/akash/.bscaff/",
+			"/home/akash/",
 		);
 
 		const result = await runCLIForTest([

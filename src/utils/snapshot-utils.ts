@@ -192,41 +192,47 @@ export async function computeSnapshotSize(
 ): Promise<string> {
 	if (!record) return `0 B`;
 
-	if (record.type == SnapshotType.URL) {
-		return "1 line";
-	} else if (
-		record.type == SnapshotType.Snippet ||
-		record.type == SnapshotType.Template
-	) {
-		const content = await readContentFromSnapshotFile(key, record.fileName!);
-		if (!content) return `0 B`;
-		if (record.type == SnapshotType.Snippet) {
-			return `${MiscUtils.countLines(content)} lines`;
-		} else {
-			return (
-				MiscUtils.formatFileSize(MiscUtils.getSizeOfTextContent(content)) ??
-				`0 B`
+	switch (record.type) {
+		case SnapshotType.URL:
+			return "1 line";
+
+		case SnapshotType.Snippet:
+			const content = await readContentFromSnapshotFile(
+				key,
+				record.snippetFileName!,
 			);
-		}
-	} else if (
-		record.type == SnapshotType.Tree ||
-		record.type == SnapshotType.Files
-	) {
-		if (!record.structure) return `0 B`;
-		let size = 0;
-		for (let i = 0; i < record.structure.length; ++i) {
-			if (record.structure[i].type == "file") {
-				size +=
-					record.structure[i].sizeInBytes ??
-					FileUtils.getFileSizeInBytes(
-						getFileUnderSnapshot(key, record.structure[i].path),
-					) ??
-					0;
+			if (!content) return `0 B`;
+			return `${MiscUtils.countLines(content)} lines`;
+
+		case SnapshotType.Tree:
+		case SnapshotType.Files:
+		case SnapshotType.Template:
+			if (!record.structure) return `0 B`;
+			const snapshotDir = getSnapshotDirectory(key);
+
+			let size = 0;
+			for (let i = 0; i < record.structure.length; ++i) {
+				if (record.structure[i].type == "file") {
+					const filePath =
+						record.type === SnapshotType.Template
+							? FileUtils.formPath([
+									snapshotDir,
+									record.templateRootDir!,
+									record.templateSubDirectoryPath ?? "",
+									record.structure[i].path,
+								])
+							: FileUtils.formPath([snapshotDir, record.structure[i].path]);
+
+					size +=
+						record.structure[i].sizeInBytes ??
+						FileUtils.getFileSizeInBytes(filePath) ??
+						0;
+				}
 			}
-		}
-		return MiscUtils.formatFileSize(size) ?? `0 B`;
-	} else {
-		return `0 B`;
+			return MiscUtils.formatFileSize(size) ?? `0 B`;
+
+		default:
+			return `0 B`;
 	}
 }
 

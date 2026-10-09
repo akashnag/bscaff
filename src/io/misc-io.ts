@@ -22,6 +22,7 @@ import {
 	printHeader,
 	printLinedHeader,
 	printPreview,
+	printPreviewFileTree,
 	printSeparatorLine,
 	QUIET_MODE,
 	quickConfirm,
@@ -311,13 +312,8 @@ export class EditSnapshotsIO extends ConsoleIO {
 		printField("Error", "Invalid/Non-existent path specified.");
 
 		if (record && record.structure) {
-			const treeLines = MiscUtils.splitContentByLines(
-				TreeUtils.drawFileTree(record.structure),
-			);
-			printLinedHeader("File Tree", true);
-			printPreview(treeLines, true, 60, treeLines.length);
-			printPreview(treeLines, true);
-			printSeparatorLine(true);
+			console.log();
+			printPreviewFileTree("File Tree", record.structure);
 		}
 
 		console.log("\nTo resolve:");

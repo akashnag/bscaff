@@ -120,11 +120,19 @@ function executeCLI(
 
 export async function runCLIForTest(
 	args: string[],
+	inputs?: string[],
 ): Promise<CLIExecutionResult> {
-	return await runCLI(args, {
-		homeDir: path.join(TEST_DIR, TEST_HOME_DIR_NAME),
-		cwd: TEST_DIR,
-	});
+	if (inputs) {
+		return await runCLIWithInput(args, inputs, {
+			homeDir: path.join(TEST_DIR, TEST_HOME_DIR_NAME),
+			cwd: TEST_DIR,
+		});
+	} else {
+		return await runCLI(args, {
+			homeDir: path.join(TEST_DIR, TEST_HOME_DIR_NAME),
+			cwd: TEST_DIR,
+		});
+	}
 }
 
 /**
