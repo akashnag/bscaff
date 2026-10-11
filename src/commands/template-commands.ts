@@ -30,7 +30,7 @@ import {
 	TemplateAnswers,
 	TemplateSourceType,
 } from "../types/template-types.js";
-import { SnapshotRecord, SnapshotType } from "../types/types.js";
+import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as ParamUtils from "../utils/param-utils.js";
@@ -547,6 +547,95 @@ export async function generateProjectFromTemplate(
 	dryRun: boolean | undefined,
 	overwriteBehaviour: string | undefined,
 	jsonParams: string | undefined,
+	fromDir: string | undefined,
+	fromZip: string | undefined,
+	fromGit: string | undefined,
+	toPath: string,
+): Promise<boolean> {
+	const io = new ExtractTemplateIO();
+
+	if (fromZip && fromDir) {
+		io.errorConflictingArgs("--from-zip", "--from-dir");
+		return false;
+	}
+
+	if (fromZip && fromGit) {
+		io.errorConflictingArgs("--from-zip", "--from-git");
+		return false;
+	}
+
+	if (fromDir && fromGit) {
+		io.errorConflictingArgs("--from-git", "--from-dir");
+		return false;
+	}
+
+	if (key && (fromZip || fromDir || fromGit)) {
+		if (fromZip) {
+			io.errorConflictingArgs("--key", "--from-zip");
+		} else if (fromDir) {
+			io.errorConflictingArgs("--key", "--from-dir");
+		} else {
+			io.errorConflictingArgs("--key", "--from-git");
+		}
+		return false;
+	}
+
+	if (!key && !fromZip && !fromDir && !fromGit) {
+		io.errorMissingParameter("--key");
+		return false;
+	}
+
+	if (key) {
+		return await generateProjectFromSavedTemplate(
+			key,
+			dryRun,
+			overwriteBehaviour,
+			jsonParams,
+			toPath,
+		);
+	} else {
+		return await generateProjectFromDirOrZipOrGitTemplate(
+			fromDir,
+			fromZip,
+			fromGit,
+			dryRun,
+			overwriteBehaviour,
+			jsonParams,
+			toPath,
+		);
+	}
+}
+
+async function generateProjectFromDirOrZipOrGitTemplate(
+	fromDir: string | undefined,
+	fromZip: string | undefined,
+	fromGit: string | undefined,
+	dryRun: boolean | undefined,
+	overwriteBehaviour: string | undefined,
+	jsonParams: string | undefined,
+	toPath: string,
+): Promise<boolean> {
+	const io = new ExtractTemplateIO();
+
+	// TODO: add code to extract-zip (if zip) and then call generateProjectFromTemplateDirectory()
+
+	return await generateProjectFromTemplateDirectory(
+		templateDir,
+		structure,
+		parameters,
+		templateSource,
+		dryRun,
+		overwriteBehaviour,
+		jsonParams,
+		toPath,
+	);
+}
+
+async function generateProjectFromSavedTemplate(
+	key: string | undefined,
+	dryRun: boolean | undefined,
+	overwriteBehaviour: string | undefined,
+	jsonParams: string | undefined,
 	toPath: string,
 ): Promise<boolean> {
 	const io = new ExtractTemplateIO();
@@ -589,9 +678,36 @@ export async function generateProjectFromTemplate(
 		record.templateRootDir,
 	]);
 
+	return await generateProjectFromTemplateDirectory(
+		pathToTemplateDir,
+		record.structure!,
+		record.parameters,
+		record.templateSource,
+		dryRun,
+		overwriteBehaviour,
+		jsonParams,
+		toPath,
+	);
+}
+
+async function generateProjectFromTemplateDirectory(
+	pathToTemplateDir: string,
+	structure: FileTreeNode[],
+	parameters: string[] | undefined,
+	templateSource: {
+		sourceType: TemplateSourceType;
+		url?: string;
+		version?: string;
+	},
+	dryRun: boolean | undefined,
+	overwriteBehaviour: string | undefined,
+	jsonParams: string | undefined,
+	toPath: string,
+): Promise<boolean> {
+	const io = new ExtractTemplateIO();
+
 	const templateFile = FileUtils.formPath([
-		snapshotDir,
-		record.templateRootDir,
+		pathToTemplateDir,
 		Config.TEMPLATE_CONFIG_FILE,
 	]);
 
@@ -602,7 +718,7 @@ export async function generateProjectFromTemplate(
 
 	const template = await TemplateUtils.readTemplateFile(templateFile);
 	if (!template) {
-		io.errorReadingTemplateConfigFile(key, templateFile);
+		io.errorReadingTemplateConfigFile(templateFile);
 		return false;
 	}
 
@@ -636,26 +752,26 @@ export async function generateProjectFromTemplate(
 
 	let paramValues: Record<string, any> = {};
 
-	if (record.parameters && record.parameters.length > 0) {
+	if (parameters && parameters.length > 0) {
 		if (jsonParams) {
 			const jsonData = JSON.parse(jsonParams);
 			const missingItems = [];
 
-			for (let i = 0; i < record.parameters.length; ++i) {
-				if (!Object.hasOwn(jsonData, record.parameters[i])) {
-					missingItems.push(record.parameters[i]);
+			for (let i = 0; i < parameters.length; ++i) {
+				if (!Object.hasOwn(jsonData, parameters[i])) {
+					missingItems.push(parameters[i]);
 				} else {
-					paramValues[record.parameters[i]] = jsonData[record.parameters[i]];
+					paramValues[parameters[i]] = jsonData[parameters[i]];
 				}
 			}
 
 			if (missingItems.length > 0) {
-				io.errorJSONMissingParameters(key, missingItems);
+				io.errorJSONMissingParameters(missingItems);
 				return false;
 			}
 		} else {
 			paramValues = await io.promptForTemplateParameters(
-				record.parameters,
+				parameters,
 				TemplateUtils.getCustomKeysFromTemplate(template),
 				template,
 			);
@@ -687,12 +803,12 @@ export async function generateProjectFromTemplate(
 
 	// ---------- create answers object/file -----------
 	let templateAnswers: TemplateAnswers = {
-		_src_type: record.templateSource.sourceType,
+		_src_type: templateSource.sourceType,
 	};
 
-	if (record.templateSource.sourceType === "git") {
-		templateAnswers._url = record.templateSource.url;
-		templateAnswers._version = record.templateSource.version;
+	if (templateSource.sourceType === "git") {
+		templateAnswers._url = templateSource.url;
+		templateAnswers._version = templateSource.version;
 	}
 
 	for (const varName in paramValues) {
@@ -711,8 +827,8 @@ export async function generateProjectFromTemplate(
 	// ----------- process files ------------------
 	const excludedDirs: string[] = [];
 
-	for (let i = 0; i < record.structure!.length; ++i) {
-		const node = record.structure![i];
+	for (let i = 0; i < structure.length; ++i) {
+		const node = structure[i];
 
 		const baseFileName = FileUtils.getFileNameFromPath(node.path);
 		if (baseFileName === Config.TEMPLATE_CONFIG_FILE) continue;
@@ -810,11 +926,7 @@ export async function generateProjectFromTemplate(
 		}
 	}
 
-	io.successTemplateProjectGenerated(
-		key,
-		toPath,
-		template._post_generation_message,
-	);
+	io.successTemplateProjectGenerated(toPath, template._post_generation_message);
 	return true;
 }
 

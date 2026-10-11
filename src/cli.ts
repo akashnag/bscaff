@@ -623,7 +623,9 @@ export class CLI {
 
 		/*
 		Examples:
-			[Verify template file]			--> bscaff template verify <path-to-yaml-file>
+			[Generate project from saved-template]			--> bscaff -k <key> template generate-project <project-directory>
+			[Generate project from directory directly]		--> bscaff -k <key> template generate-project --from-dir <template-directory> <project-directory>
+			[Generate project from zip directly]			--> bscaff -k <key> template generate-project --from-zip <template-zip> <project-directory>
 		*/
 		const generateProjectCommand = templateGroup
 			.command("generate-project <project-directory>")
@@ -631,6 +633,18 @@ export class CLI {
 			.option(
 				"--dry-run",
 				"Test generate the project without actually creating files",
+			)
+			.option(
+				"--from-dir <template-directory>",
+				"Generate template directly from template directory",
+			)
+			.option(
+				"--from-zip <template-zip-file>",
+				"Generate template directly from template zip-file",
+			)
+			.option(
+				"--from-git <git-repo-URL>",
+				"Generate template directly from a Git Repo",
 			)
 			.option(
 				"--json <var-inputs>",
@@ -654,6 +668,9 @@ export class CLI {
 						options.dryRun,
 						options.ifExists,
 						options.json,
+						options.fromDir,
+						options.fromZip,
+						options.fromGit,
 						path,
 					);
 					if (!retVal) throw new Error();
@@ -662,7 +679,7 @@ export class CLI {
 
 		/*
 		Examples:
-			[Verify template file]			--> bscaff template verify <path-to-yaml-file>
+			[Verify template config]			--> bscaff template verify <path-to-template-directory>
 		*/
 		const verifyTemplateCommand = templateGroup
 			.command("verify <path-to-template-directory>")

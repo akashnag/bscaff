@@ -386,11 +386,10 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 		return answers;
 	}
 
-	errorReadingTemplateConfigFile(key: string, templateFile: string): void {
+	errorReadingTemplateConfigFile(templateFile: string): void {
 		if (QUIET_MODE) return;
 
 		printHeader("Error Reading Template Config");
-		printField("Key", key);
 		printField("File", templateFile);
 		printField(
 			"Error",
@@ -399,7 +398,7 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 
 		console.log("\nTo resolve:");
 		printBullet("Verify that the template snapshot is not corrupted");
-		printBullet(`Inspect files in snapshot using: bscaff list -k ${key}\n`);
+		printBullet(`Inspect files in snapshot using: bscaff list -k <key>\n`);
 	}
 
 	errorCannotDryRunInPresenceOfTriggers(): void {
@@ -534,11 +533,7 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 		);
 	}
 
-	successTemplateProjectGenerated(
-		key: string,
-		tPath: string,
-		message?: string,
-	): void {
+	successTemplateProjectGenerated(tPath: string, message?: string): void {
 		if (QUIET_MODE) return;
 
 		console.log();
@@ -546,16 +541,14 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 			printHeader(message, IOHeaderType.SUCCESS);
 		} else {
 			printHeader("Project Generated Successfully!", IOHeaderType.SUCCESS);
-			printField("Key", key);
 			printField("Location", tPath);
 		}
 	}
 
-	errorJSONMissingParameters(key: string, missingItems: string[]): void {
+	errorJSONMissingParameters(missingItems: string[]): void {
 		if (QUIET_MODE) return;
 
 		printHeader("Missing Parameter Values");
-		printField("Key", key);
 		printField(
 			"Error",
 			"Error generating project from template, specified JSON missing parameter values.",
