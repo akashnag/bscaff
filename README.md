@@ -248,7 +248,7 @@ For example:
 └── README.md
 ```
 
-Variable replacement can be controlled through `settings.yml`, or inside the template config file (`bscaff-template.yml`) for templates.
+Variable replacement can be controlled through `settings.yml`, or inside the template config file (`bscaff-template.config.yml`) for templates.
 
 ---
 

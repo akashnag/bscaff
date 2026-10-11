@@ -239,6 +239,22 @@ bscaff -k my-template template save ./bscaff-react-template.zip --source zip
 bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --source git
 ```
 
+### Generate a Project from a Template
+
+Generate a project directory from a saved template:
+
+```bash
+bscaff -k my-template template generate-project projects/my-react-app
+```
+
+While project creation, variables (parameters) will be prompted for input. If you wish to have non-interactive generation, use the `--json` flag as follows:
+
+```bash
+bscaff -k my-template template generate-project --json "$(cat param-values.json)" projects/my-react-app
+```
+
+This will take the parameter values from the json content of the file `param-values.json` (or whatever file you specify) instead of prompting for input.
+
 ### Create a Template from an Existing Directory
 
 Automatically convert a directory into a saved bscaff template:
@@ -255,9 +271,9 @@ Update a saved template from its upstream Git repository:
 bscaff -k my-template template update
 ```
 
-### Template Configuration (`bscaff-template.yml`)
+### Template Configuration (`bscaff-template.config.yml`)
 
-Every bscaff template requires a configuration file named `bscaff-template.yml` (or `.yaml`) at the root of the template directory[cite: 3].
+Every bscaff template requires a configuration file named `bscaff-template.config.yml` at the root of the template directory[cite: 3].
 
 It defines template metadata, jinja/environment settings, pre/post-generation lifecycle tasks, migrations, and interactive user prompts (questions)[cite: 3].
 
@@ -272,7 +288,7 @@ All internal bscaff control keys begin with an underscore (`_`)[cite: 3].
 | `_min_bscaff_version` | `string` | Minimum required bscaff version required to execute this template[cite: 3]. |
 | `_subdirectory` | `string` | Relative path if the template files reside inside a sub-folder rather than the root[cite: 3]. |
 | `_answers_file` | `string` | Path where user answers are recorded for future template updates (default: `.bscaff-answers.yml`). |
-| `_message_after_copy` | `string` | Message displayed in the terminal upon successful project scaffolding[cite: 3]. |
+| `_post_generation_message` | `string` | Message displayed in the terminal upon successful project scaffolding[cite: 3]. |
 | `_templates_suffix` | `string` | File suffix used to identify template files (default: `.jinja`, customizable via `templatesSuffix` setting)[cite: 3]. |
 | `_exclude` | `string[]` | Glob patterns to exclude completely from template processing[cite: 3]. |
 | `_include` | `string[]` | Glob patterns to explicitly include even if matched by `_exclude`[cite: 3]. |
@@ -321,13 +337,13 @@ Any top-level YAML key that **does not** start with an underscore (`_`) is treat
 
 ---
 
-#### Example `bscaff-template.yml`
+#### Example `bscaff-template.config.yml`
 
 ```yaml
 _min_bscaff_version: "1.0.0"
 _answers_file: ".bscaff-answers.yml"
 _templates_suffix: ".jinja"
-_message_after_copy: "Project successfully initialized! Run `npm install` to get started."
+_post_generation_message: "Project successfully initialized! Run `npm install` to get started."
 _exclude:
   - ".git/*"
   - "node_modules/*"
@@ -474,7 +490,7 @@ bscaff -k react-project open docs/CONTRIBUTING.md --command "code"
 
 ## Extracting Snapshots
 
-Extract saved tree, files, or template snapshots to a destination directory:
+Extract saved tree or files to a destination directory:
 
 ```bash
 bscaff -k my-project extract ./new-project

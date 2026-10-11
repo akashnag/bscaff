@@ -714,6 +714,9 @@ export async function generateProjectFromTemplate(
 	for (let i = 0; i < record.structure!.length; ++i) {
 		const node = record.structure![i];
 
+		const baseFileName = FileUtils.getFileNameFromPath(node.path);
+		if (baseFileName === Config.TEMPLATE_CONFIG_FILE) continue;
+
 		const nodePath = ParamUtils.replacePlaceholdersInFilePath(
 			node.path,
 			paramValues,
