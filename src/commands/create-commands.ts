@@ -41,7 +41,16 @@ export async function createTreeOnDiskFromClipboard(
 		return false;
 	}
 
-	const { structure } = TreeUtils.extractStructureFromASCIITree(tree);
+	let structure: FileTreeNode[] | null = null;
+	try {
+		({ structure } = TreeUtils.extractStructureFromASCIITree(tree));
+	} catch (err: any) {
+		io.errorGeneric(
+			"createTreeOnDiskFromClipboard: error extracting structure ==> " +
+				err.toString(),
+		);
+		return false;
+	}
 
 	if (!structure) {
 		io.errorInvalidTree();
@@ -129,16 +138,18 @@ export async function createTree(
 	const cm = new ClipboardManager();
 	const engine = ParamUtils.createTemplateEngine();
 	const options = {
-		exclude: Settings.get("exclude") ?? [],
-		include: Settings.get("include") ?? [],
-		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+		exclude: Settings.get("exclude") ?? Settings.DEFAULT_SETTINGS.exclude,
+		include: Settings.get("include") ?? Settings.DEFAULT_SETTINGS.include,
+		templatesSuffix:
+			Settings.get("templatesSuffix") ??
+			Settings.DEFAULT_SETTINGS.templatesSuffix,
 	};
 
 	for (let i = 0; i < structure.length; ++i) {
 		const node = structure[i];
 
 		const subPath = parameters
-			? ParamUtils.replacePlaceholdersInFileName(
+			? ParamUtils.replacePlaceholdersInFilePath(
 					node.path,
 					parameters,
 					options,
@@ -188,12 +199,13 @@ export async function createTree(
 				} else {
 					content = await ioHandler!.promptForFileContent(fullPath, cm);
 					if (parameters && content) {
-						content = await ParamUtils.replacePlaceholdersInFileContent(
-							fullPath,
-							parameters,
-							options,
-							engine,
-						);
+						content =
+							await ParamUtils.getModifiedFileContentPostPlaceholderReplacement(
+								fullPath,
+								parameters,
+								options,
+								engine,
+							);
 					}
 				}
 

@@ -40,59 +40,39 @@ export function getParametersFromText(
 	text: string,
 	engine?: nunjucks.Environment,
 ): string[] {
-	const variables = new Set<string>();
-	const nodes = (nunjucks as any).nodes;
-
+	if (!text) return [];
 	if (!engine) engine = createTemplateEngine();
 
-	try {
-		// 1. Create a Parser instance bound to your custom Environment's lexer
-		// This ensures custom envops (tags/delimiters) are respected during tokenization!
-		const parser = new (nunjucks as any).parser.Parser(
-			(nunjucks as any).lexer.lex(text, (engine as any).opts?.tags),
-		);
+	const variables = new Set<string>();
 
-		// 2. Parse into AST
-		const ast = parser.parse();
+	// 1. Retrieve custom delimiters safely from the engine options
+	const tags = (engine as any).opts?.tags || {
+		variableStart: "{{",
+		variableEnd: "}}",
+	};
 
-		// 3. Walk AST to collect variable symbols
-		function walkNodes(node: any): void {
-			if (!node) return;
+	// Helper to escape special regex characters in custom tags
+	const escapeRegExp = (str: string) =>
+		str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-			// 'Symbol' nodes represent variable identifiers
-			if (node instanceof nodes.Symbol) {
-				variables.add(node.value);
-			}
+	const varStart = escapeRegExp(tags.variableStart);
+	const varEnd = escapeRegExp(tags.variableEnd);
 
-			// 'LookupVal' nodes represent property accesses (e.g. [[ db.host ]])
-			if (node instanceof nodes.LookupVal) {
-				let root = node.target;
-				while (root && root.target) {
-					root = root.target;
-				}
-				if (root && root instanceof nodes.Symbol) {
-					variables.add(root.value);
-				}
-			}
+	// 2. Build a dynamic regex matching your template engine's variable tags.
+	// This matches names and dot-notation (e.g., {{ user.name }})
+	const regex = new RegExp(`${varStart}\\s*([a-zA-Z0-9_.]+)\\s*${varEnd}`, "g");
 
-			// Traverse child properties
-			for (const key in node) {
-				if (Object.prototype.hasOwnProperty.call(node, key)) {
-					const child = (node as Record<string, any>)[key];
-					if (child && typeof child === "object") {
-						if (Array.isArray(child)) {
-							child.forEach((c) => walkNodes(c));
-						} else if (child instanceof nodes.Node) {
-							walkNodes(child);
-						}
-					}
-				}
-			}
+	let match;
+	while ((match = regex.exec(text)) !== null) {
+		if (match[1]) {
+			const fullPath = match[1].trim();
+
+			// If you want the root object of dot notation (e.g., "db" from "db.host"),
+			// you can split by dot. Otherwise, keep `fullPath` if you want the whole expression.
+			const rootVariable = fullPath.split(".")[0];
+
+			variables.add(rootVariable);
 		}
-
-		walkNodes(ast);
-	} catch (err) {
-		console.warn("Failed to parse template AST for variable extraction:", err);
 	}
 
 	return Array.from(variables);
@@ -156,14 +136,14 @@ export function shouldFileOrDirectoryBeExcluded(
 	return isExcluded;
 }
 
-export function replacePlaceholdersInFileName(
-	fileName: string,
+export function replacePlaceholdersInFilePath(
+	filePath: string,
 	paramValues: Record<string, any>,
 	options: { exclude?: string[]; include?: string[]; templatesSuffix?: string },
 	engine?: nunjucks.Environment,
 ): string {
 	const matchesAny = (patterns: string[]): boolean =>
-		patterns.some((pattern) => globToRegex(pattern).test(fileName));
+		patterns.some((pattern) => globToRegex(pattern).test(filePath));
 
 	const isIncluded =
 		options.include &&
@@ -176,10 +156,10 @@ export function replacePlaceholdersInFileName(
 		matchesAny(options.exclude);
 
 	if (isExcluded && !isIncluded) {
-		return fileName;
+		return filePath;
 	}
 
-	let modFileName = replacePlaceholdersInText(fileName, paramValues, engine);
+	let modFileName = replacePlaceholdersInText(filePath, paramValues, engine);
 
 	if (
 		options.templatesSuffix &&
@@ -193,10 +173,10 @@ export function replacePlaceholdersInFileName(
 	return modFileName;
 }
 
-export async function replacePlaceholdersInFileContent(
+export async function getModifiedFileContentPostPlaceholderReplacement(
 	filePath: string,
 	paramValues: Record<string, any>,
-	options: { exclude?: string[]; include?: string[]; templatesSuffix?: string },
+	options: { exclude?: string[]; include?: string[]; templatesSuffix: string },
 	engine?: nunjucks.Environment,
 ): Promise<string | null> {
 	const matchesAny = (patterns: string[]): boolean =>

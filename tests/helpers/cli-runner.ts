@@ -96,7 +96,7 @@ export function getCLICommand(): { command: string; argsPrefix: string[] } {
  * @param cwd - Current working directory
  * @param options - Additional execa options
  */
-function executeCLI(
+function executeCLI__original(
 	args: string[],
 	cwd: string,
 	options: Options = {},
@@ -113,6 +113,50 @@ function executeCLI(
 	return execa(command, [...argsPrefix, ...args], {
 		cwd,
 		reject: false,
+		...options,
+		env,
+	});
+}
+
+function executeCLI(
+	args: string[],
+	cwd: string,
+	options: Options = {},
+): ReturnType<typeof execa> {
+	const { command, argsPrefix } = getCLICommand();
+	const defaultHome = path.join(cwd, TEST_HOME_DIR_NAME);
+
+	const env: Record<string, string> = {
+		...(process.env as Record<string, string>),
+		HOME: defaultHome,
+		USERPROFILE: defaultHome,
+		BSCAFF_USER_DIR: defaultHome,
+		...(options.env as Record<string, string>),
+	};
+
+	// Safely format command parts:
+	// 1. Leave command substitutions like $(...) unquoted so the shell evaluates them.
+	// 2. Wrap any other arguments containing spaces in double quotes.
+	const fullCommand = [command, ...argsPrefix, ...args]
+		.map((arg) => {
+			if (typeof arg === "string") {
+				// Check if it's a shell command substitution
+				if (arg.startsWith("$(") && arg.endsWith(")")) {
+					return arg; // Keep unquoted so shell executes it
+				}
+				// If it contains spaces, wrap in quotes (escaping internal double quotes)
+				if (/[\s"']/.test(arg)) {
+					return `"${arg.replace(/"/g, '\\"')}"`;
+				}
+			}
+			return arg;
+		})
+		.join(" ");
+
+	return execa(fullCommand, {
+		cwd,
+		reject: false,
+		shell: true, // Enables shell interpretation
 		...options,
 		env,
 	});

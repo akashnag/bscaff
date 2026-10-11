@@ -539,6 +539,9 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 		tPath: string,
 		message?: string,
 	): void {
+		if (QUIET_MODE) return;
+
+		console.log();
 		if (message) {
 			printHeader(message, IOHeaderType.SUCCESS);
 		} else {
@@ -546,5 +549,49 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 			printField("Key", key);
 			printField("Location", tPath);
 		}
+	}
+
+	errorJSONMissingParameters(key: string, missingItems: string[]): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Missing Parameter Values");
+		printField("Key", key);
+		printField(
+			"Error",
+			"Error generating project from template, specified JSON missing parameter values.",
+		);
+		printField("Missing", missingItems.join(", "));
+
+		console.log();
+	}
+
+	infoBeginningProjectGeneration(): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Creating project...", IOHeaderType.INFO);
+	}
+
+	errorCopyingFile(fPath: string): void {
+		if (QUIET_MODE) return;
+
+		console.log(chalk.red("Error copying file: ") + fPath);
+	}
+
+	errorModifyingFileContents(fPath: string): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Error Modifying File Content");
+
+		printField("Path", fPath);
+		printField(
+			"Error",
+			"Error encountered while modifying file content as per project parameters.",
+		);
+
+		console.log("\nTo resolve:");
+		printBullet(
+			"Check if the target file exists and you have write permissions.",
+		);
+		console.log();
 	}
 }

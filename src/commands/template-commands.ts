@@ -231,15 +231,23 @@ export async function saveTemplate(
 		? FileUtils.formPath([localDir, template._subdirectory])
 		: localDir;
 
-	const { structure, parameters, stats } =
-		await TreeUtils.extractStructureFromDirectory(templateDir, {
-			exclude: template._exclude,
-			include: template._include,
-		});
+	let structure, parameters, stats;
+	try {
+		({ structure, parameters, stats } =
+			await TreeUtils.extractStructureFromDirectory(templateDir, {
+				exclude: template._exclude,
+				include: template._include,
+			}));
+	} catch (err: any) {
+		io.errorGeneric(
+			"saveTemplate: error extracting structure ==> " + err.toString(),
+		);
+		return false;
+	}
 
 	if (!structure) {
 		FileUtils.deleteDirectory(snapshotDir);
-		io.errorGeneric("saveTemplate::1");
+		io.errorGeneric("saveTemplate::3");
 		return false;
 	}
 
@@ -341,12 +349,26 @@ export async function createTemplateFromDirectory(
 		? FileUtils.formPath([localDir, template._subdirectory])
 		: localDir;
 
-	const { structure, parameters, stats } =
-		await TreeUtils.extractStructureFromDirectory(
-			templateDir,
-			{ exclude: template._exclude, include: template._include },
-			false,
+	let structure, parameters, stats;
+
+	try {
+		({ structure, parameters, stats } =
+			await TreeUtils.extractStructureFromDirectory(
+				templateDir,
+				{
+					exclude: template._exclude,
+					include: template._include,
+					envOps: template._envops,
+				},
+				false,
+			));
+	} catch (err: any) {
+		io.errorGeneric(
+			"createTemplateFromDirectory: error extracting structure ==> " +
+				err.toString(),
 		);
+		return false;
+	}
 
 	const tagList = tags ? tags.split(",") : undefined;
 	const info: SnapshotRecord = {
@@ -524,6 +546,7 @@ export async function generateProjectFromTemplate(
 	key: string | undefined,
 	dryRun: boolean | undefined,
 	overwriteBehaviour: string | undefined,
+	jsonParams: string | undefined,
 	toPath: string,
 ): Promise<boolean> {
 	const io = new ExtractTemplateIO();
@@ -597,16 +620,49 @@ export async function generateProjectFromTemplate(
 
 	const engine = ParamUtils.createTemplateEngine(template._envops);
 	const templateOptions = {
-		exclude: template._exclude ?? undefined,
-		include: template._include ?? undefined,
-		templatesSuffix: template._templates_suffix ?? undefined,
+		exclude:
+			template._exclude ??
+			Settings.get("exclude") ??
+			Settings.DEFAULT_SETTINGS.exclude,
+		include:
+			template._include ??
+			Settings.get("include") ??
+			Settings.DEFAULT_SETTINGS.include,
+		templatesSuffix:
+			template._templates_suffix ??
+			Settings.get("templatesSuffix") ??
+			Settings.DEFAULT_SETTINGS.templatesSuffix,
 	};
 
-	const paramValues = await io.promptForTemplateParameters(
-		record.parameters!,
-		TemplateUtils.getCustomKeysFromTemplate(template),
-		template,
-	);
+	let paramValues: Record<string, any> = {};
+
+	if (record.parameters && record.parameters.length > 0) {
+		if (jsonParams) {
+			const jsonData = JSON.parse(jsonParams);
+			const missingItems = [];
+
+			for (let i = 0; i < record.parameters.length; ++i) {
+				if (!Object.hasOwn(jsonData, record.parameters[i])) {
+					missingItems.push(record.parameters[i]);
+				} else {
+					paramValues[record.parameters[i]] = jsonData[record.parameters[i]];
+				}
+			}
+
+			if (missingItems.length > 0) {
+				io.errorJSONMissingParameters(key, missingItems);
+				return false;
+			}
+		} else {
+			paramValues = await io.promptForTemplateParameters(
+				record.parameters,
+				TemplateUtils.getCustomKeysFromTemplate(template),
+				template,
+			);
+		}
+	}
+
+	io.infoBeginningProjectGeneration();
 
 	if (!FileUtils.doesDirectoryExist(toPath)) {
 		io.infoCreateDirectory(toPath);
@@ -658,7 +714,7 @@ export async function generateProjectFromTemplate(
 	for (let i = 0; i < record.structure!.length; ++i) {
 		const node = record.structure![i];
 
-		const nodePath = ParamUtils.replacePlaceholdersInFileName(
+		const nodePath = ParamUtils.replacePlaceholdersInFilePath(
 			node.path,
 			paramValues,
 			templateOptions,
@@ -681,7 +737,7 @@ export async function generateProjectFromTemplate(
 			continue;
 		}
 
-		const sourcePath = FileUtils.formPath([templateSourceDir, nodePath]);
+		const sourcePath = FileUtils.formPath([templateSourceDir, node.path]);
 		const targetPath = FileUtils.formPath([toPath, nodePath]);
 
 		if (node.type === "dir") {
@@ -707,7 +763,31 @@ export async function generateProjectFromTemplate(
 			}
 
 			io.infoCreateFile(targetPath);
-			if (!dryRun) FileUtils.copyFile(sourcePath, targetPath);
+			if (!dryRun) {
+				if (!FileUtils.copyFile(sourcePath, targetPath)) {
+					io.errorCopyingFile(targetPath);
+					io.errorTemplateExtractionFailed("FILE_COPY_ERROR", targetPath);
+					return false;
+				} else {
+					const modContent =
+						await ParamUtils.getModifiedFileContentPostPlaceholderReplacement(
+							sourcePath, // use sourcePath to read the file (as otherwise .jinja extension will be lost in targetPath which will cause no replacement of placeholders as templatesSuffix wont match)
+							paramValues,
+							templateOptions,
+							engine,
+						);
+
+					if (!modContent) {
+						io.errorGeneric("generateProjectFromTemplate::1");
+						return false;
+					}
+
+					if (!FileUtils.writeTextFile(targetPath, modContent)) {
+						io.errorModifyingFileContents(targetPath);
+						return false;
+					}
+				}
+			}
 		}
 	}
 

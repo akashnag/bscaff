@@ -433,7 +433,7 @@ export async function extractFile(
 	options?: {
 		exclude?: string[];
 		include?: string[];
-		templatesSuffix?: string;
+		templatesSuffix: string;
 	},
 	engine?: nunjucks.Environment,
 ): Promise<boolean> {
@@ -471,12 +471,13 @@ export async function extractFile(
 		if (exists) FileUtils.deleteFile(targetPath);
 
 		if (parameterValues && options && engine) {
-			const content = await ParamUtils.replacePlaceholdersInFileContent(
-				sourcePath,
-				parameterValues,
-				options,
-				engine,
-			);
+			const content =
+				await ParamUtils.getModifiedFileContentPostPlaceholderReplacement(
+					sourcePath,
+					parameterValues,
+					options,
+					engine,
+				);
 
 			if (!content) {
 				io.errorGeneric("extractFile::1");
@@ -510,9 +511,11 @@ async function extractFiles(
 	const io = new ExtractSnapshotIO();
 	const engine = ParamUtils.createTemplateEngine();
 	const templatingOptions = {
-		exclude: Settings.get("exclude") ?? [],
-		include: Settings.get("include") ?? [],
-		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+		exclude: Settings.get("exclude") ?? Settings.DEFAULT_SETTINGS.exclude,
+		include: Settings.get("include") ?? Settings.DEFAULT_SETTINGS.include,
+		templatesSuffix:
+			Settings.get("templatesSuffix") ??
+			Settings.DEFAULT_SETTINGS.templatesSuffix,
 	};
 
 	for (let i = 0; i < record.structure.length; ++i) {
@@ -520,7 +523,7 @@ async function extractFiles(
 		if (partialRelativePath && record.structure[i].path !== partialRelativePath)
 			continue;
 
-		const relPath = ParamUtils.replacePlaceholdersInFileName(
+		const relPath = ParamUtils.replacePlaceholdersInFilePath(
 			record.structure[i].path,
 			parameterValues,
 			templatingOptions,
@@ -567,9 +570,11 @@ async function extractTree(
 	const io = new ExtractSnapshotIO();
 	const engine = ParamUtils.createTemplateEngine();
 	const templatingOptions = {
-		exclude: Settings.get("exclude") ?? [],
-		include: Settings.get("include") ?? [],
-		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+		exclude: Settings.get("exclude") ?? Settings.DEFAULT_SETTINGS.exclude,
+		include: Settings.get("include") ?? Settings.DEFAULT_SETTINGS.include,
+		templatesSuffix:
+			Settings.get("templatesSuffix") ??
+			Settings.DEFAULT_SETTINGS.templatesSuffix,
 	};
 
 	for (let i = 0; i < record.structure.length; ++i) {
@@ -582,7 +587,7 @@ async function extractTree(
 			continue;
 		}
 
-		const relPath = ParamUtils.replacePlaceholdersInFileName(
+		const relPath = ParamUtils.replacePlaceholdersInFilePath(
 			node.path,
 			parameterValues,
 			templatingOptions,

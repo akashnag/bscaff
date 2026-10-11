@@ -91,10 +91,19 @@ export async function saveGitRepo(
 		include: Settings.get("include") ?? undefined,
 	};
 	const tagList = tags ? tags.split(",") : undefined;
-	const result = await TreeUtils.extractStructureFromDirectory(
-		repoLocalDir,
-		settingsOptions,
-	);
+
+	let result;
+	try {
+		result = await TreeUtils.extractStructureFromDirectory(
+			repoLocalDir,
+			settingsOptions,
+		);
+	} catch (err: any) {
+		io.errorGeneric(
+			"saveGitRepo: error extracting structure ==> " + err.toString(),
+		);
+		return false;
+	}
 
 	if (!result.structure || !result.parameters) {
 		io.errorGeneric("saveGitRepo::1");
@@ -152,8 +161,17 @@ export async function saveASCIITreeFromClipboard(
 	let stats = null;
 
 	const tree = (await cm.paste()).trim();
-	({ structure, parameters, stats } =
-		TreeUtils.extractStructureFromASCIITree(tree));
+
+	try {
+		({ structure, parameters, stats } =
+			TreeUtils.extractStructureFromASCIITree(tree));
+	} catch (err: any) {
+		io.errorGeneric(
+			"saveASCIITreeFromClipboard: error extracting structure ==> " +
+				err.toString(),
+		);
+		return false;
+	}
 
 	if (!structure || !stats) {
 		io.errorInvalidTree();
@@ -250,10 +268,19 @@ export async function saveDirectory(
 		include: Settings.get("include") ?? undefined,
 	};
 	const destPath = SnapshotUtils.getSnapshotDirectory(key);
-	const result = await TreeUtils.extractStructureFromDirectory(
-		dirPath,
-		settingsOptions,
-	);
+
+	let result;
+	try {
+		result = await TreeUtils.extractStructureFromDirectory(
+			dirPath,
+			settingsOptions,
+		);
+	} catch (err: any) {
+		io.errorGeneric(
+			"saveDirectory: error extracting structure ==> " + err.toString(),
+		);
+		return false;
+	}
 
 	if (!result.structure || !result.parameters) {
 		io.errorGeneric("saveDirectory::2");
@@ -528,8 +555,16 @@ export async function saveFiles(
 
 	SnapshotUtils.createSnapshotDirectory(key);
 
-	const { structure, parameters, stats } =
-		await SnapshotUtils.copyFilesToSnapshotDirectory(key, files);
+	let structure, parameters, stats;
+	try {
+		({ structure, parameters, stats } =
+			await SnapshotUtils.copyFilesToSnapshotDirectory(key, files));
+	} catch (err: any) {
+		io.errorGeneric(
+			"saveFiles: error copying files to local cache ==> " + err.toString(),
+		);
+		return false;
+	}
 
 	store.save({
 		key: key,

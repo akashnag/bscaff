@@ -80,8 +80,10 @@ export class Settings {
 		return Settings.saveSettings();
 	}
 
-	static get<K extends keyof BScaffSettings>(key: K): BScaffSettings[K] | null {
-		if (!Object.hasOwn(Settings.DEFAULT_SETTINGS, key)) return null;
+	static get<K extends keyof BScaffSettings>(
+		key: K,
+	): BScaffSettings[K] | undefined {
+		if (!Object.hasOwn(Settings.DEFAULT_SETTINGS, key)) return undefined;
 		return this.settings[key];
 	}
 }

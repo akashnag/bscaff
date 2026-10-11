@@ -15,6 +15,7 @@ import { ClipboardManager } from "../core/clipboard.js";
 import { Settings } from "../core/settings.js";
 import { ExtractSnapshotIO } from "../io/extract-io.js";
 import { SaveASCIITreeIO } from "../io/save-io.js";
+import { TemplateEnvOps } from "../types/template-types.js";
 import { FileTreeNode } from "../types/types.js";
 import * as FileUtils from "./file-utils.js";
 import * as MiscUtils from "./misc-utils.js";
@@ -298,8 +299,9 @@ export function isValidASCIITree(tree: string): boolean {
 // converts a directory path to FileTreeNode[], does not include the root-folder name itself as one of the entries
 export async function extractStructureFromDirectory(
 	dirPath: string,
-	options: { exclude?: string[]; include?: string[] },
-	readContent: boolean = false,
+	options: { exclude?: string[]; include?: string[]; envOps?: TemplateEnvOps },
+	includeContent: boolean = false,
+	extractParamsFromContent: boolean = true,
 ): Promise<{
 	structure: FileTreeNode[] | null;
 	parameters: string[] | null;
@@ -312,6 +314,8 @@ export async function extractStructureFromDirectory(
 		fileCount: 0,
 		dirCount: 0,
 	};
+
+	const engine = ParamUtils.createTemplateEngine(options.envOps);
 
 	async function traverse(currentDirPath: string, level: number) {
 		const entries = FileUtils.readDirectoryContentsWithTypes(currentDirPath);
@@ -334,7 +338,10 @@ export async function extractStructureFromDirectory(
 				continue;
 			}
 
-			const params: string[] = ParamUtils.getParametersFromText(entry.name);
+			const params: string[] = ParamUtils.getParametersFromText(
+				entry.name,
+				engine,
+			);
 
 			if (entry.isDirectory()) {
 				++stats.dirCount;
@@ -357,18 +364,19 @@ export async function extractStructureFromDirectory(
 
 				let content: string | null = null;
 
-				if (readContent) {
+				if (includeContent || extractParamsFromContent) {
 					content = await FileUtils.readTextFile(fullPath);
-					if (content)
+					if (content && extractParamsFromContent) {
 						params.push(...ParamUtils.getParametersFromText(content));
+					}
 				}
 
 				nodes.push({
 					type: "file",
-					level,
+					level: level,
 					name: entry.name,
 					path: relativePath,
-					content,
+					content: includeContent ? content : null,
 					sizeInBytes: fileSize,
 				});
 			}

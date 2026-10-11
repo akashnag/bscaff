@@ -66,7 +66,7 @@ export class CopySnapshotIO extends ConsoleIO {
 }
 
 export class OpenSnapshotIO extends ConsoleIO {
-	errorOpeningURL(browser: string | null, url: string | undefined): void {
+	errorOpeningURL(browser: string | undefined, url: string | undefined): void {
 		if (QUIET_MODE) return;
 
 		printHeader("Failed to Open URL");

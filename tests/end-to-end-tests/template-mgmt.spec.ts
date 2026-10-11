@@ -29,6 +29,9 @@ describe("Template management", () => {
 	let testDir: string;
 	let testDirAlternate1: string;
 	let testDirAlternate2: string;
+	let templateRootDir: string;
+
+	let templateAnswersJSONInputFile: string;
 
 	beforeAll(async () => {
 		({ sourceTreeDir, extractTargetDir } = await setupTestEnvironment());
@@ -37,6 +40,10 @@ describe("Template management", () => {
 		testDirAlternate1 = path.join(sourceTreeDir, "test-temp-template-dir1");
 		testDirAlternate2 = path.join(sourceTreeDir, "test-temp-template-dir2");
 
+		templateAnswersJSONInputFile = path.join(
+			sourceTreeDir,
+			"template-inputs.json",
+		);
 		const validConfigFile = path.join(testDir, Config.TEMPLATE_CONFIG_FILE);
 		const invalidConfigFileAlternate1 = path.join(
 			testDirAlternate1,
@@ -80,6 +87,13 @@ _exclude: [ unclosed_array
 		await fs.writeFile(
 			invalidConfigFileAlternate2,
 			invalidYamlContent,
+			"utf-8",
+		);
+
+		// create json answers file to read non-interactively for project generation
+		await fs.writeFile(
+			templateAnswersJSONInputFile,
+			JSON.stringify({ project_name: "awesome-app", module_name: "auth" }),
 			"utf-8",
 		);
 
@@ -201,19 +215,23 @@ _exclude: [ unclosed_array
 		expect(result.exitCode).toBe(0);
 	});
 
-	it("Extract project from template with prompt inputs", async () => {
-		// Inputs passed for: project_name -> "awesome-app", module_name -> "auth"
-		const inputAnswers = ["awesome-app", "auth"];
-
-		const result = await runCLIForTest(
-			["-k", "my-template", "template", "generate-project", extractTargetDir],
-			inputAnswers,
-		);
+	it("Extract project from template", async () => {
+		const result = await runCLIForTest([
+			"-k",
+			"my-template",
+			"template",
+			"generate-project",
+			"--json",
+			process.platform.toString() === "win32"
+				? `$(gc ${templateAnswersJSONInputFile} -Raw)`
+				: `$(cat ${templateAnswersJSONInputFile})`,
+			extractTargetDir,
+		]);
 
 		expect(result.rawStdout).toContain("Project generated successfully!");
 		expect(result.exitCode).toBe(0);
 
-		// 1. Verify root file variable replacement
+		// Verify root file variable replacement
 		const generatedReadme = await fs.readFile(
 			path.join(extractTargetDir, "README.md"),
 			"utf-8",
@@ -221,19 +239,19 @@ _exclude: [ unclosed_array
 		expect(generatedReadme).toContain("# awesome-app");
 		expect(generatedReadme).toContain("Module: auth");
 
-		// 2. Verify directory tree creation with rendered folder name
+		// Verify directory tree creation with rendered folder name
 		const renderedModuleDir = path.join(extractTargetDir, "src", "auth");
 		const dirStats = await fs.stat(renderedModuleDir);
 		expect(dirStats.isDirectory()).toBe(true);
 
-		// 3. Verify rendered file name and contents inside the dynamic directory
+		// Verify rendered file name and contents inside the dynamic directory
 		const renderedFilePath = path.join(renderedModuleDir, "auth-service.ts");
 		const generatedService = await fs.readFile(renderedFilePath, "utf-8");
 		expect(generatedService).toBe(
 			"export const authService = () => 'awesome-app';",
 		);
 
-		// 4. Verify static file was copied intact
+		// Verify static file was copied intact
 		const staticConfig = await fs.readFile(
 			path.join(extractTargetDir, "src", "config.json"),
 			"utf-8",

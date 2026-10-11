@@ -632,6 +632,10 @@ export class CLI {
 				"--dry-run",
 				"Test generate the project without actually creating files",
 			)
+			.option(
+				"--json <var-inputs>",
+				"Read variable inputs from JSON content instead of prompting",
+			)
 			.addOption(
 				new Option(
 					"-e, --if-exists <behaviour>",
@@ -649,6 +653,7 @@ export class CLI {
 						globalOpts.key,
 						options.dryRun,
 						options.ifExists,
+						options.json,
 						path,
 					);
 					if (!retVal) throw new Error();

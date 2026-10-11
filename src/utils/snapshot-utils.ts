@@ -351,9 +351,11 @@ export async function copyFilesToSnapshotDirectory(
 	const localDir = getSnapshotDirectory(key);
 	const engine = ParamUtils.createTemplateEngine();
 	const templatingOptions = {
-		exclude: Settings.get("exclude") ?? [],
-		include: Settings.get("include") ?? [],
-		templatesSuffix: Settings.get("templatesSuffix") ?? "",
+		exclude: Settings.get("exclude") ?? Settings.DEFAULT_SETTINGS.exclude,
+		include: Settings.get("include") ?? Settings.DEFAULT_SETTINGS.include,
+		templatesSuffix:
+			Settings.get("templatesSuffix") ??
+			Settings.DEFAULT_SETTINGS.templatesSuffix,
 	};
 
 	const structure: FileTreeNode[] = [];
@@ -374,13 +376,14 @@ export async function copyFilesToSnapshotDirectory(
 
 			stats.sizeInBytes + size;
 			++stats.fileCount;
-			params.push(
-				...(await ParamUtils.getParametersFromFileContent(
-					localFile,
-					templatingOptions,
-					engine,
-				)),
+
+			const extractedParams = await ParamUtils.getParametersFromFileContent(
+				localFile,
+				templatingOptions,
+				engine,
 			);
+
+			params.push(...extractedParams);
 
 			params.forEach((param) => {
 				parameters.add(param);
