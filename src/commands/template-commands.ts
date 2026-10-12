@@ -13,7 +13,7 @@
 
 import { execSync } from "child_process";
 import * as nunjucks from "nunjucks";
-import simpleGit, { SimpleGit } from "simple-git";
+import { SimpleGit, simpleGit } from "simple-git";
 import pkg from "../../package.json" with { type: "json" };
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
@@ -213,7 +213,7 @@ export async function handleUpdateTemplateCommand(
 		return false;
 	}
 
-	const git: SimpleGit = simpleGit.simpleGit();
+	const git: SimpleGit = simpleGit();
 	const gitIO = new SaveGitRepoIO();
 
 	gitIO.startFetchGitTag(record.templateSource.url);
@@ -357,7 +357,7 @@ async function cloneGitRepoAndFetchTemplate(
 
 	FileUtils.createDirectory(localDir);
 
-	const git: SimpleGit = simpleGit.simpleGit();
+	let git: SimpleGit = simpleGit();
 	const gitIO = new SaveGitRepoIO();
 
 	try {
@@ -381,6 +381,7 @@ async function cloneGitRepoAndFetchTemplate(
 			await git.clone(url, localDir);
 		}
 
+		FileUtils.deleteDirectory(FileUtils.formPath([localDir, ".git"]));
 		gitIO.cloneComplete();
 
 		template = await verifyTemplate(localDir, true, false);

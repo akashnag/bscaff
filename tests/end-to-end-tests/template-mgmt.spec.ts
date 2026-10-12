@@ -25,11 +25,23 @@ import {
 import pkg from "../../package.json" with { type: "json" };
 import { Config } from "../../src/core/config.js";
 import { zipDirectory } from "../../src/utils/special-file-io.js";
+
+/*
+Create a ssh-config.json in root-directory with the following data:
+	{
+		"sshProfile": "<YOUR SSH PROFILE NAME, e.g. github.com-user, as configured in ~/.ssh/config"
+	}
+*/
+import sshConfig from "../../ssh-config.json" with { type: "json" };
+
 import { runCLIForTest } from "../helpers/cli-runner.js";
 import {
 	setupTestEnvironment,
 	teardownTestEnvironment,
 } from "../helpers/data-mgmt.js";
+
+const GIT_CLONE_TIMEOUT_MS: number = 100000;
+const GIT_REPO_URL: string = `git@${sshConfig.sshProfile}:akashnag/test-template-bscaff.git`; // URL to a test template, replace this with an actual template repo
 
 describe("Template management - working with saved templates", () => {
 	let sourceTreeDir: string;
@@ -80,7 +92,7 @@ _exclude: [ unclosed_array
 	});
 
 	afterAll(async () => {
-		//await teardownTestEnvironment();
+		await teardownTestEnvironment();
 	});
 
 	it("Verify template config file - happy path", async () => {
@@ -213,8 +225,6 @@ describe("Template management - direct project generation", () => {
 	let testZip: string;
 	let templateAnswersJSONInputFile: string;
 
-	const gitRepoURL: string = "https://";
-
 	beforeEach(async () => {
 		({ sourceTreeDir, extractTargetDir } = await setupTestEnvironment());
 		({ testDir, templateAnswersJSONInputFile } =
@@ -227,20 +237,31 @@ describe("Template management - direct project generation", () => {
 		await teardownTestEnvironment();
 	});
 
-	/*
-	it("Generate project directly from git repo", async () => {
-		const result = await runCLIForTest([
-			// TODO: add args
-		]);
+	it(
+		"Generate project directly from git repo",
+		async () => {
+			const result = await runCLIForTest([
+				"template",
+				"generate-project",
+				"--from-git",
+				GIT_REPO_URL,
+				"--json",
+				process.platform.toString() === "win32"
+					? `$(gc ${templateAnswersJSONInputFile} -Raw)`
+					: `$(cat ${templateAnswersJSONInputFile})`,
+				extractTargetDir,
+			]);
 
-		expect(result.rawStdout).toContain("Project generated successfully");
-		expect(result.exitCode).toBe(0);
-		await validateSuccessfulProjectGeneration(extractTargetDir);
-	});*/
+			console.log(result.rawStdout);
+
+			expect(result.rawStdout).toContain("Project generated successfully");
+			expect(result.exitCode).toBe(0);
+			await validateSuccessfulProjectGeneration(extractTargetDir);
+		},
+		GIT_CLONE_TIMEOUT_MS,
+	);
 
 	it("Generate project directly from zip file", async () => {
-		console.log(testZip);
-
 		const result = await runCLIForTest([
 			"template",
 			"generate-project",

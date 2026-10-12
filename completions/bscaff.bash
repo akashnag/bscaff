@@ -3,10 +3,10 @@ _bscaff_completions() {
 	COMPREPLY=()
 	cur="${COMP_WORDS[COMP_CWORD]}"
 	prev="${COMP_WORDS[COMP_CWORD-1]}"
-	opts="save settings update delete search list copy open extract create transform template --version --key --quiet --desc --tags --type --as-tree --partial --if-exists -e"
+	opts="save settings update delete search list copy open extract create template --version --key --quiet --data-dir --desc --tags --force -f --type --as-tree --editor --command -c --partial --dry-run --if-exists -e"
 
 	if [[ ${cur} == -* ]] ; then
-		COMPREPLY=( $(compgen -W "--version --key --quiet --desc --tags --type --as-tree --partial --if-exists -e" -- ${cur}) )
+		COMPREPLY=( $(compgen -W "--version --key --quiet --data-dir --desc --tags --force -f --type --as-tree --editor --command -c --partial --dry-run --if-exists -e" -- ${cur}) )
 		return 0
 	fi
 

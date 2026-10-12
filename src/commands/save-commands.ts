@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import simpleGit, { type SimpleGit } from "simple-git";
+import { SimpleGit, simpleGit } from "simple-git";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
@@ -74,11 +74,12 @@ export async function handleSaveGitRepoCommand(
 	const repoLocalDir = FileUtils.formPath([snapshotDir, repoName]);
 	FileUtils.createDirectory(repoLocalDir);
 
-	const git: SimpleGit = simpleGit.simpleGit();
+	const git: SimpleGit = simpleGit();
 
 	try {
 		io.cloneStart(repoLocalDir);
 		await git.clone(repoURL, repoLocalDir);
+		FileUtils.deleteDirectory(FileUtils.formPath([repoLocalDir, ".git"]));
 		io.cloneComplete();
 	} catch {
 		io.cloneFailed();

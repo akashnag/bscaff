@@ -10,11 +10,10 @@ _bscaff() {
         'search:Searches for a snapshot with a key similar to one provided'
         'list:Lists the saved snapshots'
         'copy:Copy the snippet / file-tree (ASCII) / file-list / URL / file-contents (if path specified) to clipboard'
-        'open:Opens a URL in the browser; a snippet or a file (from tree, template, files) in a text-editor (read-only)'
+        'open:Opens a URL in the browser; a snippet in a text-editor (read-only), or a file (from tree / template / files) in the default application (read-only)'
         'extract:Extracts a tree / files / template to the directory path'
         'create:Creates files and trees from content copied to clipboard'
-        'transform:Transform external files'
-        'template:Save/create/execute templates'
+        'template:Save/create/generate templates'
     )
 
     _arguments -C \
@@ -37,7 +36,7 @@ _bscaff() {
                     _values 'flags' 
                     ;;
                 delete)
-                    _values 'flags' 
+                    _values 'flags' '--force[Delete without confirmation]'
                     ;;
                 search)
                     _values 'flags' '--desc[Description (approximate) to match (in double-quotes)]' '--type[Filter by snapshot type (exact)]' '--tags[Filter by tags (exact, separated by commas, no spaces)]'
@@ -49,15 +48,12 @@ _bscaff() {
                     _values 'flags' '--as-tree[If snapshot is a template or a tree, copy the structure as an ASCII-tree instead of list of file-paths]'
                     ;;
                 open)
-                    _values 'flags' 
+                    _values 'flags' '--editor[Force file (from tree / template / files) to be open in the text-editor]' '--command[Use custom app to open file, use double-quotes]'
                     ;;
                 extract)
-                    _values 'flags' '--partial[Extract the snapshot partially under path specified by <rel-path>]' '--if-exists[Behaviour if destination file exists]'
+                    _values 'flags' '--partial[Extract the snapshot partially under path specified by <rel-path>]' '--dry-run[Do a dry-run without actually performing the extraction]' '--if-exists[Behaviour if destination file exists]'
                     ;;
                 create)
-                    _values 'flags' 
-                    ;;
-                transform)
                     _values 'flags' 
                     ;;
                 template)

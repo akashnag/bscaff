@@ -171,6 +171,18 @@ Tests are an important part of the project.
 
 The project uses **Vitest**.
 
+### Configuring SSH
+
+Create a file: `ssh-config.json` in the root of your project directory, with the following data:
+
+```json
+{
+	"sshProfile": "github.com"
+}
+```
+
+Replace `github.com` with your SSH profile name, as configured in `~/.ssh/config` (on Linux systems). Without this, all tests of features involving git repos will fail.
+
 ### Prefer end-to-end tests
 
 **End-to-end tests are preferred over unit tests wherever practical.**

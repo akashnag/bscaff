@@ -1,6 +1,6 @@
 {
 	"name": "@akashnag/bscaff",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "CLI tool to save and recall code snippets, files, and directory scaffolding",
 	"main": "dist/index.js",
 	"type": "module",
@@ -17,7 +17,6 @@
 		"dev": "tsc --watch & node --watch bin/index.js",
 		"test": "npm run build && vitest",
 		"test:run": "npm run build && vitest run",
-		"test:coverage": "npm run build && vitest run --coverage",
 		"build:completions": "npm run build && tsx scripts/generate-completions.ts"
 	},
 	"keywords": [

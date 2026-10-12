@@ -4,3 +4,4 @@ dist/
 *.tgz
 .test-coverage-reports/
 .vscode/
+ssh-config.json
