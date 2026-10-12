@@ -239,15 +239,45 @@ bscaff -k my-template template save ./bscaff-react-template.zip --source zip
 bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --source git
 ```
 
-### Generate a Project from a Template
+In case you are saving from a zip archive, the zip must contain a single root folder, and all files including the template config must be present in that root folder.
 
-Generate a project directory from a saved template:
+### Generate Projects from Templates
+
+#### From a Saved Template
+
+Generate a project directory from a previously saved template:
 
 ```bash
 bscaff -k my-template template generate-project projects/my-react-app
 ```
 
-While project creation, variables (parameters) will be prompted for input. If you wish to have non-interactive generation, use the `--json` flag as follows:
+#### From a Directory directly
+
+Generate a project directory from a directory containing a template config file:
+
+```bash
+bscaff template generate-project --from-dir my-templates/my-react-template projects/my-react-app
+```
+
+#### From a Zip Archive directly
+
+Generate a project directory from a zip archive containing a template config file:
+
+```bash
+bscaff template generate-project --from-zip my-templates/my-react-template.zip projects/my-react-app
+```
+
+#### From a Git Repo directly
+
+Generate a project directory from a git repo containing a template:
+
+```bash
+bscaff template generate-project --from-git https://github.com/username/my-react-template.git projects/my-react-app
+```
+
+#### Non-interactive Project Generation
+
+During project generation, variables (parameters) will be prompted for input. If you wish to have non-interactive generation, use the `--json` flag, for example:
 
 ```bash
 bscaff -k my-template template generate-project --json "$(cat param-values.json)" projects/my-react-app

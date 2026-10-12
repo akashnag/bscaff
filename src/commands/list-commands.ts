@@ -152,7 +152,7 @@ export async function handleSearchSnapshotsCommand(
 	return true;
 }
 
-// -------------------------- [private] -------------------------------
+// -------------------------- [helpers] -------------------------------
 
 async function displaySnapshotFileOrDirectory(
 	io: ListSnapshotsIO,

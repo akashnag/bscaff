@@ -512,7 +512,7 @@ export async function handleSaveFilesCommand(
 }
 // --------------------------------------------------------
 
-// -------------------- [private] -------------------------
+// -------------------- [helpers] -------------------------
 
 // WARNING: use this function only for saving snapshots, never for extracting them
 export async function copyTree(

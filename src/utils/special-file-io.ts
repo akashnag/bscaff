@@ -82,6 +82,29 @@ export function doesZipHaveFileUnderRootDirectory(
 	}
 }
 
+export async function zipDirectory(
+	sourceDirPath: string,
+	outputZipPath: string,
+	preserveRoot: boolean = true,
+): Promise<boolean> {
+	try {
+		const zip = new AdmZip();
+		const dirName = FileUtils.getFileNameFromPath(sourceDirPath);
+
+		if (preserveRoot) {
+			zip.addLocalFolder(sourceDirPath, dirName);
+		} else {
+			zip.addLocalFolder(sourceDirPath);
+		}
+
+		await zip.writeZipPromise(outputZipPath);
+
+		return true;
+	} catch (error) {
+		return false;
+	}
+}
+
 // ------------------- [YAML operations] ---------------------
 
 /**

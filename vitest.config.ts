@@ -2,7 +2,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		// disable all parallelism
 		fileParallelism: false,
+		maxWorkers: 1,
+
+		// print custom messages in tests
 		silent: false,
 
 		// Only search for test files in these places

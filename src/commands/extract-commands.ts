@@ -493,7 +493,7 @@ export async function extractFile(
 	return true;
 }
 
-// --------------------- [private] ----------------------
+// --------------------- [helpers] ----------------------
 
 // called from extract-commands::extract()
 async function extractFiles(

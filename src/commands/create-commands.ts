@@ -116,7 +116,7 @@ export async function handleCreateFileOnDiskFromClipboardCommand(
 	return true;
 }
 
-// --------------------------- [private] -----------------------------
+// --------------------------- [helpers] -----------------------------
 
 // creates the file structure on disk (include content if available)
 // WARNING: only to be used for Tree snapshot type (not Files, Templates)

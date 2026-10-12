@@ -326,7 +326,7 @@ export async function handleGenerateProjectFromTemplateCommand(
 	}
 }
 
-// ---------------- [private helpers] --------------------
+// ---------------- [helpers] --------------------
 
 async function cloneGitRepoAndFetchTemplate(
 	url: string,
@@ -726,8 +726,6 @@ async function generateProjectFromDirOrZipOrGitTemplate(
 ): Promise<boolean> {
 	const io = new ExtractTemplateIO();
 	const saveIO = new SaveTemplateIO();
-
-	// TODO: add code to extract-zip (if zip) and then call generateProjectFromTemplateDirectory()
 
 	let localDir: string | undefined = undefined;
 	let templateSource = undefined;
