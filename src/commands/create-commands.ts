@@ -27,7 +27,7 @@ type overwriteMode = "prompt" | "overwrite" | "fail" | "skip";
 // --------------------------------------------------------
 // create tree <path> [-e <behaviour>] [--prompt-for-content]
 // --------------------------------------------------------
-export async function createTreeOnDiskFromClipboard(
+export async function handleCreateTreeOnDiskFromClipboardCommand(
 	toPath: string,
 	overwriteBehaviour: string | undefined,
 	promptForContent: boolean | undefined,
@@ -81,7 +81,7 @@ export async function createTreeOnDiskFromClipboard(
 // --------------------------------------------------------
 // create file <path> [--overwrite]
 // --------------------------------------------------------
-export async function createFileOnDiskFromClipboard(
+export async function handleCreateFileOnDiskFromClipboardCommand(
 	toPath: string,
 	overwrite: boolean | undefined,
 ): Promise<boolean> {

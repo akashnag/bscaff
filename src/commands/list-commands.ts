@@ -22,7 +22,7 @@ import * as TreeUtils from "../utils/tree-utils.js";
 // --------------------------------------------------------
 // bscaff [-k <key>] list [relative-path] [--type <type>] [--tags <tag1,tag2,...tagN>]
 // --------------------------------------------------------
-export async function list(
+export async function handleListSnapshotsCommand(
 	key: string | undefined,
 	sType: string | undefined,
 	tags: string | undefined,
@@ -98,7 +98,7 @@ export async function list(
 // --------------------------------------------------------
 // bscaff [-k <approx-key>] search [--desc <approx-desc>] [--type <type>] [--tags <tag1,tag2,...tagN>]
 // --------------------------------------------------------
-export async function search(
+export async function handleSearchSnapshotsCommand(
 	key: string | undefined,
 	desc: string | undefined,
 	sType: string | undefined,

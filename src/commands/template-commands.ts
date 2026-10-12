@@ -18,6 +18,7 @@ import pkg from "../../package.json" with { type: "json" };
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { Store } from "../core/store.js";
+import { ConsoleIO } from "../io/io.js";
 import { SaveGitRepoIO } from "../io/save-io.js";
 import {
 	ExtractTemplateIO,
@@ -42,248 +43,17 @@ import * as TreeUtils from "../utils/tree-utils.js";
 // --------------------------------------------------------
 // template save <zip-OR-repo-URL> [--source <git|zip|dir>]
 // --------------------------------------------------------
-export async function saveTemplate(
+export async function handleSaveTemplateCommand(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
 	source: string | undefined,
 	filePath: string | undefined,
 ): Promise<boolean> {
-	const io = new SaveTemplateIO();
-
-	if (!key) {
-		io.errorMissingParameter("key");
-		return false;
-	}
-
-	if (!filePath) {
-		io.errorMissingParameter("template-path");
-		return false;
-	}
-
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		io.errorDuplicateKey(key);
-		return false;
-	}
-
-	SnapshotUtils.createSnapshotDirectory(key);
-	const snapshotDir = SnapshotUtils.getSnapshotDirectory(key);
-	let localDir: string | undefined = undefined;
-	let templateSource = undefined;
-	let template: Template | null = null;
-	let templateRootDir: string | undefined = undefined;
-
-	switch (source) {
-		// --------------- git repo ------------------
-		case "git":
-			// filePath is a Git URL
-			let repoName = filePath.substring(1 + filePath.lastIndexOf("/")).trim();
-			if (repoName.toLowerCase().endsWith(".git")) {
-				repoName = repoName.substring(repoName.length - 4);
-			}
-
-			localDir = FileUtils.formPath([snapshotDir, repoName]);
-			templateRootDir = repoName;
-
-			FileUtils.createDirectory(localDir);
-
-			const git: SimpleGit = simpleGit.simpleGit();
-			const gitIO = new SaveGitRepoIO();
-
-			try {
-				gitIO.cloneStart(localDir);
-
-				// fetch latest tag
-				templateSource = {
-					sourceType: "git" as TemplateSourceType,
-					url: filePath,
-					version: await getLatestRemoteTag(git, filePath),
-				};
-
-				// clone the latest tag if exists
-				if (templateSource.version) {
-					await git.clone(filePath, localDir, [
-						"--branch",
-						templateSource.version,
-						"--single-branch",
-					]);
-				} else {
-					await git.clone(filePath, localDir);
-				}
-
-				gitIO.cloneComplete();
-
-				template = await verifyTemplate(localDir, true);
-			} catch {
-				gitIO.cloneFailed();
-				FileUtils.deleteDirectory(snapshotDir);
-				return false;
-			}
-			break;
-
-		// --------------- zip file ------------------
-		case "zip":
-			// filePath is path to a zip file
-			filePath = FileUtils.resolvePath(filePath);
-
-			if (!FileUtils.doesFileExist(filePath)) {
-				io.errorSourceFileMissing(filePath);
-				return false;
-			}
-
-			if (!filePath.toLowerCase().trim().endsWith(".zip")) {
-				FileUtils.deleteDirectory(snapshotDir);
-				io.errorExpectedZipFile(filePath);
-				return false;
-			}
-
-			const zipRootDir = SpecialFileIOUtils.getZipRootDirectory(filePath);
-			if (!zipRootDir) {
-				FileUtils.deleteDirectory(snapshotDir);
-				io.invalidTemplateZipFile(filePath);
-				return false;
-			}
-
-			// although verifyTemplate checks for correct filename, check it here before doing an expensive extract-zip operation
-			if (
-				!SpecialFileIOUtils.doesZipHaveFileUnderRootDirectory(
-					filePath,
-					Config.TEMPLATE_CONFIG_FILE,
-					zipRootDir,
-				)
-			) {
-				io.errorTemplateFileMissing(filePath, false);
-				FileUtils.deleteDirectory(snapshotDir);
-				return false;
-			}
-
-			if (!SpecialFileIOUtils.extractZipFile(filePath, snapshotDir)) {
-				io.errorExtractingZip(filePath);
-				FileUtils.deleteDirectory(snapshotDir);
-				return false;
-			}
-
-			localDir = FileUtils.formPath([snapshotDir, zipRootDir]);
-			if (!FileUtils.doesDirectoryExist(localDir)) {
-				io.errorGeneric("saveTemplate::1");
-				return false;
-			}
-
-			templateRootDir = zipRootDir;
-			template = await verifyTemplate(localDir, true);
-
-			templateSource = {
-				sourceType: "zip" as TemplateSourceType,
-			};
-
-			break;
-
-		// --------------- directory ------------------
-		case "dir":
-		default:
-			filePath = FileUtils.resolvePath(filePath);
-
-			if (!FileUtils.doesDirectoryExist(filePath)) {
-				FileUtils.deleteDirectory(snapshotDir);
-				io.errorSourceDirectoryMissing(filePath);
-				return false;
-			}
-
-			// although verifyTemplate checks for correct filename, check it here before doing an expensive copy-dir operation
-			const remoteTemplateConfigFile = FileUtils.formPath([
-				filePath,
-				Config.TEMPLATE_CONFIG_FILE,
-			]);
-			if (!FileUtils.doesFileExist(remoteTemplateConfigFile)) {
-				FileUtils.deleteDirectory(snapshotDir);
-				io.errorTemplateFileMissing(remoteTemplateConfigFile, false);
-				return false;
-			}
-
-			const dirName = FileUtils.getPathAndFileName(filePath).filename;
-			FileUtils.copyDirectory(filePath, snapshotDir);
-			localDir = FileUtils.formPath([snapshotDir, dirName]);
-			templateRootDir = dirName;
-
-			if (!FileUtils.doesDirectoryExist(localDir)) {
-				io.errorGeneric("saveTemplate::2");
-				return false;
-			}
-
-			template = await verifyTemplate(localDir, true);
-
-			templateSource = {
-				sourceType: "dir" as TemplateSourceType,
-			};
-			break;
-	}
-
-	if (!template) {
-		FileUtils.deleteDirectory(snapshotDir);
-		return false;
-	}
-
-	const tagList = tags ? tags.split(",") : undefined;
-
-	const templateDir = template._subdirectory
-		? FileUtils.formPath([localDir, template._subdirectory])
-		: localDir;
-
-	let structure, parameters, stats;
-	try {
-		({ structure, parameters, stats } =
-			await TreeUtils.extractStructureFromDirectory(templateDir, {
-				exclude: template._exclude,
-				include: template._include,
-			}));
-	} catch (err: any) {
-		io.errorGeneric(
-			"saveTemplate: error extracting structure ==> " + err.toString(),
-		);
-		return false;
-	}
-
-	if (!structure) {
-		FileUtils.deleteDirectory(snapshotDir);
-		io.errorGeneric("saveTemplate::3");
-		return false;
-	}
-
-	const info: SnapshotRecord = {
-		key: key,
-		description: description,
-		type: SnapshotType.Template,
-		tags: tagList,
-		structure: structure,
-		parameters: parameters ?? undefined,
-		templateRootDir: templateRootDir,
-		templateSubDirectoryPath: template._subdirectory
-			? template._subdirectory
-			: undefined,
-	};
-
-	info.templateSource = templateSource;
-
-	store.save(info);
-
-	store.update();
-	io.successSnapshotTaken(
-		key,
-		MiscUtils.formatFileSize(stats.sizeInBytes),
-		stats.fileCount,
-		stats.dirCount,
-		description,
-		tagList,
-		"Template",
-	);
-
-	return true;
+	return await saveTemplate(key, description, tags, source, filePath);
 }
-// --------------------------------------------------------
 
-export async function createTemplateFromDirectory(
+export async function handleCreateTemplateFromDirectoryCommand(
 	key: string | undefined,
 	desc: string | undefined,
 	tags: string | undefined,
@@ -399,63 +169,13 @@ export async function createTemplateFromDirectory(
 	return true;
 }
 
-/* 
-	this function is called directly as a command (from CLI) 
-	and also from other template management functions for template verification 
-*/
-export async function verifyTemplate(
+export async function handleVerifyTemplateCommand(
 	templateDirPath: string,
-	suppressSuccessMsg?: boolean,
-	pathToConfigFile?: boolean, // if true then 'templateDirPath' is path to the config file itself
 ): Promise<Template | null> {
-	const io = new VerifyTemplateIO();
-
-	try {
-		if (!pathToConfigFile && !FileUtils.doesDirectoryExist(templateDirPath)) {
-			io.errorSourceDirectoryMissing(templateDirPath);
-			return null;
-		}
-
-		const filePath = pathToConfigFile
-			? templateDirPath
-			: FileUtils.formPath([templateDirPath, Config.TEMPLATE_CONFIG_FILE]);
-
-		if (!FileUtils.doesFileExist(filePath)) {
-			io.errorTemplateConfigFileMissing(filePath);
-			return null;
-		}
-
-		const modTemplate = await TemplateUtils.readTemplateFile(filePath);
-
-		// check YAML parsing errors
-		if (!modTemplate) {
-			io.errorParsingTemplateFileContent();
-			return null;
-		}
-
-		// check template sub-directory exists (if specified)
-		if (modTemplate._subdirectory) {
-			const subDirPath = FileUtils.formPath([
-				pathToConfigFile
-					? FileUtils.getPathAndFileName(templateDirPath).path
-					: templateDirPath,
-				modTemplate._subdirectory,
-			]);
-
-			if (!FileUtils.doesDirectoryExist(subDirPath)) {
-				io.warnTemplateSubdirectoryDoesNotExist(subDirPath);
-			}
-		}
-
-		if (!suppressSuccessMsg) io.successTemplateVerified();
-		return modTemplate;
-	} catch (err: any) {
-		io.errorDuringTemplateParsing(err as YAMLParseError);
-		return null;
-	}
+	return await verifyTemplate(templateDirPath, false, false);
 }
 
-export async function updateTemplate(
+export async function handleUpdateTemplateCommand(
 	key: string | undefined,
 ): Promise<boolean> {
 	const io = new SaveTemplateIO();
@@ -542,7 +262,7 @@ export async function updateTemplate(
 	return false;
 }
 
-export async function generateProjectFromTemplate(
+export async function handleGenerateProjectFromTemplateCommand(
 	key: string | undefined,
 	dryRun: boolean | undefined,
 	overwriteBehaviour: string | undefined,
@@ -606,6 +326,395 @@ export async function generateProjectFromTemplate(
 	}
 }
 
+// ---------------- [private helpers] --------------------
+
+async function cloneGitRepoAndFetchTemplate(
+	url: string,
+	extractDir: string,
+): Promise<{
+	template: Template | null;
+	templateDir: string;
+	templateRootDirName: string;
+	templateSource: {
+		sourceType: TemplateSourceType;
+		url?: string;
+		version?: string;
+	};
+} | null> {
+	let repoName = url.substring(1 + url.lastIndexOf("/")).trim();
+	if (repoName.toLowerCase().endsWith(".git")) {
+		repoName = repoName.substring(repoName.length - 4);
+	}
+
+	const localDir = FileUtils.formPath([extractDir, repoName]);
+	const templateRootDirName = repoName;
+	let templateSource: {
+		sourceType: TemplateSourceType;
+		url?: string;
+		version?: string;
+	} = { sourceType: "git" };
+	let template: Template | null = null;
+
+	FileUtils.createDirectory(localDir);
+
+	const git: SimpleGit = simpleGit.simpleGit();
+	const gitIO = new SaveGitRepoIO();
+
+	try {
+		gitIO.cloneStart(localDir);
+
+		// fetch latest tag
+		templateSource = {
+			sourceType: "git" as TemplateSourceType,
+			url: url,
+			version: await getLatestRemoteTag(git, url),
+		};
+
+		// clone the latest tag if exists
+		if (templateSource.version) {
+			await git.clone(url, localDir, [
+				"--branch",
+				templateSource.version,
+				"--single-branch",
+			]);
+		} else {
+			await git.clone(url, localDir);
+		}
+
+		gitIO.cloneComplete();
+
+		template = await verifyTemplate(localDir, true, false);
+	} catch {
+		gitIO.cloneFailed();
+		FileUtils.deleteDirectory(localDir);
+		return null;
+	}
+
+	return {
+		template,
+		templateDir: localDir,
+		templateRootDirName,
+		templateSource,
+	};
+}
+
+async function extractZipAndFetchTemplate(
+	filePath: string,
+	extractDir: string,
+	io: SaveTemplateIO,
+): Promise<{
+	template: Template | null;
+	templateDir: string;
+	templateRootDirName: string;
+	templateSource: {
+		sourceType: TemplateSourceType;
+		url?: string;
+		version?: string;
+	};
+} | null> {
+	if (!FileUtils.doesFileExist(filePath)) {
+		io.errorSourceFileMissing(filePath);
+		return null;
+	}
+
+	if (!filePath.toLowerCase().trim().endsWith(".zip")) {
+		io.errorExpectedZipFile(filePath);
+		return null;
+	}
+
+	const zipRootDir = SpecialFileIOUtils.getZipRootDirectory(filePath);
+	if (!zipRootDir) {
+		io.invalidTemplateZipFile(filePath);
+		return null;
+	}
+
+	// although verifyTemplate checks for correct filename, check it here before doing an expensive extract-zip operation
+	if (
+		!SpecialFileIOUtils.doesZipHaveFileUnderRootDirectory(
+			filePath,
+			Config.TEMPLATE_CONFIG_FILE,
+			zipRootDir,
+		)
+	) {
+		io.errorTemplateFileMissing(filePath, false);
+		return null;
+	}
+
+	if (!SpecialFileIOUtils.extractZipFile(filePath, extractDir)) {
+		io.errorExtractingZip(filePath);
+		return null;
+	}
+
+	const localDir = FileUtils.formPath([extractDir, zipRootDir]);
+	if (!FileUtils.doesDirectoryExist(localDir)) {
+		io.errorGeneric("extractZipAndFetchTemplate::1");
+		return null;
+	}
+
+	const templateRootDirName = zipRootDir;
+	const template = await verifyTemplate(localDir, true, false);
+
+	const templateSource = {
+		sourceType: "zip" as TemplateSourceType,
+	};
+
+	return {
+		template,
+		templateSource,
+		templateRootDirName,
+		templateDir: localDir,
+	};
+}
+
+async function copyTemplateDirAndFetchTemplate(
+	dirPath: string,
+	copyToDir: string,
+	io: SaveTemplateIO,
+): Promise<{
+	template: Template | null;
+	templateDir: string;
+	templateRootDirName: string;
+	templateSource: {
+		sourceType: TemplateSourceType;
+		url?: string;
+		version?: string;
+	};
+} | null> {
+	if (!FileUtils.doesDirectoryExist(dirPath)) {
+		io.errorSourceDirectoryMissing(dirPath);
+		return null;
+	}
+
+	// although verifyTemplate checks for correct filename, check it here before doing an expensive copy-dir operation
+	const remoteTemplateConfigFile = FileUtils.formPath([
+		dirPath,
+		Config.TEMPLATE_CONFIG_FILE,
+	]);
+
+	if (!FileUtils.doesFileExist(remoteTemplateConfigFile)) {
+		io.errorTemplateFileMissing(remoteTemplateConfigFile, false);
+		return null;
+	}
+
+	const dirName = FileUtils.getPathAndFileName(dirPath).filename;
+	FileUtils.copyDirectory(dirPath, copyToDir);
+	const localDir = FileUtils.formPath([copyToDir, dirName]);
+	const templateRootDirName = dirName;
+
+	if (!FileUtils.doesDirectoryExist(localDir)) {
+		io.errorGeneric("copyTemplateDirAndFetchTemplate::1");
+		return null;
+	}
+
+	const template = await verifyTemplate(localDir, true, false);
+
+	const templateSource = {
+		sourceType: "dir" as TemplateSourceType,
+	};
+
+	return {
+		template,
+		templateSource,
+		templateDir: localDir,
+		templateRootDirName,
+	};
+}
+
+async function saveTemplate(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	source: string | undefined,
+	filePath: string | undefined,
+): Promise<boolean> {
+	const io = new SaveTemplateIO();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (!filePath) {
+		io.errorMissingParameter("template-path");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	SnapshotUtils.createSnapshotDirectory(key);
+	const snapshotDir = SnapshotUtils.getSnapshotDirectory(key);
+	let localDir: string | undefined = undefined;
+	let templateSource = undefined;
+	let template: Template | null = null; // important: must be initialized to NULL, since after switch-case we are checking for this to return / proceed
+	let templateRootDirName: string | undefined = undefined;
+	let result;
+
+	switch (source) {
+		// --------------- git repo ------------------
+		case "git":
+			result = await cloneGitRepoAndFetchTemplate(filePath, snapshotDir);
+			if (result) {
+				({
+					template,
+					templateSource,
+					templateRootDirName,
+					templateDir: localDir,
+				} = result);
+			}
+			break;
+
+		// --------------- zip file ------------------
+		case "zip":
+			filePath = FileUtils.resolvePath(filePath);
+
+			result = await extractZipAndFetchTemplate(filePath, snapshotDir, io);
+			if (result) {
+				({
+					template,
+					templateSource,
+					templateRootDirName,
+					templateDir: localDir,
+				} = result);
+			}
+			break;
+
+		// --------------- directory ------------------
+		case "dir":
+		default:
+			filePath = FileUtils.resolvePath(filePath);
+
+			result = await copyTemplateDirAndFetchTemplate(filePath, snapshotDir, io);
+			if (result) {
+				({
+					template,
+					templateSource,
+					templateRootDirName,
+					templateDir: localDir,
+				} = result);
+			}
+
+			break;
+	}
+
+	if (!template || !localDir || !templateRootDirName || !templateSource) {
+		FileUtils.deleteDirectory(snapshotDir);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+
+	const templateDir = template._subdirectory
+		? FileUtils.formPath([localDir, template._subdirectory])
+		: localDir;
+
+	let structure, parameters, stats;
+	try {
+		({ structure, parameters, stats } =
+			await TreeUtils.extractStructureFromDirectory(templateDir, {
+				exclude: template._exclude,
+				include: template._include,
+			}));
+	} catch (err: any) {
+		io.errorGeneric(
+			"saveTemplate: error extracting structure ==> " + err.toString(),
+		);
+		return false;
+	}
+
+	if (!structure) {
+		FileUtils.deleteDirectory(snapshotDir);
+		io.errorGeneric("saveTemplate::1");
+		return false;
+	}
+
+	const info: SnapshotRecord = {
+		key: key,
+		description: description,
+		type: SnapshotType.Template,
+		tags: tagList,
+		structure: structure,
+		parameters: parameters ?? undefined,
+		templateRootDir: templateRootDirName,
+		templateSubDirectoryPath: template._subdirectory
+			? template._subdirectory
+			: undefined,
+	};
+
+	info.templateSource = templateSource;
+
+	store.save(info);
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		MiscUtils.formatFileSize(stats.sizeInBytes),
+		stats.fileCount,
+		stats.dirCount,
+		description,
+		tagList,
+		"Template",
+	);
+
+	return true;
+}
+
+async function verifyTemplate(
+	templateDirPath: string,
+	suppressSuccessMsg: boolean,
+	pathToConfigFile: boolean, // if true then 'templateDirPath' is path to the config file itself
+): Promise<Template | null> {
+	const io = new VerifyTemplateIO();
+
+	try {
+		if (!pathToConfigFile && !FileUtils.doesDirectoryExist(templateDirPath)) {
+			io.errorSourceDirectoryMissing(templateDirPath);
+			return null;
+		}
+
+		const filePath = pathToConfigFile
+			? templateDirPath
+			: FileUtils.formPath([templateDirPath, Config.TEMPLATE_CONFIG_FILE]);
+
+		if (!FileUtils.doesFileExist(filePath)) {
+			io.errorTemplateConfigFileMissing(filePath);
+			return null;
+		}
+
+		const modTemplate = await TemplateUtils.readTemplateFile(filePath);
+
+		// check YAML parsing errors
+		if (!modTemplate) {
+			io.errorParsingTemplateFileContent();
+			return null;
+		}
+
+		// check template sub-directory exists (if specified)
+		if (modTemplate._subdirectory) {
+			const subDirPath = FileUtils.formPath([
+				pathToConfigFile
+					? FileUtils.getPathAndFileName(templateDirPath).path
+					: templateDirPath,
+				modTemplate._subdirectory,
+			]);
+
+			if (!FileUtils.doesDirectoryExist(subDirPath)) {
+				io.warnTemplateSubdirectoryDoesNotExist(subDirPath);
+			}
+		}
+
+		if (!suppressSuccessMsg) io.successTemplateVerified();
+		return modTemplate;
+	} catch (err: any) {
+		io.errorDuringTemplateParsing(err as YAMLParseError);
+		return null;
+	}
+}
+
 async function generateProjectFromDirOrZipOrGitTemplate(
 	fromDir: string | undefined,
 	fromZip: string | undefined,
@@ -616,11 +725,86 @@ async function generateProjectFromDirOrZipOrGitTemplate(
 	toPath: string,
 ): Promise<boolean> {
 	const io = new ExtractTemplateIO();
+	const saveIO = new SaveTemplateIO();
 
 	// TODO: add code to extract-zip (if zip) and then call generateProjectFromTemplateDirectory()
 
+	let localDir: string | undefined = undefined;
+	let templateSource = undefined;
+	let template: Template | null = null; // important: must be initialized to NULL, since after switch-case we are checking for this to return / proceed
+	let templateRootDirName: string | undefined = undefined;
+	let result;
+
+	const tempDir = MiscUtils.createTempDirectory();
+	if (!tempDir) {
+		io.errorGeneric("generateProjectFromDirOrZipOrGitTemplate::1");
+		return false;
+	}
+
+	if (fromGit) {
+		result = await cloneGitRepoAndFetchTemplate(fromGit, tempDir);
+		if (result) {
+			({
+				template,
+				templateSource,
+				templateRootDirName,
+				templateDir: localDir,
+			} = result);
+		}
+	} else if (fromZip) {
+		fromZip = FileUtils.resolvePath(fromZip);
+
+		result = await extractZipAndFetchTemplate(fromZip, tempDir, saveIO);
+		if (result) {
+			({
+				template,
+				templateSource,
+				templateRootDirName,
+				templateDir: localDir,
+			} = result);
+		}
+	} else if (fromDir) {
+		fromDir = FileUtils.resolvePath(fromDir);
+
+		result = await copyTemplateDirAndFetchTemplate(fromDir, tempDir, saveIO);
+		if (result) {
+			({
+				template,
+				templateSource,
+				templateRootDirName,
+				templateDir: localDir,
+			} = result);
+		}
+	}
+
+	if (!template || !templateSource || !templateRootDirName || !localDir) {
+		io.errorProjectGenerationAborted();
+		return false;
+	}
+
+	let structure = null,
+		parameters: string[] | null = null,
+		stats;
+
+	try {
+		({ structure, parameters, stats } =
+			await TreeUtils.extractStructureFromDirectory(localDir, {
+				exclude: template._exclude,
+				include: template._include,
+			}));
+
+		if (!structure) throw new Error("Could not extract directory structure!");
+		if (!parameters) parameters = [];
+	} catch (err: any) {
+		io.errorGeneric(
+			"generateProjectFromDirOrZipOrGitTemplate: error extracting structure ==> " +
+				err.toString(),
+		);
+		return false;
+	}
+
 	return await generateProjectFromTemplateDirectory(
-		templateDir,
+		localDir,
 		structure,
 		parameters,
 		templateSource,
@@ -929,8 +1113,6 @@ async function generateProjectFromTemplateDirectory(
 	io.successTemplateProjectGenerated(toPath, template._post_generation_message);
 	return true;
 }
-
-// ---------------- [private] --------------------
 
 async function executeTemplateTriggerTasks(
 	eventType: "Pre" | "Post",

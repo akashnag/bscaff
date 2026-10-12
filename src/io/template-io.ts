@@ -587,4 +587,17 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 		);
 		console.log();
 	}
+
+	errorProjectGenerationAborted(): void {
+		if (QUIET_MODE) return;
+
+		printHeader("Error Generating Project");
+		printField(
+			"Error",
+			"An error was encountered while attempting to generate the project from the template.",
+		);
+		printField("Status", "The operation was aborted.");
+
+		console.log();
+	}
 }

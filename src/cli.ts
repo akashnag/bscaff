@@ -73,9 +73,10 @@ export class CLI {
 				}
 			})
 			.action(async (options: Record<string, any>, command: Command) => {
-				const retVal = await SaveSnapshotCommands.saveSnippetFromLiveInput(
-					options.key,
-				);
+				const retVal =
+					await SaveSnapshotCommands.handleSaveSnippetFromLiveInputCommand(
+						options.key,
+					);
 
 				if (!retVal) throw new Error();
 			});
@@ -130,21 +131,22 @@ export class CLI {
 					let retVal = true;
 
 					if (!path) {
-						retVal = await SaveSnapshotCommands.saveASCIITreeFromClipboard(
-							globalOpts.key,
-							parentOpts?.desc,
-							parentOpts?.tags,
-							options.promptForContent,
-						);
+						retVal =
+							await SaveSnapshotCommands.handleSaveASCIITreeFromClipboardCommand(
+								globalOpts.key,
+								parentOpts?.desc,
+								parentOpts?.tags,
+								options.promptForContent,
+							);
 					} else if (options.git) {
-						retVal = await SaveSnapshotCommands.saveGitRepo(
+						retVal = await SaveSnapshotCommands.handleSaveGitRepoCommand(
 							globalOpts.key,
 							parentOpts?.desc,
 							parentOpts?.tags,
 							path,
 						);
 					} else {
-						retVal = await SaveSnapshotCommands.saveDirectory(
+						retVal = await SaveSnapshotCommands.handleSaveDirectoryCommand(
 							globalOpts.key,
 							parentOpts?.desc,
 							parentOpts?.tags,
@@ -182,7 +184,7 @@ export class CLI {
 
 					let retVal: boolean = false;
 					if (options.clipboard || path) {
-						retVal = await SaveSnapshotCommands.saveSnippet(
+						retVal = await SaveSnapshotCommands.handleSaveSnippetCommand(
 							globalOpts.key,
 							parentOpts?.desc,
 							parentOpts?.tags,
@@ -191,12 +193,13 @@ export class CLI {
 							path,
 						);
 					} else {
-						retVal = await SaveSnapshotCommands.saveSnippetFromLiveInput(
-							globalOpts.key,
-							parentOpts?.desc,
-							parentOpts?.tags,
-							options.type,
-						);
+						retVal =
+							await SaveSnapshotCommands.handleSaveSnippetFromLiveInputCommand(
+								globalOpts.key,
+								parentOpts?.desc,
+								parentOpts?.tags,
+								options.type,
+							);
 					}
 					if (!retVal) throw new Error();
 				},
@@ -218,7 +221,7 @@ export class CLI {
 				) => {
 					const globalOpts = command.optsWithGlobals();
 					const parentOpts = command.parent?.opts();
-					const retVal = await SaveSnapshotCommands.saveFiles(
+					const retVal = await SaveSnapshotCommands.handleSaveFilesCommand(
 						globalOpts.key,
 						parentOpts?.desc,
 						parentOpts?.tags,
@@ -239,7 +242,7 @@ export class CLI {
 				async (url: string, options: Record<string, any>, command: Command) => {
 					const globalOpts = command.optsWithGlobals();
 					const parentOpts = command.parent?.opts();
-					const retVal = await SaveSnapshotCommands.saveURL(
+					const retVal = await SaveSnapshotCommands.handleSaveURLCommand(
 						globalOpts.key,
 						parentOpts?.desc,
 						parentOpts?.tags,
@@ -261,7 +264,7 @@ export class CLI {
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
 				const retVal =
-					await SnapshotManagementCommands.openSettingsForEditing();
+					await SnapshotManagementCommands.handleOpenSettingsForEditingCommand();
 				if (!retVal) throw new Error();
 			});
 
@@ -283,10 +286,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await SnapshotManagementCommands.updateSnapshotKey(
-						globalOpts.key,
-						newKey,
-					);
+					const retVal =
+						await SnapshotManagementCommands.handleUpdateSnapshotKeyCommand(
+							globalOpts.key,
+							newKey,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -305,10 +309,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await SnapshotManagementCommands.updateDescription(
-						globalOpts.key,
-						newDescription,
-					);
+					const retVal =
+						await SnapshotManagementCommands.handleUpdateDescriptionCommand(
+							globalOpts.key,
+							newDescription,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -327,10 +332,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await SnapshotManagementCommands.updateTags(
-						globalOpts.key,
-						newTags,
-					);
+					const retVal =
+						await SnapshotManagementCommands.handleUpdateTagsCommand(
+							globalOpts.key,
+							newTags,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -349,10 +355,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await SnapshotManagementCommands.updateURL(
-						globalOpts.key,
-						newURL,
-					);
+					const retVal =
+						await SnapshotManagementCommands.handleUpdateURLCommand(
+							globalOpts.key,
+							newURL,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -372,10 +379,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await SnapshotManagementCommands.updateFileContent(
-						globalOpts.key,
-						relPath,
-					);
+					const retVal =
+						await SnapshotManagementCommands.handleUpdateFileContentCommand(
+							globalOpts.key,
+							relPath,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -396,11 +404,12 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await SnapshotManagementCommands.deleteSnapshotOrFile(
-						globalOpts.key,
-						options.force,
-						relPath,
-					);
+					const retVal =
+						await SnapshotManagementCommands.handleDeleteSnapshotOrFileCommand(
+							globalOpts.key,
+							options.force,
+							relPath,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -423,7 +432,7 @@ export class CLI {
 			)
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
-				const retVal = await ListSnapshotCommands.search(
+				const retVal = await ListSnapshotCommands.handleSearchSnapshotsCommand(
 					globalOpts.key,
 					options.desc,
 					options.type,
@@ -452,7 +461,7 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await ListSnapshotCommands.list(
+					const retVal = await ListSnapshotCommands.handleListSnapshotsCommand(
 						globalOpts.key,
 						options.type,
 						options.tags,
@@ -480,11 +489,12 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await ExtractSnapshotCommands.copyToClipboard(
-						globalOpts.key,
-						options.asTree,
-						relPath,
-					);
+					const retVal =
+						await ExtractSnapshotCommands.handleCopySnapshotToClipboardCommand(
+							globalOpts.key,
+							options.asTree,
+							relPath,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -509,12 +519,13 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await ExtractSnapshotCommands.openSnapshotReadOnly(
-						globalOpts.key,
-						options.editor,
-						options.command,
-						relPath,
-					);
+					const retVal =
+						await ExtractSnapshotCommands.handleOpenSnapshotReadOnlyCommand(
+							globalOpts.key,
+							options.editor,
+							options.command,
+							relPath,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -543,13 +554,14 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await ExtractSnapshotCommands.extract(
-						globalOpts.key,
-						options.dryRun,
-						options.ifExists,
-						options.partial,
-						path,
-					);
+					const retVal =
+						await ExtractSnapshotCommands.handleExtractSnapshotCommand(
+							globalOpts.key,
+							options.dryRun,
+							options.ifExists,
+							options.partial,
+							path,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -582,11 +594,12 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await CreateCommands.createTreeOnDiskFromClipboard(
-						path,
-						options.ifExists,
-						options.promptForContent,
-					);
+					const retVal =
+						await CreateCommands.handleCreateTreeOnDiskFromClipboardCommand(
+							path,
+							options.ifExists,
+							options.promptForContent,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -607,10 +620,11 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await CreateCommands.createFileOnDiskFromClipboard(
-						path,
-						options.overwrite,
-					);
+					const retVal =
+						await CreateCommands.handleCreateFileOnDiskFromClipboardCommand(
+							path,
+							options.overwrite,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -663,16 +677,17 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await TemplateCommands.generateProjectFromTemplate(
-						globalOpts.key,
-						options.dryRun,
-						options.ifExists,
-						options.json,
-						options.fromDir,
-						options.fromZip,
-						options.fromGit,
-						path,
-					);
+					const retVal =
+						await TemplateCommands.handleGenerateProjectFromTemplateCommand(
+							globalOpts.key,
+							options.dryRun,
+							options.ifExists,
+							options.json,
+							options.fromDir,
+							options.fromZip,
+							options.fromGit,
+							path,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -693,7 +708,8 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await TemplateCommands.verifyTemplate(path);
+					const retVal =
+						await TemplateCommands.handleVerifyTemplateCommand(path);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -726,7 +742,7 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await TemplateCommands.saveTemplate(
+					const retVal = await TemplateCommands.handleSaveTemplateCommand(
 						globalOpts.key,
 						options.desc,
 						options.tags,
@@ -762,13 +778,14 @@ export class CLI {
 					command: Command,
 				) => {
 					const globalOpts = command.optsWithGlobals();
-					const retVal = await TemplateCommands.createTemplateFromDirectory(
-						globalOpts.key,
-						options.desc,
-						options.tags,
-						options.edit,
-						path,
-					);
+					const retVal =
+						await TemplateCommands.handleCreateTemplateFromDirectoryCommand(
+							globalOpts.key,
+							options.desc,
+							options.tags,
+							options.edit,
+							path,
+						);
 					if (!retVal) throw new Error();
 				},
 			);
@@ -785,7 +802,9 @@ export class CLI {
 			)
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
-				const retVal = await TemplateCommands.updateTemplate(globalOpts.key);
+				const retVal = await TemplateCommands.handleUpdateTemplateCommand(
+					globalOpts.key,
+				);
 				if (!retVal) throw new Error();
 			});
 

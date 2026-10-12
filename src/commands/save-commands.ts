@@ -38,7 +38,7 @@ import * as CreateCommands from "./create-commands.js";
 // --------------------------------------------------------
 // save tree [path] [--git]
 // --------------------------------------------------------
-export async function saveGitRepo(
+export async function handleSaveGitRepoCommand(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
@@ -132,7 +132,7 @@ export async function saveGitRepo(
 	return true;
 }
 
-export async function saveASCIITreeFromClipboard(
+export async function handleSaveASCIITreeFromClipboardCommand(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
@@ -221,7 +221,7 @@ export async function saveASCIITreeFromClipboard(
 	return true;
 }
 
-export async function saveDirectory(
+export async function handleSaveDirectoryCommand(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
@@ -327,7 +327,7 @@ export async function saveDirectory(
 // --------------------------------------------------------
 // save snippet [path] [--type file-type [--memory]]
 // --------------------------------------------------------
-export async function saveSnippet(
+export async function handleSaveSnippetCommand(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
@@ -335,91 +335,13 @@ export async function saveSnippet(
 	fromMemory: boolean | undefined,
 	filePath: string | undefined,
 ): Promise<boolean> {
-	const io = new SaveSnippetIO();
-	const cm = new ClipboardManager();
-
-	if (!key) {
-		io.errorMissingParameter("key");
-		return false;
-	}
-
-	if (fromMemory && filePath) {
-		io.errorConflictingArgs("--memory", "file-path");
-		return false;
-	}
-
-	const store = await Store.create();
-
-	if (store.doesKeyExist(key)) {
-		io.errorDuplicateKey(key);
-		return false;
-	}
-
-	const tagList = tags ? tags.split(",") : undefined;
-	let content: string | null = null;
-	let fileType: string = "txt";
-	let fromFile: boolean = false;
-
-	if (filePath) {
-		filePath = FileUtils.resolvePath(filePath);
-
-		if (!FileUtils.doesFileExist(filePath)) {
-			io.errorSourceFileMissing(filePath);
-			return false;
-		} else {
-			if (fType) {
-				io.errorConflictingArgs("path", "file-type");
-				return false;
-			}
-
-			content = await FileUtils.readTextFile(filePath);
-			fileType = FileUtils.getFileType(filePath);
-			fromFile = true;
-		}
-	} else if (fromMemory) {
-		content = await cm.paste();
-		if (fType) fileType = fType;
-	} else {
-		io.errorGeneric("saveSnippet::1");
-		return false;
-	}
-
-	if (!content || content.length == 0) {
-		io.errorNoContentFound(fromFile);
-		return false;
-	}
-
-	const localFilePath = `${Config.SINGLE_FILE_NAME}.${fileType}`;
-
-	SnapshotUtils.createSnapshotDirectory(key);
-	SnapshotUtils.writeContentToSnapshotFile(content, key, localFilePath);
-
-	store.save({
-		key: key,
-		description: description,
-		type: SnapshotType.Snippet,
-		tags: tagList,
-		snippetFileName: localFilePath,
-	});
-
-	store.update();
-	io.successSnapshotTaken(
-		key,
-		`${MiscUtils.countLines(content)} lines`,
-		0,
-		0,
-		description,
-		tagList,
-		content,
-	);
-
-	return true;
+	return await saveSnippet(key, description, tags, fType, fromMemory, filePath);
 }
 
 // --------------------------------------------------------
 // save snippet [--type file-type]
 // --------------------------------------------------------
-export async function saveSnippetFromLiveInput(
+export async function handleSaveSnippetFromLiveInputCommand(
 	key: string | undefined,
 	description?: string,
 	tags?: string,
@@ -464,7 +386,7 @@ export async function saveSnippetFromLiveInput(
 // --------------------------------------------------------
 // save url [url]
 // --------------------------------------------------------
-export async function saveURL(
+export async function handleSaveURLCommand(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
@@ -517,7 +439,7 @@ export async function saveURL(
 // --------------------------------------------------------
 // save files <...files>
 // --------------------------------------------------------
-export async function saveFiles(
+export async function handleSaveFilesCommand(
 	key: string | undefined,
 	description: string | undefined,
 	tags: string | undefined,
@@ -674,4 +596,93 @@ export async function copyTree(
 	} catch (error) {
 		return false;
 	}
+}
+
+async function saveSnippet(
+	key: string | undefined,
+	description: string | undefined,
+	tags: string | undefined,
+	fType: string | undefined,
+	fromMemory: boolean | undefined,
+	filePath: string | undefined,
+): Promise<boolean> {
+	const io = new SaveSnippetIO();
+	const cm = new ClipboardManager();
+
+	if (!key) {
+		io.errorMissingParameter("key");
+		return false;
+	}
+
+	if (fromMemory && filePath) {
+		io.errorConflictingArgs("--memory", "file-path");
+		return false;
+	}
+
+	const store = await Store.create();
+
+	if (store.doesKeyExist(key)) {
+		io.errorDuplicateKey(key);
+		return false;
+	}
+
+	const tagList = tags ? tags.split(",") : undefined;
+	let content: string | null = null;
+	let fileType: string = "txt";
+	let fromFile: boolean = false;
+
+	if (filePath) {
+		filePath = FileUtils.resolvePath(filePath);
+
+		if (!FileUtils.doesFileExist(filePath)) {
+			io.errorSourceFileMissing(filePath);
+			return false;
+		} else {
+			if (fType) {
+				io.errorConflictingArgs("path", "file-type");
+				return false;
+			}
+
+			content = await FileUtils.readTextFile(filePath);
+			fileType = FileUtils.getFileType(filePath);
+			fromFile = true;
+		}
+	} else if (fromMemory) {
+		content = await cm.paste();
+		if (fType) fileType = fType;
+	} else {
+		io.errorGeneric("saveSnippet::1");
+		return false;
+	}
+
+	if (!content || content.length == 0) {
+		io.errorNoContentFound(fromFile);
+		return false;
+	}
+
+	const localFilePath = `${Config.SINGLE_FILE_NAME}.${fileType}`;
+
+	SnapshotUtils.createSnapshotDirectory(key);
+	SnapshotUtils.writeContentToSnapshotFile(content, key, localFilePath);
+
+	store.save({
+		key: key,
+		description: description,
+		type: SnapshotType.Snippet,
+		tags: tagList,
+		snippetFileName: localFilePath,
+	});
+
+	store.update();
+	io.successSnapshotTaken(
+		key,
+		`${MiscUtils.countLines(content)} lines`,
+		0,
+		0,
+		description,
+		tagList,
+		content,
+	);
+
+	return true;
 }

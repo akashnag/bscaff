@@ -32,7 +32,7 @@ import * as TemplateCommands from "./template-commands.js";
 // --------------------------------------------------------
 // copy [rel-path] [--as-tree]
 // --------------------------------------------------------
-export async function copyToClipboard(
+export async function handleCopySnapshotToClipboardCommand(
 	key: string | undefined,
 	asTree: boolean | undefined,
 	relPath: string | undefined,
@@ -155,7 +155,7 @@ export async function copyToClipboard(
 // --------------------------------------------------------
 // open [path]
 // --------------------------------------------------------
-export async function openSnapshotReadOnly(
+export async function handleOpenSnapshotReadOnlyCommand(
 	key: string | undefined,
 	forceEditor: boolean | undefined,
 	commandToExec: string | undefined,
@@ -324,7 +324,7 @@ export async function openSnapshotReadOnly(
 // --------------------------------------------------------
 // extract <to-path> [--dry-run] [--partial <rel-path>] [--if-exists <behaviour>]
 // --------------------------------------------------------
-export async function extract(
+export async function handleExtractSnapshotCommand(
 	key: string | undefined,
 	dryRun: boolean | undefined,
 	overwriteBehaviour: string | undefined,

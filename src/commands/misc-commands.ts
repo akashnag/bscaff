@@ -24,14 +24,14 @@ import * as TreeUtils from "../utils/tree-utils.js";
 // --------------------------------------------------------
 // settings
 // --------------------------------------------------------
-export async function openSettingsForEditing(): Promise<boolean> {
+export async function handleOpenSettingsForEditingCommand(): Promise<boolean> {
 	return MiscUtils.openFileInEditor(Settings.settingsFile);
 }
 
 // --------------------------------------------------------
 // update key <new-key>
 // --------------------------------------------------------
-export async function updateSnapshotKey(
+export async function handleUpdateSnapshotKeyCommand(
 	key: string | undefined,
 	newKey: string,
 ): Promise<boolean> {
@@ -68,7 +68,7 @@ export async function updateSnapshotKey(
 // --------------------------------------------------------
 // update desc <new-description>
 // --------------------------------------------------------
-export async function updateDescription(
+export async function handleUpdateDescriptionCommand(
 	key: string | undefined,
 	desc: string,
 ): Promise<boolean> {
@@ -100,7 +100,7 @@ export async function updateDescription(
 // --------------------------------------------------------
 // update tags <tag1,tag2,...tagN>
 // --------------------------------------------------------
-export async function updateTags(
+export async function handleUpdateTagsCommand(
 	key: string | undefined,
 	tags: string,
 ): Promise<boolean> {
@@ -133,7 +133,7 @@ export async function updateTags(
 // --------------------------------------------------------
 // update url <new-url>
 // --------------------------------------------------------
-export async function updateURL(
+export async function handleUpdateURLCommand(
 	key: string | undefined,
 	url: string,
 ): Promise<boolean> {
@@ -165,7 +165,7 @@ export async function updateURL(
 // --------------------------------------------------------
 // update content [relative-file-path]
 // --------------------------------------------------------
-export async function updateFileContent(
+export async function handleUpdateFileContentCommand(
 	key: string | undefined,
 	relPath: string | undefined,
 ): Promise<boolean> {
@@ -240,7 +240,7 @@ export async function updateFileContent(
 // --------------------------------------------------------
 // delete [relative-file-path]
 // --------------------------------------------------------
-export async function deleteSnapshotOrFile(
+export async function handleDeleteSnapshotOrFileCommand(
 	key: string | undefined,
 	forceDelete: boolean | undefined,
 	relPath: string | undefined,
