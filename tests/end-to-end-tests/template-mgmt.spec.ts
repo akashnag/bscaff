@@ -252,8 +252,6 @@ describe("Template management - direct project generation", () => {
 				extractTargetDir,
 			]);
 
-			console.log(result.rawStdout);
-
 			expect(result.rawStdout).toContain("Project generated successfully");
 			expect(result.exitCode).toBe(0);
 			await validateSuccessfulProjectGeneration(extractTargetDir);

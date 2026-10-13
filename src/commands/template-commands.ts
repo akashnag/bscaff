@@ -33,6 +33,7 @@ import {
 } from "../types/template-types.js";
 import { FileTreeNode, SnapshotRecord, SnapshotType } from "../types/types.js";
 import * as FileUtils from "../utils/file-utils.js";
+import * as GitUtils from "../utils/git-utils.js";
 import * as MiscUtils from "../utils/misc-utils.js";
 import * as ParamUtils from "../utils/param-utils.js";
 import * as SnapshotUtils from "../utils/snapshot-utils.js";
@@ -75,7 +76,7 @@ export async function handleCreateTemplateFromDirectoryCommand(
 		return false;
 	}
 
-	const template: Template = {
+	const rawTemplate: Template = {
 		_min_bscaff_version: pkg.version,
 		_exclude: Settings.get("exclude") ?? undefined,
 		_include: Settings.get("include") ?? undefined,
@@ -84,7 +85,7 @@ export async function handleCreateTemplateFromDirectoryCommand(
 	};
 
 	const templateContent: string = TemplateUtils.writeTemplate(
-		template,
+		rawTemplate,
 	) as string;
 
 	const randFile = MiscUtils.createTempFile(
@@ -99,7 +100,8 @@ export async function handleCreateTemplateFromDirectoryCommand(
 		return false;
 	}
 
-	if (!verifyTemplate(randFile, true, true)) {
+	const template = await verifyTemplate(randFile, true, true);
+	if (!template) {
 		io.errorCreatingTemplateDueToInvalidTemplateFormat();
 		return false;
 	}
@@ -217,7 +219,7 @@ export async function handleUpdateTemplateCommand(
 	const gitIO = new SaveGitRepoIO();
 
 	gitIO.startFetchGitTag(record.templateSource.url);
-	const remoteVersion = await getLatestRemoteTag(
+	const remoteVersion = await GitUtils.getLatestRemoteGitCommitHash(
 		git,
 		record.templateSource.url,
 	);
@@ -367,7 +369,7 @@ async function cloneGitRepoAndFetchTemplate(
 		templateSource = {
 			sourceType: "git" as TemplateSourceType,
 			url: url,
-			version: await getLatestRemoteTag(git, url),
+			version: await GitUtils.getLatestRemoteGitCommitHash(git, url),
 		};
 
 		// clone the latest tag if exists
@@ -1168,27 +1170,4 @@ async function executeTemplateTriggerTasks(
 		io.errorFailedToCompleteGenerationTasks(eventType);
 		return false;
 	}
-}
-
-async function getLatestRemoteTag(
-	git: SimpleGit,
-	repoURL: string,
-): Promise<string | undefined> {
-	const rawOutput = await git.listRemote([
-		"--tags",
-		"--sort=-v:refname",
-		repoURL,
-	]);
-
-	// Extract all tag names, stripping out "refs/tags/" and dereference indicators ("^{}")
-	const tags = rawOutput
-		.split("\n")
-		.map((line) => line.trim())
-		.filter(Boolean)
-		.map((line) => line.split(/\s+/)[1]) // Get the ref path (e.g. "refs/tags/v1.2.3")
-		.filter((ref) => ref && !ref.endsWith("^{}")) // Exclude annotated tag commit pointers
-		.map((ref) => ref.replace("refs/tags/", ""));
-
-	// The first element in the array is the latest version tag
-	return tags && tags.length > 0 ? tags[0] : undefined;
 }

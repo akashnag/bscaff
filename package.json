@@ -34,6 +34,7 @@
 		"commander": "^12.0.0",
 		"fuzzball": "^2.2.6",
 		"isbinaryfile": "^5.0.7",
+		"minimatch": "^10.2.6",
 		"nunjucks": "^3.2.4",
 		"ora": "^9.4.1",
 		"simple-git": "^3.36.0",

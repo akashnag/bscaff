@@ -208,20 +208,20 @@ A Git repository can be captured directly as a directory tree snapshot using the
 bscaff -k test-fork save tree https://github.com/akashnag/bscaff.git --git
 ```
 
-bscaff clones the repository contents into the snapshot.
+**bscaff** clones the repository contents into the snapshot.
 
 ---
 
 ## Templates
 
-bscaff supports custom template packages with variable processing and configuration rules.
+**bscaff** supports custom template packages with variable processing and configuration rules. A template can be a git-repo, a zip file, or a directory. In either case, it must contain the template configuration as `bscaff-template.config.yml` in its root.
 
 ### Verify a Template Config
 
 Verify if a template configuration file is syntactically valid:
 
 ```bash
-bscaff template verify ./template-config.yaml
+bscaff template verify ./bscaff-template.config.yaml
 ```
 
 ### Save a Template
@@ -239,9 +239,11 @@ bscaff -k my-template template save ./bscaff-react-template.zip --source zip
 bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --source git
 ```
 
-In case you are saving from a zip archive, the zip must contain a single root folder, and all files including the template config must be present in that root folder.
+In case you are saving from a zip archive, the zip must contain a single root folder, and all files (including the template config YAML file) must be present in that root folder.
 
 ### Generate Projects from Templates
+
+A template can be used to generate project scaffolding. If a template has parameters/variables, those will be prompted for input during project generation, and will be saved as `bscaff-project.config.json` in the newly generated project directory.
 
 #### From a Saved Template
 
@@ -283,7 +285,7 @@ During project generation, variables (parameters) will be prompted for input. If
 bscaff -k my-template template generate-project --json "$(cat param-values.json)" projects/my-react-app
 ```
 
-This will take the parameter values from the json content of the file `param-values.json` (or whatever file you specify) instead of prompting for input.
+This will take the parameter values from the json content of the file `param-values.json` (or whatever file you specify) instead of prompting for input. This can be used in the scenario where you want the project-config of a different project to be used (with the same variable replacements) for generating this project. In that case, you can pass the `bscaff-project.config.json` directly into the `--json` parameter.
 
 ### Create a Template from an Existing Directory
 

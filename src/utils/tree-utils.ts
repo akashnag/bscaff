@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import chalk from "chalk";
 import { ClipboardManager } from "../core/clipboard.js";
 import { Settings } from "../core/settings.js";
 import { ExtractSnapshotIO } from "../io/extract-io.js";
@@ -487,9 +488,12 @@ export function drawFileTree(
 
 		// Append trailing slash for directories
 		const suffix = node.type === "dir" ? "/" : "";
+		const text = `${node.name}${suffix}`;
+		const displayText =
+			node.type === "dir" && colored ? chalk.cyan(text) : text;
 
 		if (currentLevel === 0) {
-			lines.push(`${node.name}${suffix}`);
+			lines.push(displayText);
 		} else {
 			let indent = "";
 
@@ -501,7 +505,7 @@ export function drawFileTree(
 
 			const isLastChild = isLastSibling(nodes, i);
 			const branch = isLastChild ? "└── " : "├── ";
-			lines.push(`${indent}${branch}${node.name}${suffix}`);
+			lines.push(`${indent}${branch}${displayText}`);
 		}
 	}
 

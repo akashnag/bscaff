@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to **bscaff**.
 
-bscaff is an open-source project, and contributions of many kinds are welcome. You do not need to contribute code to make a valuable contribution. Documentation improvements, tests, bug reports, examples, and feedback are all important.
+**bscaff** is an open-source project, and contributions of many kinds are welcome. You do not need to contribute code to make a valuable contribution. Documentation improvements, tests, bug reports, examples, and feedback are all important.
 
 Please read this guide before opening an issue or pull request.
 
@@ -29,7 +29,7 @@ Some particularly useful contributions include:
 * Improving error messages and CLI usability
 * Adding examples and usage documentation
 * Reporting confusing behaviour or edge cases
-* Reviewing proposed features and pull requests
+* Implementing proposed features
 
 ## Before You Start
 
@@ -61,7 +61,7 @@ A pull request implementing a previously unapproved feature may be closed or ask
 
 ## Development Setup
 
-bscaff is a Node.js / TypeScript project.
+**bscaff** is a Node.js / TypeScript project.
 
 Make sure you have a supported version of Node.js installed. The project currently requires:
 
@@ -78,12 +78,16 @@ npm install
 Before making changes, make sure the existing test suite passes:
 
 ```bash
-npm test
+npm run test:run
 ```
 
-Also run the project's linting and formatting checks before submitting a pull request.
+Also run the project's linting and formatting checks before submitting a pull request:
 
-Refer to `package.json` for the current available scripts.
+```bash
+npm run check
+```
+
+Refer to `package.json` for the currently available scripts.
 
 ## Project Structure
 
@@ -181,7 +185,7 @@ Create a file: `ssh-config.json` in the root of your project directory, with the
 }
 ```
 
-Replace `github.com` with your SSH profile name, as configured in `~/.ssh/config` (on Linux systems). Without this, all tests of features involving git repos will fail.
+Replace `github.com` (e.g. `gh-work`) with your SSH host alias, as configured in `~/.ssh/config` (on Linux systems). Without this, all tests of features involving git repos will fail.
 
 ### Prefer end-to-end tests
 
@@ -207,6 +211,8 @@ Unit tests are still appropriate when:
 * A unit test provides substantially clearer coverage
 
 Do not add unit tests solely to increase the number of tests.
+
+End-to-end tests should be written in: `/test/end-to-end-tests/`. For format, please refer to `/tests/_test-template.spec.ts`.
 
 ### When fixing a bug
 

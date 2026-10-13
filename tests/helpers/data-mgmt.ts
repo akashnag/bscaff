@@ -28,11 +28,7 @@ export const TEST_DB_FILE = path.join(
 	".bscaff/db.json",
 );
 
-/**
- * Recursively cleans up a directory with retry logic to avoid file lock issues.
- *
- * @param dirPath - Path to directory to remove
- */
+// Recursively cleans up a directory with retry logic to avoid file lock issues
 export async function cleanupDir(dirPath: string): Promise<void> {
 	try {
 		await fs.rm(dirPath, {
@@ -48,11 +44,7 @@ export async function cleanupDir(dirPath: string): Promise<void> {
 	}
 }
 
-/**
- * Creates the test directory and an isolated .home folder, tracking it for cleanup.
- *
- * @returns The absolute path of the created directory
- */
+// Creates the test directory and an isolated .home folder, tracking it for cleanup
 async function createTestDir(): Promise<string> {
 	await cleanupDir(TEST_DIR);
 	await fs.mkdir(TEST_DIR, { recursive: true });
@@ -62,9 +54,7 @@ async function createTestDir(): Promise<string> {
 	return TEST_DIR;
 }
 
-/**
- * Cleans up all tracked temporary directories.
- */
+// Cleans up all tracked temporary directories
 async function cleanupTestDir(): Promise<void> {
 	await cleanupDir(TEST_DIR);
 	for (const dir of trackedDirs) {

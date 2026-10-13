@@ -35,7 +35,7 @@ export class Config {
 	static readonly TEMPLATE_CONFIG_FILE: string = "bscaff-template.config.yml";
 	static readonly TEMPLATE_FILE_VERSION: string = "1.0.0";
 	static readonly TEMPLATE_PROJECT_CONFIG_FILE: string =
-		"bscaff-project.config.yml";
+		"bscaff-project.config.json";
 
 	// --------------- global vars ----------------------------
 	private static storagePath: string | null = null;

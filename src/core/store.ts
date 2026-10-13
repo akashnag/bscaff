@@ -41,6 +41,42 @@ export class Store {
 		return new Store(data);
 	}
 
+	findTemplatesWithURL(url: string): SnapshotRecord | null {
+		const results = [];
+
+		for (let i = 0; i < this.list.length; ++i) {
+			const record = this.list[i];
+			if (
+				record.type === SnapshotType.Template &&
+				record.templateSource &&
+				record.templateSource.sourceType === "git" &&
+				record.templateSource.url === url
+			) {
+				results.push({
+					index: i,
+					version: record.templateSource.version,
+				});
+			}
+		}
+
+		if (results.length === 0) return null;
+		if (results.length === 1) return this.list[results[0].index];
+
+		let bestVersion = undefined;
+		let bestPos = -1;
+
+		for (let i = 0; i < results.length; ++i) {
+			const item = results[i];
+			if (item.version && (!bestVersion || item.version > bestVersion)) {
+				bestVersion = item.version;
+				bestPos = i;
+			}
+		}
+
+		if (bestPos < 0) return null;
+		return this.list[results[bestPos].index];
+	}
+
 	renameKey(oldKey: string, newKey: string): boolean {
 		if (this.doesKeyExist(newKey)) return false;
 

@@ -13,29 +13,25 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runCLIForTest } from "./helpers/cli-runner";
 import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-} from "vitest";
-import {
-	cleanupTestDir,
-	createTestDir,
-	runCLIForTest,
-	TEST_DIR,
-} from "./helpers/cli";
+	setupTestEnvironment,
+	teardownTestEnvironment,
+} from "./helpers/data-mgmt";
 
 describe("TODO: add description of test feature", () => {
+	let sourceTreeDir: string;
+	let sourceFilesDir: string;
+	let extractTargetDir: string;
+
 	beforeAll(async () => {
-		await createTestDir();
+		({ sourceTreeDir, sourceFilesDir, extractTargetDir } =
+			await setupTestEnvironment());
 	});
 
 	afterAll(async () => {
-		await cleanupTestDir();
+		await teardownTestEnvironment();
 	});
 
 	it("TODO: add description of test variant", async () => {

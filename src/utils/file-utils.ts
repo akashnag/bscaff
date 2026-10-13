@@ -203,6 +203,12 @@ export function createDirectory(
 	}
 }
 
+export function ensureDirectoryExists(dirPath: string) {
+	if (!doesDirectoryExist(dirPath)) {
+		createDirectory(dirPath);
+	}
+}
+
 export function deleteDirectory(path: string): boolean {
 	try {
 		fs.rmSync(path, { recursive: true, force: true });
