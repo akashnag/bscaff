@@ -5,7 +5,7 @@
 	"main": "dist/index.js",
 	"type": "module",
 	"bin": {
-		"scaffold": "./bin/index.js"
+		"bscaff": "./bin/index.js"
 	},
 	"scripts": {
 		"check": "tsc --noEmit",
@@ -20,6 +20,7 @@
 		"build:completions": "npm run build && tsx scripts/generate-completions.ts"
 	},
 	"keywords": [
+		"bscaff",
 		"cli",
 		"scaffolding",
 		"typescript",
