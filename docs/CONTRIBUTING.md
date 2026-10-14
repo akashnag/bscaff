@@ -66,7 +66,7 @@ A pull request implementing a previously unapproved feature may be closed or ask
 Make sure you have a supported version of Node.js installed. The project currently requires:
 
 * **Node.js >= 22.11.0**
-* **git** (if working with git templates)
+* **git**
 
 Clone the repository and install dependencies:
 
@@ -96,20 +96,18 @@ The source code is organized by responsibility.
 
 When adding or modifying functionality, follow the existing project structure rather than introducing new architectural patterns without discussion.
 
-In particular:
-
-```text
-src/
-├── io/
-│   └── ...
-└── ...
-```
-
-The `src/io/` directory contains the project's I/O classes.
+* The `src/io/` directory contains the project's I/O classes. For all user prompts and messages, use the classes defined here. All new classes must inherit from `ConsoleIO` defined in `/src/io/io.ts`.
+* The `src/cli.ts` file defines all the supported commands. Some as-of-yet unsupported handler boilerplates are also defined but commented out for future implementations.
+* The `src/commands/` directory contains the command handlers. It may have some helper functions as well, but command handlers are named as `handleXXXCommand` where `XXX` is the specific command name.
+* All generic utility functions are in `src/utils/` directory.
+* Types are defined in `/src/types/`.
+* Abstractions/classes are defined in `/src/core/`. Some functionalities of `/src/utils/snapshot-utils.ts` will be moved in future to a core `Snapshot` class inside `/src/core/`.
+* The `/src/utils/git-utils.ts` file contains mostly unused commands. These need to be implemented to support project updates via templates in future. This is a good place to start if you are looking to contribute.
+* Completions for Zsh and Fish are in `/completions/`
 
 ### I/O Abstraction
 
-**All I/O operations must be performed through the appropriate classes in `src/io/`.**
+**All User I/O operations must be performed through the appropriate classes in `src/io/`.**
 
 Do not introduce direct filesystem, process, console, clipboard, or other external I/O into business-logic classes when an appropriate I/O abstraction exists.
 
@@ -123,7 +121,7 @@ For example, business logic should not directly perform operations such as:
 * Accessing the clipboard
 * Other environment-dependent operations
 
-Instead, use or extend the appropriate I/O class in `src/io/`.
+Instead, use or extend the appropriate I/O class in `src/io/`. Raw file I/O must be handled in `/src/utils/file-utils.ts`.
 
 If the required I/O abstraction does not exist, add one in `src/io/` rather than bypassing the abstraction.
 
