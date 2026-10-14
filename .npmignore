@@ -1,0 +1,29 @@
+# Dependency directories
+node_modules/
+
+# Local development and environment files
+.env
+.env.local
+.DS_Store
+
+# Source code / Uncompiled files (if you only want to ship your built 'dist' folder)
+scripts/
+completions/
+docs/
+src/
+tsconfig.json
+vitest.config.ts
+eslint.config.js
+ssh-config.json
+biome.json
+*.tgz
+
+# Test files and coverage reports
+tests/
+.test-coverage-reports/
+coverage/
+
+# Workspace settings and git files
+.git/
+.github/
+.vscode/
