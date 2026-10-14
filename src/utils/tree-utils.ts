@@ -476,7 +476,6 @@ export function drawFileTree(
 	rawNodes: FileTreeNode[],
 	colored?: boolean,
 ): string {
-	// TODO: add support for colors
 	if (rawNodes.length === 0) return "";
 
 	const nodes = sortTreeStructure(rawNodes);
