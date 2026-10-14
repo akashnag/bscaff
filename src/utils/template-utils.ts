@@ -114,6 +114,71 @@ export function normalizeAndValidateTemplateAnswers(
 	return answers as TemplateAnswers;
 }
 
+// ------------------------- [private] -----------------------------
+
+function normalizeAndValidateTemplate(raw: Record<string, unknown>): Template {
+	const template: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(raw)) {
+		if (key.startsWith("_")) {
+			(template as Record<string, unknown>)[key] = value;
+		} else {
+			// Normalize shorthand prompt definitions
+			if (
+				typeof value === "object" &&
+				value !== null &&
+				!Array.isArray(value)
+			) {
+				template[key] = value as TemplateQuestion;
+			} else {
+				// Expand shorthand string/boolean/number defaults into Question objects
+				template[key] = {
+					default: value as TemplateQuestion["default"],
+					type:
+						typeof value === "number"
+							? "int"
+							: typeof value === "boolean"
+								? "bool"
+								: "str",
+				};
+			}
+		}
+	}
+
+	return template as Template;
+}
+
+function normalizeTemplateAnswerValue(value: unknown): TemplateAnswerValue {
+	if (value === null || value === undefined) {
+		return null;
+	}
+
+	const type = typeof value;
+
+	if (type === "string" || type === "number" || type === "boolean") {
+		return value as TemplateAnswerValue;
+	}
+
+	if (Array.isArray(value)) {
+		return value.map((item) => normalizeTemplateAnswerValue(item));
+	}
+
+	if (type === "object") {
+		const normalizedObj: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+			normalizedObj[k] = normalizeTemplateAnswerValue(v);
+		}
+		return normalizedObj;
+	}
+
+	// Fallback for unsupported types (e.g. functions, symbols)
+	return String(value);
+}
+
+// ------------------------- [unused] ------------------------
+
+/*
+
 export async function copyAndRenderTemplate(
 	sourceDir: string,
 	outputDir: string,
@@ -232,64 +297,4 @@ export async function copyAndRenderTemplate(
 
 	await walkAndRender(resolvedSourceDir);
 }
-
-// ------------------------- [private] -----------------------------
-
-function normalizeAndValidateTemplate(raw: Record<string, unknown>): Template {
-	const template: Record<string, unknown> = {};
-
-	for (const [key, value] of Object.entries(raw)) {
-		if (key.startsWith("_")) {
-			(template as Record<string, unknown>)[key] = value;
-		} else {
-			// Normalize shorthand prompt definitions
-			if (
-				typeof value === "object" &&
-				value !== null &&
-				!Array.isArray(value)
-			) {
-				template[key] = value as TemplateQuestion;
-			} else {
-				// Expand shorthand string/boolean/number defaults into Question objects
-				template[key] = {
-					default: value as TemplateQuestion["default"],
-					type:
-						typeof value === "number"
-							? "int"
-							: typeof value === "boolean"
-								? "bool"
-								: "str",
-				};
-			}
-		}
-	}
-
-	return template as Template;
-}
-
-function normalizeTemplateAnswerValue(value: unknown): TemplateAnswerValue {
-	if (value === null || value === undefined) {
-		return null;
-	}
-
-	const type = typeof value;
-
-	if (type === "string" || type === "number" || type === "boolean") {
-		return value as TemplateAnswerValue;
-	}
-
-	if (Array.isArray(value)) {
-		return value.map((item) => normalizeTemplateAnswerValue(item));
-	}
-
-	if (type === "object") {
-		const normalizedObj: Record<string, unknown> = {};
-		for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-			normalizedObj[k] = normalizeTemplateAnswerValue(v);
-		}
-		return normalizedObj;
-	}
-
-	// Fallback for unsupported types (e.g. functions, symbols)
-	return String(value);
-}
+*/

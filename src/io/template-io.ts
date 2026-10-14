@@ -549,10 +549,8 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 		if (QUIET_MODE) return;
 
 		printHeader("Missing Parameter Values");
-		printField(
-			"Error",
-			"Error generating project from template, specified JSON missing parameter values.",
-		);
+		printField("Error", "Error generating project from template");
+		printField("Details", "Specified JSON missing parameter values.");
 		printField("Missing", missingItems.join(", "));
 
 		console.log();
@@ -592,10 +590,7 @@ export class ExtractTemplateIO extends ExtractSnapshotIO {
 		if (QUIET_MODE) return;
 
 		printHeader("Error Generating Project");
-		printField(
-			"Error",
-			"An error was encountered while attempting to generate the project from the template.",
-		);
+		printField("Error", "Could not generate the project from the template.");
 		printField("Status", "The operation was aborted.");
 
 		console.log();

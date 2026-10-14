@@ -239,7 +239,7 @@ bscaff -k my-template template save ./bscaff-react-template.zip --source zip
 bscaff -k my-template template save https://github.com/bscaff/bscaff-react-template.git --source git
 ```
 
-In case you are saving from a zip archive, the zip must contain a single root folder, and all files (including the template config YAML file) must be present in that root folder.
+In case you are saving from a zip archive, the zip must contain a single root folder, and all files (including the template config YAML file) must be present in that root folder. In case you are saving from a git repo, you can optionally specify `--commit <hash>` to target a specific commit to clone from.
 
 ### Generate Projects from Templates
 
@@ -277,6 +277,8 @@ Generate a project directory from a git repo containing a template:
 bscaff template generate-project --from-git https://github.com/username/my-react-template.git projects/my-react-app
 ```
 
+You can optionally specify a particular commit by `--commit <hash>` option.
+
 #### Non-interactive Project Generation
 
 During project generation, variables (parameters) will be prompted for input. If you wish to have non-interactive generation, use the `--json` flag, for example:
@@ -302,6 +304,8 @@ Update a saved template from its upstream Git repository:
 ```bash
 bscaff -k my-template template update
 ```
+
+You can target a specific commit to update from by adding the `--commit <hash>` flag.
 
 ### Template Configuration (`bscaff-template.config.yml`)
 

@@ -50,8 +50,16 @@ export async function handleSaveTemplateCommand(
 	tags: string | undefined,
 	source: string | undefined,
 	filePath: string | undefined,
+	commitHash?: string,
 ): Promise<boolean> {
-	return await saveTemplate(key, description, tags, source, filePath);
+	return await saveTemplate(
+		key,
+		description,
+		tags,
+		source,
+		filePath,
+		commitHash,
+	);
 }
 
 export async function handleCreateTemplateFromDirectoryCommand(
@@ -179,6 +187,7 @@ export async function handleVerifyTemplateCommand(
 
 export async function handleUpdateTemplateCommand(
 	key: string | undefined,
+	commitHash?: string,
 ): Promise<boolean> {
 	const io = new SaveTemplateIO();
 
@@ -251,6 +260,7 @@ export async function handleUpdateTemplateCommand(
 		record.tags ? record.tags.join(",") : undefined,
 		"git",
 		record.templateSource!.url,
+		commitHash,
 	);
 
 	if (retVal) {
@@ -273,6 +283,7 @@ export async function handleGenerateProjectFromTemplateCommand(
 	fromZip: string | undefined,
 	fromGit: string | undefined,
 	toPath: string,
+	commitHash?: string,
 ): Promise<boolean> {
 	const io = new ExtractTemplateIO();
 
@@ -324,6 +335,7 @@ export async function handleGenerateProjectFromTemplateCommand(
 			overwriteBehaviour,
 			jsonParams,
 			toPath,
+			commitHash,
 		);
 	}
 }
@@ -333,6 +345,7 @@ export async function handleGenerateProjectFromTemplateCommand(
 async function cloneGitRepoAndFetchTemplate(
 	url: string,
 	extractDir: string,
+	commitHash?: string,
 ): Promise<{
 	template: Template | null;
 	templateDir: string;
@@ -369,16 +382,15 @@ async function cloneGitRepoAndFetchTemplate(
 		templateSource = {
 			sourceType: "git" as TemplateSourceType,
 			url: url,
-			version: await GitUtils.getLatestRemoteGitCommitHash(git, url),
+			version:
+				commitHash ?? (await GitUtils.getLatestRemoteGitCommitHash(git, url)),
 		};
 
 		// clone the latest tag if exists
 		if (templateSource.version) {
-			await git.clone(url, localDir, [
-				"--branch",
-				templateSource.version,
-				"--single-branch",
-			]);
+			await git.clone(url, localDir);
+			const localRepo = simpleGit(localDir);
+			await localRepo.checkout(templateSource.version);
 		} else {
 			await git.clone(url, localDir);
 		}
@@ -387,8 +399,8 @@ async function cloneGitRepoAndFetchTemplate(
 		gitIO.cloneComplete();
 
 		template = await verifyTemplate(localDir, true, false);
-	} catch {
-		gitIO.cloneFailed();
+	} catch (err) {
+		gitIO.cloneFailed(url);
 		FileUtils.deleteDirectory(localDir);
 		return null;
 	}
@@ -529,6 +541,7 @@ async function saveTemplate(
 	tags: string | undefined,
 	source: string | undefined,
 	filePath: string | undefined,
+	commitHash?: string,
 ): Promise<boolean> {
 	const io = new SaveTemplateIO();
 
@@ -549,6 +562,10 @@ async function saveTemplate(
 		return false;
 	}
 
+	if (source !== "git" && commitHash) {
+		io.warnOptionIgnored("--commit");
+	}
+
 	SnapshotUtils.createSnapshotDirectory(key);
 	const snapshotDir = SnapshotUtils.getSnapshotDirectory(key);
 	let localDir: string | undefined = undefined;
@@ -560,7 +577,11 @@ async function saveTemplate(
 	switch (source) {
 		// --------------- git repo ------------------
 		case "git":
-			result = await cloneGitRepoAndFetchTemplate(filePath, snapshotDir);
+			result = await cloneGitRepoAndFetchTemplate(
+				filePath,
+				snapshotDir,
+				commitHash,
+			);
 			if (result) {
 				({
 					template,
@@ -726,6 +747,7 @@ async function generateProjectFromDirOrZipOrGitTemplate(
 	overwriteBehaviour: string | undefined,
 	jsonParams: string | undefined,
 	toPath: string,
+	commitHash?: string,
 ): Promise<boolean> {
 	const io = new ExtractTemplateIO();
 	const saveIO = new SaveTemplateIO();
@@ -742,8 +764,12 @@ async function generateProjectFromDirOrZipOrGitTemplate(
 		return false;
 	}
 
+	if (commitHash && !fromGit) {
+		io.warnOptionIgnored("--commit");
+	}
+
 	if (fromGit) {
-		result = await cloneGitRepoAndFetchTemplate(fromGit, tempDir);
+		result = await cloneGitRepoAndFetchTemplate(fromGit, tempDir, commitHash);
 		if (result) {
 			({
 				template,

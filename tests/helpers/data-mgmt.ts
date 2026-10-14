@@ -126,7 +126,7 @@ export function doNoneOfTheFilesExist(
 	for (let i = 0; i < relPaths.length; ++i) {
 		const p = FileUtils.formPath([rootDir, relPaths[i]]);
 		if (FileUtils.doesFileExist(p)) {
-			console.log(`File exists: ${p}`);
+			//console.log(`File exists: ${p}`);
 			return false;
 		}
 	}

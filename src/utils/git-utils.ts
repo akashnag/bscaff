@@ -25,35 +25,6 @@ import * as ParamUtils from "./param-utils.js";
 import * as TemplateUtils from "./template-utils.js";
 import * as TreeUtils from "./tree-utils.js";
 
-interface MergeOptions {
-	repoUrl: string;
-	targetDir: string;
-	remoteBranch?: string; // defaults to 'origin/HEAD'
-}
-
-export async function getLatestRemoteGitTag(
-	git: SimpleGit,
-	repoURL: string,
-): Promise<string | undefined> {
-	const rawOutput = await git.listRemote([
-		"--tags",
-		"--sort=-v:refname",
-		repoURL,
-	]);
-
-	// Extract all tag names, stripping out "refs/tags/" and dereference indicators ("^{}")
-	const tags = rawOutput
-		.split("\n")
-		.map((line) => line.trim())
-		.filter(Boolean)
-		.map((line) => line.split(/\s+/)[1]) // Get the ref path (e.g. "refs/tags/v1.2.3")
-		.filter((ref) => ref && !ref.endsWith("^{}")) // Exclude annotated tag commit pointers
-		.map((ref) => ref.replace("refs/tags/", ""));
-
-	// The first element in the array is the latest version tag
-	return tags && tags.length > 0 ? tags[0] : undefined;
-}
-
 export async function getLatestRemoteGitCommitHash(
 	git: SimpleGit,
 	repoURL: string,
@@ -72,7 +43,14 @@ export async function getLatestRemoteGitCommitHash(
 	return line.split(/\s+/)[0];
 }
 
-// ------------------------------------
+// ---------------------- [unused] ----------------------------
+
+/*
+interface MergeOptions {
+	repoUrl: string;
+	targetDir: string;
+	remoteBranch?: string; // defaults to 'origin/HEAD'
+}
 
 function runGitInScratch(scratchPad: string, args: string[]): string {
 	return execFileSync("git", args, { cwd: scratchPad, encoding: "utf-8" });
@@ -82,7 +60,7 @@ export async function mergeRemoteChanges({
 	repoUrl,
 	targetDir,
 	remoteBranch = "origin/HEAD",
-}: MergeOptions): Promise<void> {
+}: MergeOptions): Promise<boolean> {
 	const io = new ExtractTemplateIO();
 	const resolvedTargetDir = path.resolve(targetDir);
 
@@ -475,9 +453,7 @@ export async function mergeRemoteChanges({
 			tempBackupDir,
 		);
 
-		console.log(
-			"3-way merge and update completed successfully using rendered template trees.",
-		);
+		return true;
 	} finally {
 		await cleanupTempFiles([
 			scratchPad,
@@ -639,3 +615,27 @@ async function getFilesRecursive(
 
 	return files;
 }
+
+export async function getLatestRemoteGitTag(
+	git: SimpleGit,
+	repoURL: string,
+): Promise<string | undefined> {
+	const rawOutput = await git.listRemote([
+		"--tags",
+		"--sort=-v:refname",
+		repoURL,
+	]);
+
+	// Extract all tag names, stripping out "refs/tags/" and dereference indicators ("^{}")
+	const tags = rawOutput
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean)
+		.map((line) => line.split(/\s+/)[1]) // Get the ref path (e.g. "refs/tags/v1.2.3")
+		.filter((ref) => ref && !ref.endsWith("^{}")) // Exclude annotated tag commit pointers
+		.map((ref) => ref.replace("refs/tags/", ""));
+
+	// The first element in the array is the latest version tag
+	return tags && tags.length > 0 ? tags[0] : undefined;
+}
+*/

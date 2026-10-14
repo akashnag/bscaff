@@ -82,7 +82,7 @@ export async function handleSaveGitRepoCommand(
 		FileUtils.deleteDirectory(FileUtils.formPath([repoLocalDir, ".git"]));
 		io.cloneComplete();
 	} catch {
-		io.cloneFailed();
+		io.cloneFailed(repoURL);
 		FileUtils.deleteDirectory(snapshotDir);
 		return false;
 	}

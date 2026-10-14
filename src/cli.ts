@@ -664,6 +664,10 @@ export class CLI {
 				"--json <var-inputs>",
 				"Read variable inputs from JSON content instead of prompting",
 			)
+			.option(
+				"--commit <commit-hash>",
+				"If --from-git, optionally specify the exact commit hash",
+			)
 			.addOption(
 				new Option(
 					"-e, --if-exists <behaviour>",
@@ -687,6 +691,7 @@ export class CLI {
 							options.fromZip,
 							options.fromGit,
 							path,
+							options.commit,
 						);
 					if (!retVal) throw new Error();
 				},
@@ -734,6 +739,10 @@ export class CLI {
 					.choices(["zip", "git", "dir"])
 					.default("dir"),
 			)
+			.option(
+				"--commit <commit-hash>",
+				"If --source=git, optionally specify the exact commit hash",
+			)
 			.description("Save a bscaff template")
 			.action(
 				async (
@@ -748,6 +757,7 @@ export class CLI {
 						options.tags,
 						options.source,
 						path,
+						options.commit,
 					);
 					if (!retVal) throw new Error();
 				},
@@ -800,23 +810,28 @@ export class CLI {
 			.description(
 				"Update a saved template from its upstream git repo (if exists)",
 			)
+			.option(
+				"--commit <commit-hash>",
+				"If --source=git, optionally specify the exact commit hash",
+			)
 			.action(async (options: Record<string, any>, command: Command) => {
 				const globalOpts = command.optsWithGlobals();
 				const retVal = await TemplateCommands.handleUpdateTemplateCommand(
 					globalOpts.key,
+					options.commit,
 				);
 				if (!retVal) throw new Error();
 			});
 
+		// ---------------- parked for future ---------------
 		/*
 		Examples: 
 			NOTE: this works only if the template was originally created from a git-repo
 			[Update template-generated project]		--> bscaff -k my-template template update-project projects/my-react-app
 		*/
 		/*
-		// parked for future
 		const updateTemplateProjectCommand = templateGroup
-			.command("update-project <path-to-project>")
+			.command("update-project <path-to-project>")			
 			.description(
 				"Updates a project originally created/extracted from a template",
 			)
@@ -835,8 +850,8 @@ export class CLI {
 
 	// -------------------- [future] ------------------------
 
-	/*
 	private defineTransformGroup(): void {
+		/*
 		const transformGroup = this.program
 			.command("transform")
 			.description("Transform external files");
@@ -950,6 +965,6 @@ export class CLI {
 					// TODO: add code
 				},
 			);
+		*/
 	}
-	*/
 }

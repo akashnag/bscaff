@@ -130,7 +130,7 @@ export class SaveDirectoryIO extends ConsoleIO {
 export class SaveGitRepoIO extends SaveDirectoryIO {
 	private spinner: Ora | null = null;
 
-	cloneStart(localDir: string) {
+	cloneStart(localDir: string): void {
 		if (QUIET_MODE) return;
 
 		this.spinner = ora(
@@ -138,19 +138,21 @@ export class SaveGitRepoIO extends SaveDirectoryIO {
 		).start();
 	}
 
-	cloneComplete() {
+	cloneComplete(): void {
 		if (QUIET_MODE) return;
 		this.spinner!.succeed("Cloning completed successfully!");
 	}
 
-	cloneFailed() {
+	cloneFailed(repoURL: string): void {
 		if (QUIET_MODE) return;
 
 		this.spinner!.fail("Cloning Failed");
 		printField("Error", "Could not clone git repo");
+		printField("Repo URL", repoURL);
 		console.log("\nTo resolve:");
 		printBullet("Ensure the Git Repo URL is correct");
 		printBullet("Check your network connectivity");
+		console.log();
 	}
 
 	successSnapshotTaken(
@@ -248,7 +250,7 @@ export class SaveASCIITreeIO extends SaveDirectoryIO {
 // save snippet [path] [--type file-type]
 // --------------------------------------------------------
 export class SaveSnippetIO extends ConsoleIO {
-	errorNoContentFound(fromFile: boolean) {
+	errorNoContentFound(fromFile: boolean): void {
 		if (QUIET_MODE) return;
 
 		printHeader("No Content Found");
@@ -307,7 +309,7 @@ export class SaveSnippetIO extends ConsoleIO {
 // save url [url]
 // --------------------------------------------------------
 export class SaveURLIO extends ConsoleIO {
-	errorNoURLFound(fromMemory: boolean) {
+	errorNoURLFound(fromMemory: boolean): void {
 		if (QUIET_MODE) return;
 
 		printHeader("No URL Found");
