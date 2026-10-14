@@ -66,6 +66,7 @@ A pull request implementing a previously unapproved feature may be closed or ask
 Make sure you have a supported version of Node.js installed. The project currently requires:
 
 * **Node.js >= 22.11.0**
+* **git** (if working with git templates)
 
 Clone the repository and install dependencies:
 
