@@ -9,7 +9,6 @@ node_modules/
 # Source code / Uncompiled files (if you only want to ship your built 'dist' folder)
 scripts/
 completions/
-docs/
 src/
 tsconfig.json
 vitest.config.ts
