@@ -372,3 +372,7 @@ Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](docs
 ### License
 
 bscaff is distributed under the **GNU General Public License v2.0**.
+
+---
+
+Created by **Akash Nag**

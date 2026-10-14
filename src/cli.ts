@@ -73,6 +73,11 @@ export class CLI {
 				}
 			})
 			.action(async (options: Record<string, any>, command: Command) => {
+				if (Object.keys(options).length === 0) {
+					this.program.help();
+					return;
+				}
+
 				const retVal =
 					await SaveSnapshotCommands.handleSaveSnippetFromLiveInputCommand(
 						options.key,
