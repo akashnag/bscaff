@@ -148,10 +148,10 @@ bscaff -k react-component save snippet ./components/my-component.tsx
 
 ### Save text from clipboard
 
-Copy text or code directly from the system clipboard into a snapshot using `--memory`:
+Copy text or code directly from the system clipboard into a snapshot using `-c`:
 
 ```bash
-bscaff -k react-component save snippet --memory --type tsx
+bscaff -k react-component save snippet -c --type tsx
 ```
 
 The `--type` option signals the file extension or code syntax (e.g., `tsx`, `py`, `json`), enabling appropriate syntax highlighting when editing or viewing.
@@ -163,7 +163,11 @@ The `--type` option signals the file extension or code syntax (e.g., `tsx`, `py`
 bscaff provides interactive terminal input for saving quick notes or code fragments.
 
 ```bash
+# open text editor and save snippet (as .txt)
 bscaff -k my-snippet save snippet
+
+# specify type explicitly (e.g. markdown)
+bscaff -k my-notes save snippet --type md
 ```
 
 If flags and path are omitted, bscaff opens a text editor for live content input.
@@ -595,7 +599,25 @@ The `open` command provides contextual resource launching:
 - **Snippets / Files**: Opened in read-only mode in your preferred text editor or default viewer.
 
 ```bash
+# open a URL in the browser
 bscaff -k my-docs open
+```
+
+To open snippets/notes (e.g. saved as `--type md`) in your default markdown viewer:
+
+```bash
+# open a snippet in the default viewer
+bscaff -k my-notes open
+```
+
+You can also force it to open in your text-editor or any specific application:
+
+```bash
+# open in text-editor (read-only)
+bscaff -k my-notes open --editor
+
+# open in a specific application (e.g. in Okular)
+bscaff -k my-notes open --command okular
 ```
 
 <!--
@@ -843,7 +865,7 @@ This document provides a concise reference for all commands and options availabl
 | `bscaff -k <key> save tree <repo-url> --git` | Clone a Git repository and save it as a directory tree snapshot. |
 | `bscaff -k <key> save tree` | Parse an ASCII tree diagram from clipboard and save as a snapshot. |
 | `bscaff -k <key> save snippet [path/to/file]` | Save a code or text snippet from an existing file on disk. |
-| `bscaff -k <key> save snippet --memory [--type <ext>]` | Save snippet text directly from system clipboard. |
+| `bscaff -k <key> save snippet -c [--type <ext>]` | Save snippet text directly from system clipboard. |
 | `bscaff -k <key> save snippet` | Open interactive text editor to input snippet text directly in terminal. |
 | `bscaff -k <key> save files <file1> <file2> ...` | Save one or more standalone files into a single snapshot. |
 | `bscaff -k <key> save url [url]` | Save a web URL as a snapshot (captures URL from clipboard if parameter is omitted). |
