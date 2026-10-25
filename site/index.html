@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bscaff - Cross-Platform Project Scaffolding & Developer Toolkit</title>
+    <meta name="description" content="Build it once. Save it. Reuse it. Cross-platform project scaffolding and developer template toolkit.">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#111827',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        brand: {
+                            blue: '#38bdf8',
+                            indigo: '#818cf8',
+                            emerald: '#34d399',
+                            purple: '#c084fc'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(56, 189, 248, 0.15);
+        }
+
+        /* Glow effects */
+        .glow-blue {
+            box-shadow: 0 0 50px -10px rgba(56, 189, 248, 0.25);
+        }
+
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Terminal Window */
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Toast popup notification */
+        #toast {
+            visibility: hidden;
+            min-width: 220px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s;
+            opacity: 0;
+        }
+        #toast.show {
+            visibility: visible;
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-800 text-sky-400 border border-sky-500/30 px-4 py-3 rounded-xl shadow-2xl font-mono text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <span id="toast-message">Copied to clipboard!</span>
+    </div>
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center font-mono font-bold text-slate-950 text-xl shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform">
+                        <img src="https://github.com/akashnag/bscaff/blob/main/docs/images/bscaff-logo-white-transparent.png"/>
+                    </div>
+                    <span class="font-mono text-xl font-bold tracking-tight text-white">bscaff</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-mono">v0.1.0</span>
+                </a>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-300">
+                    <a href="#features" class="hover:text-sky-400 transition-colors">Features</a>
+                    <a href="#playground" class="hover:text-sky-400 transition-colors">Commands</a>
+                    <a href="#sandbox" class="hover:text-sky-400 transition-colors">Variables Demo</a>
+                    <a href="#quickstart" class="hover:text-sky-400 transition-colors">Quick Start</a>
+                    <a href="#config" class="hover:text-sky-400 transition-colors">Config</a>
+                </nav>
+
+                <!-- GitHub Star CTA -->
+                <div class="hidden sm:flex items-center gap-4">
+                    <a href="https://github.com/akashnag/bscaff" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-medium transition-all hover:border-slate-600 shadow-sm">
+                        <svg class="w-4 h-4 text-slate-400 fill-current" viewBox="0 0 16 16">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        <span>Star on GitHub</span>
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden px-4 pt-2 pb-4 space-y-2 border-t border-slate-800 bg-slate-900">
+            <a href="#features" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Features</a>
+            <a href="#playground" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Commands</a>
+            <a href="#sandbox" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Variables Demo</a>
+            <a href="#quickstart" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Quick Start</a>
+            <a href="#config" class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Configuration</a>
+            <a href="https://github.com/akashnag/bscaff" target="_blank" class="block px-3 py-2 rounded-md text-base font-medium text-sky-400 hover:bg-slate-800">GitHub Repository ↗</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow">
+        
+        <!-- Hero Section -->
+        <section class="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden">
+            <!-- Background Glows -->
+            <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-sky-500/10 blur-[120px] rounded-full pointer-events-none"></div>
+            <div class="absolute top-1/3 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="text-center max-w-3xl mx-auto space-y-6">
+                    
+                    <!-- Pre-release Warning Callout -->
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs sm:text-sm font-medium animate-pulse">
+                        <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <span>Pre-release Status: In active development</span>
+                    </div>
+
+                    <!-- Main Headline -->
+                    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
+                        Build it once. <br>
+                        <span class="gradient-text">Save it. Reuse it.</span>
+                    </h1>
+
+                    <!-- Subtitle -->
+                    <p class="text-lg sm:text-xl text-slate-300 font-normal leading-relaxed">
+                        A modern cross-platform CLI toolkit for project scaffolding, directory snapshots, code snippets, Git templates, and AI-assisted tree generation.
+                    </p>
+
+                    <!-- Primary Command Snippet Bar -->
+                    <div class="pt-4 max-w-xl mx-auto">
+                        <div class="glass-panel p-2 rounded-xl flex items-center justify-between gap-3 border border-slate-700/80 shadow-2xl font-mono text-sm sm:text-base text-slate-200">
+                            <div class="flex items-center gap-3 overflow-x-auto pl-3 py-1 no-scrollbar">
+                                <span class="text-sky-400 font-bold select-none">$</span>
+                                <code id="install-cmd" class="whitespace-nowrap text-emerald-300">npm install -g @akashnag/bscaff</code>
+                            </div>
+                            <button onclick="copyToClipboard('npm install -g @akashnag/bscaff', 'Install command copied!')" class="shrink-0 px-4 py-2.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-sans font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-sky-500/25 active:scale-95">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <span>Copy</span>
+                            </button>
+                        </div>
+                        <div class="mt-2 text-xs text-slate-400 flex items-center justify-center gap-4 font-mono">
+                            <span>Req: Node.js &gt;= 22.11.0</span>
+                            <span>•</span>
+                            <span>Git installed</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <a href="#quickstart" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-sky-500/20 transition-all text-center">
+                            Get Started
+                        </a>
+                        <a href="https://github.com/akashnag/bscaff" target="_blank" rel="noopener opacity" class="w-full sm:w-auto px-6 py-3 rounded-xl glass-card hover:bg-slate-800 text-slate-200 border border-slate-700 font-medium transition-all text-center flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 fill-current" viewBox="0 0 16 16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            View Source on GitHub
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Command Playground / CLI Simulator Section -->
+        <section id="playground" class="py-12 bg-slate-900/60 border-y border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-10">
+                    <h2 class="text-xs font-semibold text-sky-400 tracking-wider uppercase">Interactive CLI Demo</h2>
+                    <p class="text-2xl sm:text-3xl font-bold text-white mt-1">Experience the bscaff workflow</p>
+                </div>
+
+                <!-- Interactive Terminal Container -->
+                <div class="max-w-4xl mx-auto glass-panel rounded-2xl overflow-hidden border border-slate-700/80 shadow-2xl">
+                    
+                    <!-- Terminal Header Bar -->
+                    <div class="bg-slate-800/90 px-4 py-3 border-b border-slate-700/60 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="terminal-dot bg-red-500/80"></span>
+                            <span class="terminal-dot bg-yellow-500/80"></span>
+                            <span class="terminal-dot bg-green-500/80"></span>
+                            <span class="ml-2 text-xs font-mono text-slate-400">bscaff-cli — bash</span>
+                        </div>
+                        <div class="text-xs font-mono text-slate-500 hidden sm:block">
+                            ~/.bscaff/snapshots
+                        </div>
+                    </div>
+
+                    <!-- Command Selector Tabs -->
+                    <div class="bg-slate-900/80 border-b border-slate-800 p-2 flex flex-wrap gap-2 text-xs font-mono">
+                        <button onclick="switchTab('snapshot')" id="tab-snapshot" class="tab-btn px-3 py-2 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 transition-all font-semibold">
+                            1. Save Snapshot
+                        </button>
+                        <button onclick="switchTab('extract')" id="tab-extract" class="tab-btn px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                            2. Extract Project
+                        </button>
+                        <button onclick="switchTab('aitree')" id="tab-aitree" class="tab-btn px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                            3. AI Scaffolding
+                        </button>
+                        <button onclick="switchTab('gittemplate')" id="tab-gittemplate" class="tab-btn px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+                            4. Git Templates
+                        </button>
+                    </div>
+
+                    <!-- Terminal Code View -->
+                    <div class="p-6 font-mono text-sm leading-relaxed overflow-x-auto bg-slate-950/90 min-h-[220px] flex flex-col justify-between">
+                        <div id="tab-content" class="space-y-3">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+
+                        <!-- Terminal Actions Footer -->
+                        <div class="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                            <span class="text-slate-500">Click tab or copy command to test in terminal</span>
+                            <button id="copy-tab-cmd" onclick="copyCurrentTabCmd()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <span>Copy Command</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Cards Grid -->
+        <section id="features" class="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-xs font-semibold text-sky-400 tracking-wider uppercase">Powerful Features</h2>
+                <p class="text-3xl sm:text-4xl font-extrabold text-white mt-2">Everything you need to reuse project structures</p>
+                <p class="text-slate-400 mt-3 text-base">One unified CLI workflow to store, transform, and restore boilerplate, templates, and snippets.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <!-- Feature 1 -->
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mb-5">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Project Scaffolding</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Save and recreate complete project structures, including nested subdirectories and files, with simple key-based commands.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-800 font-mono text-xs text-sky-300">
+                        bscaff --key api save dir ./api
+                    </div>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-5">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">AI-Assisted Scaffolding</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Turn AI-generated project outlines copied to your clipboard straight into real folders and files instantly.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-800 font-mono text-xs text-indigo-300">
+                        bscaff create tree ./my-app
+                    </div>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-5">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Variable Replacement</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Use <code class="text-purple-300">{{ variable }}</code> syntax in file names, folder names, and file contents for dynamic scaffolding.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-800 font-mono text-xs text-purple-300">
+                        {{ projectName }}.config.ts
+                    </div>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-5">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Snippets & Utilities</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Store multi-file code sets, URLs, or Dockerfiles. Quick-copy saved content straight to system clipboard anytime.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-800 font-mono text-xs text-emerald-300">
+                        bscaff --key config copy
+                    </div>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-5">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Git & Zip Repositories</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Save any remote Git repo or Zip archive as a bscaff snapshot directly. Strips <code class="text-amber-300">.git</code> automatically.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-800 font-mono text-xs text-amber-300">
+                        --source git repo.git
+                    </div>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-5">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Cross-Platform Ready</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Built with Node.js to run flawlessly on Linux, macOS, and Windows with customized editor & browser preferences.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-800 font-mono text-xs text-rose-300">
+                        ~/.bscaff/settings.yml
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Interactive Variable Interpolation Sandbox -->
+        <section id="sandbox" class="py-16 bg-slate-900/80 border-y border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-12">
+                    <h2 class="text-xs font-semibold text-purple-400 tracking-wider uppercase">Interactive Sandbox</h2>
+                    <p class="text-3xl font-bold text-white mt-1">Live Variable Templating Sandbox</p>
+                    <p class="text-slate-400 text-sm mt-2">Type a project name below to see real-time variable expansion in file trees and file contents.</p>
+                </div>
+
+                <div class="max-w-4xl mx-auto glass-panel rounded-2xl p-6 border border-slate-700/80">
+                    
+                    <!-- Input Controls -->
+                    <div class="mb-6">
+                        <label for="var-input" class="block text-xs font-mono text-slate-300 uppercase tracking-wider mb-2">
+                            Variable Value: <span class="text-purple-400 font-bold">{{ projectName }}</span>
+                        </label>
+                        <input type="text" id="var-input" value="my-awesome-api" placeholder="Enter project name..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sky-300 font-mono focus:outline-none focus:border-purple-500 transition-colors shadow-inner">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Left: Template Input -->
+                        <div class="space-y-2">
+                            <span class="text-xs font-mono text-slate-400 flex items-center justify-between">
+                                <span>TEMPLATE DEFINITION</span>
+                                <span class="text-slate-500">bscaff-template</span>
+                            </span>
+                            <div class="bg-slate-950 rounded-xl p-4 font-mono text-xs text-slate-300 border border-slate-800 h-64 overflow-y-auto space-y-2">
+                                <div class="text-amber-400">// Directory Structure</div>
+                                <div><span class="text-purple-400">{{ projectName }}</span>/</div>
+                                <div>├── src/</div>
+                                <div>│   ├── <span class="text-purple-400">{{ projectName }}</span>.ts</div>
+                                <div>│   └── utils.ts</div>
+                                <div>├── package.json</div>
+                                <div>└── README.md</div>
+                                <div class="pt-3 text-amber-400">// Content of src/<span class="text-purple-400">{{ projectName }}</span>.ts</div>
+                                <div class="text-slate-400">
+                                    import { config } from "./utils";<br>
+                                    export const appName = "<span class="text-purple-400">{{ projectName }}</span>";
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Live Output Preview -->
+                        <div class="space-y-2">
+                            <span class="text-xs font-mono text-emerald-400 flex items-center justify-between">
+                                <span>GENERATED OUTPUT</span>
+                                <span class="text-emerald-500/80">Live Interpolated</span>
+                            </span>
+                            <div id="sandbox-output" class="bg-slate-950 rounded-xl p-4 font-mono text-xs text-emerald-300 border border-emerald-500/20 h-64 overflow-y-auto space-y-2 shadow-inner">
+                                <!-- Dynamically computed in JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Start & Installation Steps -->
+        <section id="quickstart" class="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <h2 class="text-xs font-semibold text-sky-400 tracking-wider uppercase">Getting Started</h2>
+                <p class="text-3xl font-bold text-white mt-1">Ready in under 1 minute</p>
+            </div>
+
+            <div class="max-w-3xl mx-auto space-y-6">
+                
+                <!-- Step 1 -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col sm:flex-row items-start gap-4 border border-slate-700/60">
+                    <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 font-mono font-bold flex items-center justify-center shrink-0 border border-sky-500/30">
+                        1
+                    </div>
+                    <div class="space-y-2 w-full">
+                        <h3 class="text-lg font-bold text-white">Install via NPM</h3>
+                        <p class="text-slate-400 text-sm">Install bscaff globally on your system using Node Package Manager.</p>
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-sky-300 flex justify-between items-center">
+                            <code>npm install -g @akashnag/bscaff</code>
+                            <button onclick="copyToClipboard('npm install -g @akashnag/bscaff')" class="text-slate-500 hover:text-white transition-colors">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col sm:flex-row items-start gap-4 border border-slate-700/60">
+                    <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 font-mono font-bold flex items-center justify-center shrink-0 border border-sky-500/30">
+                        2
+                    </div>
+                    <div class="space-y-2 w-full">
+                        <h3 class="text-lg font-bold text-white">Verify Installation</h3>
+                        <p class="text-slate-400 text-sm">Ensure the binary is registered in your PATH.</p>
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-sky-300 flex justify-between items-center">
+                            <code>bscaff --version</code>
+                            <button onclick="copyToClipboard('bscaff --version')" class="text-slate-500 hover:text-white transition-colors">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col sm:flex-row items-start gap-4 border border-slate-700/60">
+                    <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 font-mono font-bold flex items-center justify-center shrink-0 border border-sky-500/30">
+                        3
+                    </div>
+                    <div class="space-y-2 w-full">
+                        <h3 class="text-lg font-bold text-white">Save Your First Snapshot</h3>
+                        <p class="text-slate-400 text-sm">Snapshot any directory and save it under a unique key name.</p>
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-sky-300 flex justify-between items-center">
+                            <code>bscaff --key my-template save tree ./my-project</code>
+                            <button onclick="copyToClipboard('bscaff --key my-template save tree ./my-project')" class="text-slate-500 hover:text-white transition-colors">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Configuration Section -->
+        <section id="config" class="py-16 bg-slate-900/60 border-t border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h2 class="text-xs font-semibold text-sky-400 tracking-wider uppercase">Configuration</h2>
+                        <h3 class="text-3xl font-bold text-white mt-1 mb-4">Flexible Settings File</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-6">
+                            bscaff stores configuration in <code class="text-sky-300 font-mono">~/.bscaff/settings.yml</code>. You can customize text editors, web browsers, default directory exclusion patterns, and template suffixes.
+                        </p>
+                        <div class="space-y-3 text-sm text-slate-400">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span>Open settings instantly via <code class="text-slate-200 font-mono">bscaff settings</code></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span>Default exclusions for <code class="text-slate-200 font-mono">.git</code>, <code class="text-slate-200 font-mono">node_modules</code>, and caches</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span>Platform-agnostic CLI configuration</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- YAML Preview Card -->
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-700/80 shadow-2xl">
+                        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-xs font-mono text-slate-400">
+                            <span>~/.bscaff/settings.yml</span>
+                            <span>YAML</span>
+                        </div>
+                        <pre class="font-mono text-xs leading-relaxed text-slate-300 overflow-x-auto"><span class="text-sky-400">textEditor</span>: nano
+<span class="text-sky-400">browser</span>: google-chrome
+<span class="text-sky-400">exclude</span>:
+  - .git
+  - .vscode
+  - node_modules
+  - __pycache__
+  - .pytest_cache
+<span class="text-sky-400">include</span>: []
+<span class="text-sky-400">templatesSuffix</span>: .jinja</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-t border-slate-800 text-slate-400 text-sm py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-7 h-7 rounded-md bg-sky-500 flex items-center justify-center font-mono font-bold text-slate-950 text-sm">
+                    <img src="https://github.com/akashnag/bscaff/blob/main/docs/images/bscaff-logo-white-transparent.png"/>
+                </div>
+                <span class="font-mono font-bold text-white">bscaff</span>
+                <span class="text-xs text-slate-500">• Released under GPL-2.0 License</span>
+            </div>
+
+            <div class="flex items-center gap-6 text-xs">
+                <a href="https://github.com/akashnag/bscaff" target="_blank" class="hover:text-sky-400 transition-colors">GitHub Repository</a>
+                <a href="https://github.com/akashnag/bscaff/blob/main/docs/FEATURES.md" target="_blank" class="hover:text-sky-400 transition-colors">Features Documentation</a>
+                <a href="https://github.com/akashnag/bscaff/blob/main/CONTRIBUTING.md" target="_blank" class="hover:text-sky-400 transition-colors">Contributing</a>
+            </div>
+
+            <div class="text-xs text-slate-500">
+                Created by <a href="https://github.com/akashnag" target="_blank" class="text-slate-300 hover:text-white transition-colors underline decoration-slate-700">Akash Nag</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive Scripts -->
+    <script>
+        // Mobile Navigation Toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Toast Notification Function
+        function copyToClipboard(text, customMessage) {
+            // Using execCommand fallback for iframe sandboxing compatibility
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast(customMessage || 'Copied to clipboard!');
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // CLI Playground Tabs Data
+        const tabsData = {
+            snapshot: {
+                cmd: 'bscaff --key my-project save tree ./my-project',
+                output: [
+                    '<span class="text-slate-500">$ bscaff --key my-project save tree ./my-project</span>',
+                    '<span class="text-emerald-400">✔ Directory snapshot created successfully!</span>',
+                    '<span class="text-slate-400">Snapshot Key: <strong class="text-white">my-project</strong></span>',
+                    '<span class="text-slate-400">Files indexed: 14 | Total size: 42.8 KB</span>',
+                    '<span class="text-slate-500">Stored at ~/.bscaff/snapshots/my-project</span>'
+                ]
+            },
+            extract: {
+                cmd: 'bscaff --key my-project extract ./new-project',
+                output: [
+                    '<span class="text-slate-500">$ bscaff --key my-project extract ./new-project</span>',
+                    '<span class="text-sky-400">Extracting snapshot [my-project] into ./new-project...</span>',
+                    '<span class="text-emerald-400">✔ Extract complete! 14 files restored.</span>',
+                    '<span class="text-slate-400">Target path: <strong class="text-white">/Users/dev/new-project</strong></span>'
+                ]
+            },
+            aitree: {
+                cmd: 'bscaff create tree ./my-app',
+                output: [
+                    '<span class="text-slate-500">$ bscaff create tree ./my-app</span>',
+                    '<span class="text-purple-400">Detecting project tree from system clipboard...</span>',
+                    '<span class="text-slate-300">Found tree outline with 4 items:</span>',
+                    '<span class="text-slate-400">  my-app/</span>',
+                    '<span class="text-slate-400">  ├── src/index.ts</span>',
+                    '<span class="text-slate-400">  └── package.json</span>',
+                    '<span class="text-emerald-400">✔ Created 3 directories and 2 files from clipboard tree!</span>'
+                ]
+            },
+            gittemplate: {
+                cmd: 'bscaff --key web-app template save https://github.com/example/repo.git --source git',
+                output: [
+                    '<span class="text-slate-500">$ bscaff --key web-app template save https://github.com/example/repo.git --source git</span>',
+                    '<span class="text-sky-400">Cloning template repository from GitHub...</span>',
+                    '<span class="text-slate-400">Stripping .git metadata directory...</span>',
+                    '<span class="text-emerald-400">✔ Git template saved under key [web-app]</span>'
+                ]
+            }
+        };
+
+        let activeTab = 'snapshot';
+
+        function switchTab(tabKey) {
+            activeTab = tabKey;
+            
+            // Reset button styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all';
+            });
+
+            // Highlight active button
+            const activeBtn = document.getElementById(`tab-${tabKey}`);
+            if (activeBtn) {
+                activeBtn.className = 'tab-btn px-3 py-2 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 transition-all font-semibold';
+            }
+
+            // Render Output
+            const contentDiv = document.getElementById('tab-content');
+            contentDiv.innerHTML = tabsData[tabKey].output.map(line => `<div>${line}</div>`).join('');
+        }
+
+        function copyCurrentTabCmd() {
+            if (tabsData[activeTab]) {
+                copyToClipboard(tabsData[activeTab].cmd, 'CLI Command copied!');
+            }
+        }
+
+        // Variable Interpolation Live Sandbox logic
+        const varInput = document.getElementById('var-input');
+        const sandboxOutput = document.getElementById('sandbox-output');
+
+        function updateSandbox() {
+            const name = varInput.value.trim() || 'my-project';
+            sandboxOutput.innerHTML = `
+                <div class="text-emerald-400">// Real-time Interpolated Output</div>
+                <div>${name}/</div>
+                <div>├── src/</div>
+                <div>│   ├── <span class="text-white font-bold">${name}.ts</span></div>
+                <div>│   └── utils.ts</div>
+                <div>├── package.json</div>
+                <div>└── README.md</div>
+                <div class="pt-3 text-emerald-400">// Content of src/${name}.ts</div>
+                <div class="text-slate-300">
+                    import { config } from "./utils";<br>
+                    export const appName = "<span class="text-sky-300 font-bold">${name}</span>";
+                </div>
+            `;
+        }
+
+        varInput.addEventListener('input', updateSandbox);
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            switchTab('snapshot');
+            updateSandbox();
+        });
+    </script>
+</body>
+</html>
