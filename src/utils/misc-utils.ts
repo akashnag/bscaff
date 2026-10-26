@@ -264,11 +264,15 @@ export function executeCommand(
 		let result;
 
 		if (detach) {
-			const child = spawn(command, [], { detached: true, stdio: "ignore" });
+			const child = spawn(command, [], {
+				detached: true,
+				stdio: "ignore",
+				shell: true,
+			});
 			child.unref();
 			return true;
 		} else {
-			result = spawnSync(command, [], { stdio: "inherit" });
+			result = spawnSync(command, [], { stdio: "inherit", shell: true });
 			return result.status === 0 && result.error === undefined;
 		}
 	} catch (err) {
