@@ -14,26 +14,24 @@
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import { SimpleGit } from "simple-git";
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
 import { ExtractTemplateIO } from "../io/template-io.js";
 import { Template, TemplateAnswers } from "../types/template-types.js";
 import * as FileUtils from "./file-utils.js";
+import * as MiscUtils from "./misc-utils.js";
 import { createTempDirectory } from "./misc-utils.js";
 import * as ParamUtils from "./param-utils.js";
 import * as TemplateUtils from "./template-utils.js";
 import * as TreeUtils from "./tree-utils.js";
 
 export async function getLatestRemoteGitCommitHash(
-	git: SimpleGit,
 	repoURL: string,
 ): Promise<string | undefined> {
 	// Query HEAD for the specified repository URL
-	const rawOutput = await git.listRemote([repoURL, "HEAD"]);
+	const rawOutput = gitListRemoteCommits(repoURL);
 
 	const line = rawOutput
-		.split("\n")
 		.map((line) => line.trim())
 		.find((line) => line.endsWith("HEAD"));
 
@@ -41,6 +39,34 @@ export async function getLatestRemoteGitCommitHash(
 
 	// Extract the commit hash (the first column before whitespace)
 	return line.split(/\s+/)[0];
+}
+
+export function gitClone(repoURL: string, localDir: string): boolean {
+	return MiscUtils.executeCommand(`git clone ${repoURL} ${localDir}`, false);
+}
+
+export function gitSwitchToCommitOrTag(
+	localDir: string,
+	commitHashOrTag: string,
+): boolean {
+	if (!localDir || !commitHashOrTag) return false;
+
+	return MiscUtils.executeCommand(
+		`git switch --detach ${commitHashOrTag}`,
+		false,
+		localDir,
+	);
+}
+
+export function gitListRemoteCommits(repoURL: string): string[] {
+	if (!repoURL) return [];
+
+	const output = MiscUtils.executeCommandAndFetchOutput(
+		`git ls-remote ${repoURL}`,
+	);
+
+	if (!output) return [];
+	return output.split("\n").filter((line) => line.trim().length > 0);
 }
 
 // ---------------------- [unused] ----------------------------
@@ -616,26 +642,14 @@ async function getFilesRecursive(
 	return files;
 }
 
-export async function getLatestRemoteGitTag(
-	git: SimpleGit,
-	repoURL: string,
-): Promise<string | undefined> {
-	const rawOutput = await git.listRemote([
-		"--tags",
-		"--sort=-v:refname",
-		repoURL,
-	]);
+export function gitListRemoteTags(repoURL: string): string[] {
+	if (!repoURL) return [];
 
-	// Extract all tag names, stripping out "refs/tags/" and dereference indicators ("^{}")
-	const tags = rawOutput
-		.split("\n")
-		.map((line) => line.trim())
-		.filter(Boolean)
-		.map((line) => line.split(/\s+/)[1]) // Get the ref path (e.g. "refs/tags/v1.2.3")
-		.filter((ref) => ref && !ref.endsWith("^{}")) // Exclude annotated tag commit pointers
-		.map((ref) => ref.replace("refs/tags/", ""));
+	const output = MiscUtils.executeCommandAndFetchOutput(
+		`git ls-remote --tags --sort=version:refname ${repoURL}`,
+	);
 
-	// The first element in the array is the latest version tag
-	return tags && tags.length > 0 ? tags[0] : undefined;
+	if (!output) return [];
+	return output.split("\n").filter((line) => line.trim().length > 0);
 }
 */

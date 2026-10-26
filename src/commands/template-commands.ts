@@ -13,7 +13,6 @@
 
 import { execSync } from "child_process";
 import * as nunjucks from "nunjucks";
-import { SimpleGit, simpleGit } from "simple-git";
 import pkg from "../../package.json" with { type: "json" };
 import { Config } from "../core/config.js";
 import { Settings } from "../core/settings.js";
@@ -224,12 +223,10 @@ export async function handleUpdateTemplateCommand(
 		return false;
 	}
 
-	const git: SimpleGit = simpleGit();
 	const gitIO = new SaveGitRepoIO();
 
 	gitIO.startFetchGitTag(record.templateSource.url);
 	const remoteVersion = await GitUtils.getLatestRemoteGitCommitHash(
-		git,
 		record.templateSource.url,
 	);
 
@@ -372,7 +369,6 @@ async function cloneGitRepoAndFetchTemplate(
 
 	FileUtils.createDirectory(localDir);
 
-	let git: SimpleGit = simpleGit();
 	const gitIO = new SaveGitRepoIO();
 
 	try {
@@ -382,17 +378,15 @@ async function cloneGitRepoAndFetchTemplate(
 		templateSource = {
 			sourceType: "git" as TemplateSourceType,
 			url: url,
-			version:
-				commitHash ?? (await GitUtils.getLatestRemoteGitCommitHash(git, url)),
+			version: commitHash ?? (await GitUtils.getLatestRemoteGitCommitHash(url)),
 		};
 
 		// clone the latest tag if exists
 		if (templateSource.version) {
-			await git.clone(url, localDir);
-			const localRepo = simpleGit(localDir);
-			await localRepo.checkout(templateSource.version);
+			GitUtils.gitClone(url, localDir);
+			GitUtils.gitSwitchToCommitOrTag(localDir, templateSource.version);
 		} else {
-			await git.clone(url, localDir);
+			GitUtils.gitClone(url, localDir);
 		}
 
 		FileUtils.deleteDirectory(FileUtils.formPath([localDir, ".git"]));

@@ -21,7 +21,7 @@ Whether you are starting a new project, reusing a familiar directory structure, 
 
 ## Installation
 
-Requires **Node.js >= 22.11.0**. Also requires **git** if you are working with templates.
+Requires **Node.js >= 22.11.0**. Also requires **git >= 2.6** if you are working with templates.
 
 ```bash
 npm install -g @akashnag/bscaff
@@ -48,7 +48,7 @@ Follow these steps to build and run the CLI locally from the source code.
 Ensure you have the following installed on your system:
 * **Node.js**: `v22.11.0` or higher
 * **npm**
-* **git** (if you would be working with templates)
+* **git (v2.6+)** (if you would be working with templates)
 
 ### 1. Clone the Repository
 

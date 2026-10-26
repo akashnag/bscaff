@@ -257,6 +257,7 @@ export function openFileByOS(
 export function executeCommand(
 	command: string,
 	detach: boolean = true,
+	cwd?: string,
 ): boolean {
 	if (!command) return false;
 
@@ -268,16 +269,27 @@ export function executeCommand(
 				detached: true,
 				stdio: "ignore",
 				shell: true,
+				cwd,
 			});
 			child.unref();
 			return true;
 		} else {
-			result = spawnSync(command, [], { stdio: "inherit", shell: true });
+			result = spawnSync(command, [], { stdio: "inherit", shell: true, cwd });
 			return result.status === 0 && result.error === undefined;
 		}
 	} catch (err) {
 		console.error(`Failed to execute on ${process.platform}:`, err);
 		return false;
+	}
+}
+
+export function executeCommandAndFetchOutput(command: string): string | null {
+	try {
+		return execSync(command, {
+			encoding: "utf-8",
+		});
+	} catch (err) {
+		return null;
 	}
 }
 

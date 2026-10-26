@@ -54,7 +54,6 @@
 		"minimatch": "^10.2.6",
 		"nunjucks": "^3.2.4",
 		"ora": "^9.4.1",
-		"simple-git": "^3.36.0",
 		"yaml": "^2.9.1"
 	},
 	"devDependencies": {
