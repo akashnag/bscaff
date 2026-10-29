@@ -434,6 +434,59 @@ export function getSubTreeInfo(
 	};
 }
 
+export function addOrRenameRootToTree(
+	nodes: FileTreeNode[],
+	rootDir: string,
+): FileTreeNode[] {
+	const modNodes: FileTreeNode[] = [];
+
+	let hasRoot = true,
+		levelZeroCount = 0,
+		levelZeroIndex = -1;
+
+	for (let i = 0; i < nodes.length; ++i) {
+		if (nodes[i].level === 0 && nodes[i].type === "dir") {
+			++levelZeroCount;
+			levelZeroIndex = i;
+
+			if (levelZeroCount > 1) break;
+		}
+	}
+
+	if (levelZeroCount !== 1) hasRoot = false;
+
+	const prefix = `/${rootDir}`;
+
+	if (hasRoot) {
+		for (let i = 0; i < nodes.length; ++i) {
+			modNodes.push(Object.assign({}, nodes[i]));
+
+			if (i === levelZeroIndex) {
+				modNodes[i].name = rootDir;
+				modNodes[i].path = prefix;
+			} else {
+				modNodes[i].path =
+					prefix + modNodes[i].path.substring(modNodes[i].path.indexOf("/", 1));
+			}
+		}
+	} else {
+		modNodes.push({
+			type: "dir",
+			level: 0,
+			name: rootDir,
+			path: prefix,
+		});
+
+		for (let i = 0; i < nodes.length; ++i) {
+			modNodes.push(Object.assign({}, nodes[i]));
+			++modNodes[i + 1].level;
+			modNodes[i + 1].path = `${prefix}${modNodes[i + 1].path}`;
+		}
+	}
+
+	return modNodes;
+}
+
 // ---------------------- Tree ordering and drawing ---------------------
 
 export function sortTreeStructure(nodes: FileTreeNode[]): FileTreeNode[] {

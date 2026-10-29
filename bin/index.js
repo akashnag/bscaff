@@ -23,7 +23,6 @@ const entryPath = resolve(__dirname, "../dist/index.js");
 
 // Extract command line arguments (skipping 'node' and script path)
 const args = ["--no-warnings", entryPath, ...process.argv.slice(2)];
-const result = spawnSync("node", args, { stdio: "inherit" });
 
-// Propagate the child process exit code
+const result = spawnSync("node", args, { stdio: "inherit" });
 process.exit(result.status ?? 0);

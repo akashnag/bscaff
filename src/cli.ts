@@ -592,6 +592,10 @@ export class CLI {
 				"--prompt-for-content",
 				"Prompts to enter content of each text-file in the tree",
 			)
+			.option(
+				"--root <root-dir-name>",
+				"Creates a root directory (if tree does not have a root) or else renames the root directory to the new name",
+			)
 			.action(
 				async (
 					path: string,
@@ -604,6 +608,7 @@ export class CLI {
 							path,
 							options.ifExists,
 							options.promptForContent,
+							options.root,
 						);
 					if (!retVal) throw new Error();
 				},

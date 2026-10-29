@@ -22,7 +22,6 @@ import * as MiscUtils from "../utils/misc-utils.js";
 import * as TreeUtils from "../utils/tree-utils.js";
 import {
 	ConsoleIO,
-	getche,
 	IOHeaderType,
 	printBullet,
 	printErrorFooter,
@@ -107,8 +106,9 @@ export class SaveDirectoryIO extends ConsoleIO {
 	successTreeCreated(path: string): void {
 		if (QUIET_MODE) return;
 
+		console.log();
+		printField("Path", path + "\n");
 		printHeader("File Tree Created Successfully!", IOHeaderType.SUCCESS);
-		printField("Path", FileUtils.getRelativePath(path) + "\n");
 	}
 
 	errorCopyingDirectoryTree(sourceDir: string, destPath: string): void {

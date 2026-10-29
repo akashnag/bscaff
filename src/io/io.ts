@@ -11,9 +11,10 @@
  * GNU General Public License for more details.
  */
 
-import { stdin as input, stdout as output } from "node:process";
+import { stdin, stdout } from "node:process";
 import * as readline from "node:readline/promises";
 import * as inquirer from "@inquirer/prompts";
+
 import chalk from "chalk";
 import nunjucks from "nunjucks";
 import { ClipboardManager } from "../core/clipboard.js";
@@ -48,8 +49,8 @@ export enum IOHeaderType {
 }
 
 export async function prompt(question: string): Promise<string> {
-	const rl = readline.createInterface({ input, output });
-	return (await rl.question(question)).trim();
+	const rl = readline.createInterface({ input: stdin, output: stdout });
+	return (await rl.question(question + " ")).trim();
 }
 
 export async function quickConfirm(
@@ -70,7 +71,7 @@ export async function quickConfirm(
 export function getche(question?: string): Promise<string> {
 	return new Promise((resolve) => {
 		if (question) {
-			process.stdout.write(question);
+			process.stdout.write(question + " ");
 		}
 
 		const { stdin } = process;
@@ -95,7 +96,7 @@ export function getche(question?: string): Promise<string> {
 			stdin.removeListener("data", onData);
 
 			// Print a newline so subsequent output starts on a fresh line
-			process.stdout.write("\n");
+			process.stdout.write(char + "\n");
 
 			resolve(char);
 		};
@@ -752,7 +753,7 @@ export class ConsoleIO {
 
 	async promptForFileOverwrite(fPath: string): Promise<boolean> {
 		return await quickConfirm(
-			"File already exists. Overwrite (Y/N)?",
+			`File (${fPath}) already exists. Overwrite (Y/N)?`,
 			{ y: true, n: false },
 			false,
 		);

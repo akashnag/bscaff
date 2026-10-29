@@ -468,10 +468,17 @@ weather-service/
 Copy the text block to your clipboard and run:
 
 ```bash
-bscaff create tree ./weather-service --prompt-for-content
+bscaff create tree --prompt-for-content ~/projects
 ```
 
-bscaff parses the clipboard diagram, builds the folder hierarchy, and prompts you for content for each file.
+bscaff parses the clipboard diagram, builds the folder hierarchy inside `~/projects`, and prompts you for content for each file.
+
+If you do not want to provide file contents then omit the `--prompt-for-content` flag. In case you want to rename the root directory (or create a root-directory) then run:
+
+```bash
+# rename the root folder from 'weather-service' to 'my-weather-service'
+bscaff create tree --root my-weather-service ~/projects
+```
 
 ---
 
